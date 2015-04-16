@@ -287,6 +287,17 @@ namespace Bloom.WebLibraryIntegration
 			}
 		}
 
+		public void UploadFile(string content, string key)
+		{
+			var request = new TransferUtilityUploadRequest()
+			{
+				BucketName = _bucketName,
+				InputStream = new MemoryStream(Encoding.UTF8.GetBytes(content)),
+				Key = key
+			};
+			_transferUtility.Upload(request);
+		}
+
 		/// <summary>
 		/// copy directory and all subdirectories
 		/// </summary>

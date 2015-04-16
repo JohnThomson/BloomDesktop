@@ -52,7 +52,7 @@ namespace Bloom.WebLibraryIntegration
 			get
 			{
 #if DEBUG
-				return true;
+				return false;
 #else
 				var temp = Environment.GetEnvironmentVariable("BloomSandbox");
 				if (string.IsNullOrWhiteSpace(temp))

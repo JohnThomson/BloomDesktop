@@ -55,7 +55,7 @@ namespace Bloom.WebLibraryIntegration
 		}
 
 
-		private RestRequest MakeGetRequest(string path)
+		public RestRequest MakeGetRequest(string path)
 		{
 			return MakeRequest(path, Method.GET);
 		}
@@ -71,7 +71,7 @@ namespace Bloom.WebLibraryIntegration
 			return MakeRequest(path, Method.POST);
 		}
 
-		private RestRequest MakePutRequest(string path)
+		public RestRequest MakePutRequest(string path)
 		{
 			return MakeRequest(path, Method.PUT);
 		}
@@ -88,6 +88,12 @@ namespace Bloom.WebLibraryIntegration
 			var response = _client.Execute(request);
 			var dy = JsonConvert.DeserializeObject<dynamic>(response.Content);
 			return dy.count;
+		}
+
+		public dynamic PerformRequest(RestRequest request)
+		{
+			var response = _client.Execute(request);
+			return JsonConvert.DeserializeObject<dynamic>(response.Content);
 		}
 
 		public IRestResponse GetBookRecordsByQuery(string query)
