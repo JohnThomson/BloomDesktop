@@ -10,6 +10,7 @@ using Bloom.MiscUI;
 using Bloom.Properties;
 using L10NSharp;
 using Palaso.PlatformUtilities;
+using Palaso.Reporting;
 using Squirrel;
 
 namespace Bloom
@@ -294,6 +295,13 @@ namespace Bloom
 					// some sort of discontinuity in the sequence of deltas.
 					ignoreDeltaUpdates = true;
 					Palaso.Reporting.Logger.WriteEvent("Squirrel update incremental download failed; trying whole package. Exception: " + ex.Message);
+					if (ChannelName == "Alpha")
+					{
+						// We really want to gather information about this. This message is just for early testers and developers,
+						// so I'm not making it localizable.
+						ErrorReport.NotifyUserOfProblem(ex,
+							"Squirrel incremental update failed; please get the details and attach to BL-1256");
+					}
 					goto retry;
 				}
 
