@@ -81,6 +81,11 @@ namespace Bloom.web
 			return new NameValueCollection();
 		}
 
+		public byte[] GetRawPostData()
+		{
+			throw new System.NotImplementedException();
+		}
+
 		public string RawUrl { get; private set; }
 	}
 }

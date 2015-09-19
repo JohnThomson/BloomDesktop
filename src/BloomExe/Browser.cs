@@ -324,6 +324,9 @@ namespace Bloom
 			// until we get past that, it's just annoying
 			GeckoPreferences.User["layout.spellcheckDefault"] = 0;
 
+			// Allows audio recording
+			GeckoPreferences.User["media.navigator.permission.disabled"] = true;
+
 			RaiseGeckoReady();
 	   }
 

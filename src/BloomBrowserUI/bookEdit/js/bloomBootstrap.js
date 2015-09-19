@@ -37,7 +37,8 @@ var scripts = [
     'bookEdit/js/libsynphony/bloom_xregexp_categories.js',
     'bookEdit/js/libsynphony/synphony_lib.js',
     'bookEdit/js/libsynphony/bloom_lib.js',
-    'audio/audioRecording.js'
+    'audio/audioRecording.js',
+    'audio/recordmp3.js'
 ];
 
 var styleSheets = [

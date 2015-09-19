@@ -448,6 +448,14 @@ namespace Bloom.web
 					// it on the UI thread
 					HelpLauncher.Show(null, post["data"]);
 					return true;
+				case "audio":
+					var audio = info.GetRawPostData();
+					var id = info.GetQueryString()["dest"];
+					var dirPath = Path.Combine(CurrentBook.FolderPath, "audio");
+					Directory.CreateDirectory(dirPath); //  in case it's the first thing in /audio
+					var path = Path.Combine(dirPath, id + ".wav");
+					File.WriteAllBytes(path, audio);
+					break;
 				case "getNextBookStyle":
 					info.ContentType = "text/html";
 					info.WriteCompleteOutput(CurrentBook.NextStyleNumber.ToString(CultureInfo.InvariantCulture));

@@ -1,5 +1,9 @@
 ﻿class audioRecording {
 
+    audio_context;
+    recorder;
+
+
     nextSpan() {
         var current: JQuery = $('.ui-audioCurrent');
         var next: JQuery = current.nextAll('.audio-sentence').first();
@@ -15,6 +19,29 @@
         current.removeClass('ui-audioCurrent');
         prev.addClass('ui-audioCurrent');
     }
+
+    // Todo: For HearThis compatibility, start on mouseDown and end on mouseUp.
+    recordCurrent() {
+        if (this.recorder.isRecording()) {
+            this.recorder.stop();
+            this.recorder.exportWAV(function (blob) {
+               // Todo: mp3 encode, change extension
+                var current: JQuery = $('.ui-audioCurrent');
+                var id = current.attr("id");
+                //var data = id + ':' + blob; // todo: somehow encode blob?
+                var oReq = new XMLHttpRequest();
+                oReq.open("POST", "http://localhost:8089/bloom/audio?dest="+id, true);
+                //oReq.onload = function (oEvent) {
+                //    // Uploaded.
+                //};
+                oReq.send(blob);
+            });
+
+        } else {
+            this.recorder.record();
+        }
+    }
+
     startRecording() {
         var editable = <qtipInterface>$('div.bloom-editable').first();
         var thisClass = this;
@@ -22,16 +49,16 @@
         // eventually we probably want our own icon files.
         var bubble = $("<div class='ui-audioTitle'>Record eBook audio</div>" +
             "<div class=ui-audioBody>" +
-                "<span id='audio-prev' class='ui-icon ui-icon-triangle-1-w' >Prev</span >" +
-                "<span id='audio-record' class='ui-icon ui-icon-bullet icon-red'>Record</span>" +
-                "<span id='audio-play' class='ui-icon ui-icon-play'>Play</span>" +
-                "<span id='audio-next' class='ui-icon ui-icon-triangle-1-e'>N</span>" +
+            "<span id='audio-prev' class='ui-icon ui-icon-triangle-1-w' >Prev</span >" +
+            "<span id='audio-record' class='ui-icon ui-icon-bullet icon-red'>Record</span>" +
+            "<span id='audio-play' class='ui-icon ui-icon-play'>Play</span>" +
+            "<span id='audio-next' class='ui-icon ui-icon-triangle-1-e'>N</span>" +
             "</div><div class='ui-audioFooter'>" +
-                "<span id='audio-close' class='ui-icon ui-icon-close'>N</span>" +
+            "<span id='audio-close' class='ui-icon ui-icon-close'>N</span>" +
             "</div>");
         bubble.css('z-index', 15003);
         editable.qtip({
-            id:'audio',
+            id: 'audio',
             position: {
                 my: 'left top',
                 at: 'top right',
@@ -69,14 +96,17 @@
             },
             events: {
                 show: function(event, api) {
-                    $('#audio-close').click(function () {
+                    $('#audio-close').click(function() {
                         api.hide();
                     });
-                    $('#audio-next').click(function () {
+                    $('#audio-next').click(function() {
                         thisClass.nextSpan();
                     });
-                    $('#audio-prev').click(function () {
+                    $('#audio-prev').click(function() {
                         thisClass.prevSpan();
+                    });
+                    $('#audio-record').click(function () {
+                        thisClass.recordCurrent();
                     });
                 }
             }
@@ -107,6 +137,27 @@
         this.makeSentenceSpans(editable);
         var firstSentence = editable.find('span.audio-sentence').first();
         firstSentence.addClass('ui-audioCurrent');
+        // I think mozGetUserMedia is the one that is in FF 29.
+        // After FF36 we will probably need navigator. MediaDevices.getUserMedia()
+        navigator.getUserMedia = (navigator.getUserMedia ||
+        navigator.webkitGetUserMedia ||
+        navigator.mozGetUserMedia ||
+        navigator.msGetUserMedia);
+        this.audio_context = new AudioContext;
+        navigator.getUserMedia({ audio: true },
+            function (stream) {
+                thisClass.startUserMedia(stream);
+            },
+            function (e) {
+                alert('No live audio input: ' + e);
+        });
+    }
+
+    startUserMedia(stream) {
+        var input = this.audio_context.createMediaStreamSource(stream);
+        this.recorder = new Recorder(input, {
+            numChannels: 1
+        });
     }
 
 
@@ -421,7 +472,6 @@
                 newHtml += '<span id= "' + newId + '" class="audio-sentence"' + newMd5 + '>' + fragment.text + '</span>';
             }
         }
-
         // set the html
         div.html(newHtml);
     }

@@ -171,6 +171,20 @@ namespace Bloom.web
 
 		}
 
+		public byte[] GetRawPostData()
+		{
+			var request = _actualContext.Request;
+
+			if (!request.HasEntityBody)
+				return new byte[0];
+			using (var input = request.InputStream)
+			using (MemoryStream ms = new MemoryStream())
+			{
+				input.CopyTo(ms);
+				return ms.ToArray();
+			}
+		}
+
 		private static string UnescapeString(string value)
 		{
 			return Uri.UnescapeDataString(value.Replace("+", " "));

@@ -666,6 +666,7 @@ namespace Bloom.Edit
 			_view.AddMessageEventListener("setModalStateEvent", SetModalState);
 			_view.AddMessageEventListener("preparePageForEditingAfterOrigamiChangesEvent", RethinkPageAndReloadIt);
 			_view.AddMessageEventListener("finishSavingPage", FinishSavingPage);
+			_view.AddMessageEventListener("saveSoundData", SaveSoundData);
 		}
 
 		private void RethinkPageAndReloadIt(string obj)
@@ -713,6 +714,13 @@ namespace Bloom.Edit
 				_view.ChangingPages = false;
 
 			return returnVal;
+		}
+
+		private void SaveSoundData(string data)
+		{
+			var id = data.Substring(0, data.IndexOf(':'));
+			var path = Path.Combine(_bookSelection.CurrentSelection.Storage.FolderPath, "audio", id + ".mp3");
+			// todo: decode balance of data and write to file.
 		}
 
 		private void SaveAccordionSettings(string data)

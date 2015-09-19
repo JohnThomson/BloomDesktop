@@ -1,14 +1,15 @@
-var audioRecording = (function () {
+﻿var audioRecording = (function () {
     function audioRecording() {
     }
     audioRecording.prototype.nextSpan = function () {
         var current = $('.ui-audioCurrent');
         var next = current.nextAll('.audio-sentence').first();
         if (next.length === 0)
-            return; // next page??
+            return;
         current.removeClass('ui-audioCurrent');
         next.addClass('ui-audioCurrent');
     };
+
     audioRecording.prototype.prevSpan = function () {
         var current = $('.ui-audioCurrent');
         var prev = current.prevAll('.audio-sentence').first();
@@ -17,9 +18,34 @@ var audioRecording = (function () {
         current.removeClass('ui-audioCurrent');
         prev.addClass('ui-audioCurrent');
     };
+
+    // Todo: For HearThis compatibility, start on mouseDown and end on mouseUp.
+    audioRecording.prototype.recordCurrent = function () {
+        if (this.recorder.isRecording()) {
+            this.recorder.stop();
+            this.recorder.exportWAV(function (blob) {
+                // Todo: mp3 encode, change extension
+                var current = $('.ui-audioCurrent');
+                var id = current.attr("id");
+
+                //var data = id + ':' + blob; // todo: somehow encode blob?
+                var oReq = new XMLHttpRequest();
+                oReq.open("POST", "http://localhost:8089/bloom/audio?dest=" + id, true);
+
+                //oReq.onload = function (oEvent) {
+                //    // Uploaded.
+                //};
+                oReq.send(blob);
+            });
+        } else {
+            this.recorder.record();
+        }
+    };
+
     audioRecording.prototype.startRecording = function () {
         var editable = $('div.bloom-editable').first();
         var thisClass = this;
+
         // Makes rather blurry icons (have to scale by 3-5x to get useful size);
         // eventually we probably want our own icon files.
         var bubble = $("<div class='ui-audioTitle'>Record eBook audio</div>" + "<div class=ui-audioBody>" + "<span id='audio-prev' class='ui-icon ui-icon-triangle-1-w' >Prev</span >" + "<span id='audio-record' class='ui-icon ui-icon-bullet icon-red'>Record</span>" + "<span id='audio-play' class='ui-icon ui-icon-play'>Play</span>" + "<span id='audio-next' class='ui-icon ui-icon-triangle-1-e'>N</span>" + "</div><div class='ui-audioFooter'>" + "<span id='audio-close' class='ui-icon ui-icon-close'>N</span>" + "</div>");
@@ -45,7 +71,7 @@ var audioRecording = (function () {
                     $('#qtip-audio').qtip('api').destroy();
                     var current = $('.ui-audioCurrent');
                     current.removeClass('ui-audioCurrent');
-                } // prevents it coming back on mouseenter Todo: remove highlights
+                }
             },
             style: {
                 tip: {
@@ -71,13 +97,34 @@ var audioRecording = (function () {
                     $('#audio-prev').click(function () {
                         thisClass.prevSpan();
                     });
+                    $('#audio-record').click(function () {
+                        thisClass.recordCurrent();
+                    });
                 }
             }
         });
         this.makeSentenceSpans(editable);
         var firstSentence = editable.find('span.audio-sentence').first();
         firstSentence.addClass('ui-audioCurrent');
+
+        // I think mozGetUserMedia is the one that is in FF 29.
+        // After FF36 we will probably need navigator. MediaDevices.getUserMedia()
+        navigator.getUserMedia = (navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia || navigator.msGetUserMedia);
+        this.audio_context = new AudioContext;
+        navigator.getUserMedia({ audio: true }, function (stream) {
+            thisClass.startUserMedia(stream);
+        }, function (e) {
+            alert('No live audio input: ' + e);
+        });
     };
+
+    audioRecording.prototype.startUserMedia = function (stream) {
+        var input = this.audio_context.createMediaStreamSource(stream);
+        this.recorder = new Recorder(input, {
+            numChannels: 1
+        });
+    };
+
     // from http://stackoverflow.com/questions/105034/create-guid-uuid-in-javascript
     audioRecording.prototype.createUuid = function () {
         // http://www.ietf.org/rfc/rfc4122.txt
@@ -89,16 +136,20 @@ var audioRecording = (function () {
         s[14] = "4"; // bits 12-15 of the time_hi_and_version field to 0010
         s[19] = hexDigits.substr((s[19] & 0x3) | 0x8, 1); // bits 6-7 of the clock_seq_hi_and_reserved to 01
         s[8] = s[13] = s[18] = s[23] = "-";
+
         var uuid = s.join("");
         return uuid;
     };
+
     audioRecording.prototype.md5 = function (message) {
         var HEX_CHARS = '0123456789abcdef'.split('');
         var EXTRA = [128, 32768, 8388608, -2147483648];
         var blocks = [];
+
         var h0, h1, h2, h3, a, b, c, d, bc, da, code, first = true, end = false, index = 0, i, start = 0, bytes = 0, length = message.length;
         blocks[16] = 0;
         var SHIFT = [0, 8, 16, 24];
+
         do {
             blocks[0] = blocks[16];
             blocks[16] = blocks[1] = blocks[2] = blocks[3] = blocks[4] = blocks[5] = blocks[6] = blocks[7] = blocks[8] = blocks[9] = blocks[10] = blocks[11] = blocks[12] = blocks[13] = blocks[14] = blocks[15] = 0;
@@ -106,17 +157,14 @@ var audioRecording = (function () {
                 code = message.charCodeAt(index);
                 if (code < 0x80) {
                     blocks[i >> 2] |= code << SHIFT[i++ & 3];
-                }
-                else if (code < 0x800) {
+                } else if (code < 0x800) {
                     blocks[i >> 2] |= (0xc0 | (code >> 6)) << SHIFT[i++ & 3];
                     blocks[i >> 2] |= (0x80 | (code & 0x3f)) << SHIFT[i++ & 3];
-                }
-                else if (code < 0xd800 || code >= 0xe000) {
+                } else if (code < 0xd800 || code >= 0xe000) {
                     blocks[i >> 2] |= (0xe0 | (code >> 12)) << SHIFT[i++ & 3];
                     blocks[i >> 2] |= (0x80 | ((code >> 6) & 0x3f)) << SHIFT[i++ & 3];
                     blocks[i >> 2] |= (0x80 | (code & 0x3f)) << SHIFT[i++ & 3];
-                }
-                else {
+                } else {
                     code = 0x10000 + (((code & 0x3ff) << 10) | (message.charCodeAt(++index) & 0x3ff));
                     blocks[i >> 2] |= (0xf0 | (code >> 18)) << SHIFT[i++ & 3];
                     blocks[i >> 2] |= (0x80 | ((code >> 12) & 0x3f)) << SHIFT[i++ & 3];
@@ -134,6 +182,7 @@ var audioRecording = (function () {
                 blocks[14] = bytes << 3;
                 end = true;
             }
+
             if (first) {
                 a = blocks[0] - 680876937;
                 a = (a << 7 | a >>> 25) - 271733879 << 0;
@@ -143,8 +192,7 @@ var audioRecording = (function () {
                 c = (c << 17 | c >>> 15) + d << 0;
                 b = (a ^ (c & (d ^ a))) + blocks[3] - 1316259209;
                 b = (b << 22 | b >>> 10) + c << 0;
-            }
-            else {
+            } else {
                 a = h0;
                 b = h1;
                 c = h2;
@@ -158,6 +206,7 @@ var audioRecording = (function () {
                 b += (a ^ (c & (d ^ a))) + blocks[3] - 1044525330;
                 b = (b << 22 | b >>> 10) + c << 0;
             }
+
             a += (d ^ (b & (c ^ d))) + blocks[4] - 176418897;
             a = (a << 7 | a >>> 25) + b << 0;
             d += (c ^ (a & (b ^ c))) + blocks[5] + 1200080426;
@@ -286,20 +335,21 @@ var audioRecording = (function () {
             c = (c << 15 | c >>> 17) + d << 0;
             b += (d ^ (c | ~a)) + blocks[9] - 343485551;
             b = (b << 21 | b >>> 11) + c << 0;
+
             if (first) {
                 h0 = a + 1732584193 << 0;
                 h1 = b - 271733879 << 0;
                 h2 = c - 1732584194 << 0;
                 h3 = d + 271733878 << 0;
                 first = false;
-            }
-            else {
+            } else {
                 h0 = h0 + a << 0;
                 h1 = h1 + b << 0;
                 h2 = h2 + c << 0;
                 h3 = h3 + d << 0;
             }
-        } while (!end);
+        } while(!end);
+
         var hex = HEX_CHARS[(h0 >> 4) & 0x0F] + HEX_CHARS[h0 & 0x0F];
         hex += HEX_CHARS[(h0 >> 12) & 0x0F] + HEX_CHARS[(h0 >> 8) & 0x0F];
         hex += HEX_CHARS[(h0 >> 20) & 0x0F] + HEX_CHARS[(h0 >> 16) & 0x0F];
@@ -318,6 +368,7 @@ var audioRecording = (function () {
         hex += HEX_CHARS[(h3 >> 28) & 0x0F] + HEX_CHARS[(h3 >> 24) & 0x0F];
         return hex;
     };
+
     audioRecording.prototype.makeSentenceSpans = function (div) {
         var markedSentences = div.find("span.audio-sentence");
         var reuse = [];
@@ -325,7 +376,9 @@ var audioRecording = (function () {
             reuse.push({ id: $(this).attr('id'), md5: $(this).attr('recordingmd5') });
             $(this).replaceWith($(this).html()); // strip out the audio-sentence wrapper so we can re-partition.
         });
+
         var fragments = libsynphony.stringToSentences(div.html());
+
         for (var i = 0; i < fragments.length; i++) {
             var fragment = fragments[i];
             if (this.isRecordable(fragment)) {
@@ -342,11 +395,11 @@ var audioRecording = (function () {
         var newHtml = "";
         for (var i = 0; i < fragments.length; i++) {
             var fragment = fragments[i];
+
             if (!this.isRecordable(fragment)) {
                 // this is inter-sentence space (or white space before first sentence).
                 newHtml += fragment.text;
-            }
-            else {
+            } else {
                 var newId = null;
                 var newMd5 = '';
                 var reuseThis = fragment.match;
@@ -363,24 +416,30 @@ var audioRecording = (function () {
                 newHtml += '<span id= "' + newId + '" class="audio-sentence"' + newMd5 + '>' + fragment.text + '</span>';
             }
         }
+
         // set the html
         div.html(newHtml);
     };
+
     audioRecording.prototype.isRecordable = function (fragment) {
         if (fragment.isSpace)
-            return false; // this seems to be reliable
+            return false;
+
         // initial white-space fragments may currently be marked sentence
         var test = fragment.text.replace(/<br *[^>]*\/?>/g, " ");
         return !test.match(/^\s*$/);
     };
+
     // Clean up stuff audio recording leaves around that should not be saved.
     audioRecording.prototype.cleanupAudio = function () {
         $('span.ui-audioCurrent').removeClass('ui-audioCurrent');
     };
     return audioRecording;
 })();
+
 var audioRecorder;
 var libsynphony;
+
 // Get our instance created
 if (typeof ($) === "function") {
     // Running for real, and jquery properly loaded first
@@ -389,11 +448,13 @@ if (typeof ($) === "function") {
         libsynphony = new libSynphony();
     });
 }
+
 // Function called to start things going.
 // Called by 'calledByCSharp.recordAudio
 function recordAudio() {
     audioRecorder.startRecording();
 }
+
 function cleanupAudio() {
     audioRecorder.cleanupAudio();
 }
