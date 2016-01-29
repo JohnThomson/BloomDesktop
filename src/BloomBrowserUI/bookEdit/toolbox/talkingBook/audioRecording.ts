@@ -42,6 +42,8 @@
 
 import * as JQuery from 'jquery';
 import * as $ from 'jquery';
+import {libSynphony} from '../decodableReader/libsynphony/synphony_lib';
+import '../decodableReader/libsynphony/bloom_lib'; // parts of libsynphony we need here
 
 enum Status {
     Disabled, // Can't use button now (e.g., Play when there is no recording)

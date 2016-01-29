@@ -420,3 +420,11 @@ $(document).ready(function () {
 $(parent.window.document).ready(function() {
     $(parent.window.document).find('#pure-toggle-right').change(function() { showToolboxChanged(!this.checked); });
 })
+
+// These three are not currently used (except that they provide the implementations of ITabModel),
+// but we need to import them somewhere so webpack figures out we need them.
+// Loading them attempts to use some functions of Toolbox, so they have to be imported
+// AFTER it is defined.
+import './decodableReader/decodableReader';
+import './leveledReader/leveledReader';
+import './talkingBook/talkingBook';
