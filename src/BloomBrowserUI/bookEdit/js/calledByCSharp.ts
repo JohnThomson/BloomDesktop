@@ -47,11 +47,11 @@ export class CalledByCSharp {
       contentWindow['SetCopyrightAndLicense'](contents);
   }
 
-    cleanupAudio() {
-        var contentWindow = this.getPageContent();
-        if (!contentWindow) return;
-        if (typeof contentWindow['cleanupAudio'] === 'function') {
-            contentWindow['cleanupAudio']();
+    removeToolboxMarkup() {
+        var toolboxWindow = this.getToolboxContent();
+        if (!toolboxWindow) return;
+        if (typeof toolboxWindow['removeToolboxMarkup'] === 'function') {
+            toolboxWindow['removeToolboxMarkup']();
         }
     }
 
@@ -62,15 +62,6 @@ export class CalledByCSharp {
             toolboxWindow['setPeakLevel'](level);
         }
     }
-
-  removeSynphonyMarkup() {
-    var page = this.getPageContent();
-    if (!page) return;
-    var toolbox = this.getToolboxWindow();
-    if ((typeof toolbox['jQuery'] !== 'undefined') && (toolbox['jQuery'].fn.removeSynphonyMarkup)) {
-        toolbox['jQuery'].fn.removeSynphonyMarkup.call(page['jQuery']('.bloom-content1'));
-    }
-  }
 
   invokeToolboxWithOneParameter(functionName: string, value: string) {
 
