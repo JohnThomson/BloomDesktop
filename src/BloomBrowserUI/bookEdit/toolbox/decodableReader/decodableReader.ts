@@ -221,7 +221,7 @@ export function initializeReaderSetupDialog() {
 /**
  * Called by C# after the setup data has been saved, following Save click.
  */
-function closeSetupDialog() {
+export function closeSetupDialog() {
     $(parentDocument()).find('#synphonyConfig').dialog("close");
 }
 

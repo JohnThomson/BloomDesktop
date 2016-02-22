@@ -73,7 +73,7 @@ namespace Bloom.web
 
 				case "saveReaderToolSettings":
 					var path = DecodableReaderTool.GetDecodableLevelPathName(currentCollectionSettings);
-					var content = info.GetPostData()["data"];
+					var content = info.GetPostJson();
 					File.WriteAllText(path, content, Encoding.UTF8);
 					info.ContentType = "text/plain";
 					info.WriteCompleteOutput("OK");

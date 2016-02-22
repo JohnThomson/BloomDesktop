@@ -9,12 +9,13 @@ import {handleBookSettingCheckboxClick} from './bookSettings/bookSettings';
 // reviewslog: is this actually needed? Could these be be directly imported where they are used?
 export {showOrHidePanel_click};
 export {removeToolboxMarkup};
-export {showSetupDialog, initializeReaderSetupDialog} from './decodableReader/decodableReader'
-export {addWordListChangedListener} from './decodableReader/readerTools';
+export {showSetupDialog, initializeReaderSetupDialog, closeSetupDialog} from './decodableReader/decodableReader'
+export {addWordListChangedListener, makeLetterWordList} from './decodableReader/readerTools';
 export {loadLongpressInstructions} from '../js/bloomEditing';
 export {default as BloomHelp} from '../../BloomHelp';
 export {TalkingBookModel}; // one function is called by CSharp; also, exporting something from it gets it included in the bundle.
 export {handleBookSettingCheckboxClick}; // called by click handler in jade; also, exporting something from it gets it included in the bundle.
+export {LeveledReaderModel} from './leveledReader/leveledReader'; // don't actually need to export, but forces it to be really included.
 
 export function canUndo() :boolean {
     return (typeof ReaderToolsModel.model != 'undefined') && ReaderToolsModel.model.shouldHandleUndo() && ReaderToolsModel.model.canUndo();

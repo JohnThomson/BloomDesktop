@@ -114,11 +114,11 @@ function saveClicked(): void {
     saveChangedSettings(function() {
       if (typeof toolbox['readerSampleFilesChanged'] === 'function')
         toolbox['readerSampleFilesChanged']();
-      toolbox.closeSetupDialog();
+      toolbox.FrameExports.closeSetupDialog();
     });
   }
   else {
-      saveChangedSettings(toolbox.closeSetupDialog);
+      saveChangedSettings(toolbox.FrameExports.closeSetupDialog);
   }
 }
 
@@ -137,9 +137,9 @@ export function saveChangedSettings(callback?: Function): void {
 
   // save now
   if (callback)
-    axios.post('/bloom/readers/saveReaderToolSettings', { params: { data: settingsStr } }).then(result => {callback(result.data)});
+    axios.post('/bloom/readers/saveReaderToolSettings', settingsStr).then(result => {callback(result.data)});
   else
-    axios.post('/bloom/readers/saveReaderToolSettings', { params: { data: settingsStr } });
+    axios.post('/bloom/readers/saveReaderToolSettings', settingsStr);
 }
 
 function getChangedSettings(): any {

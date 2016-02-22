@@ -5,7 +5,7 @@ import {ITabModel} from "../toolbox";
 import {ToolBox} from "../toolbox";
 import {theOneLibSynphony}  from '../decodableReader/libSynphony/synphony_lib';
 
-class LeveledReaderModel implements ITabModel {
+export class LeveledReaderModel implements ITabModel {
     restoreSettings(opts: string) {
         if (!ReaderToolsModel.model) ReaderToolsModel.model = new ReaderToolsModel();
         initializeLeveledReaderTool();
