@@ -20,6 +20,7 @@ import 'jquery.qtip.js'
 import 'jquery.qtipSecondary.js'
 import 'long-press/jquery.longpress.js'
 import 'jquery.hotkeys'; //makes the on(keydown work with keynames)
+import {getToolboxFrameExports} from './bloomFrames';
 
 //promise may be needed to run tests with phantomjs
 //import promise = require('es6-promise');
@@ -260,17 +261,6 @@ function IsInTranslationMode() {
     }
 }
 
-
-
-function getToolbox() {
-    // I (GJM) tried to define this is readerTools.ts, but it wasn't loaded if no reader tools were active!
-    var toolbox = parent.window.document.getElementById("toolbox") as HTMLIFrameElement;
-
-    // toolbox will be undefined during unit testing
-    if (toolbox)
-        return toolbox.contentWindow['toolbox'];
-}
-
 // Originally, all this code was in document.load and the selectors were acting
 // on all elements (not bound by the container).  I added the container bound so we
 // can add new elements (such as during layout mode) and call this on only newly added elements.
@@ -293,15 +283,14 @@ function SetupElements(container) {
         this.innerHTML = this.value;
     });
 
-    var toolbox = getToolbox();
+    var toolbox = getToolboxFrameExports().ToolBox;
     var toolboxVisible = false;
     // toolbox might be undefined in unit testing?
    
     //TODO: how to properly access toolbox from here? this is yet another *#$!% global in our code, grrrr
     if (toolbox) {
-        //TODO: this is broken with the switch to proper TS
-        // toolboxVisible = toolbox.toolboxIsShowing();
-        //toolbox.configureElementsForTools(container);
+        toolboxVisible = toolbox.toolboxIsShowing();
+        toolbox.configureElementsForTools(container);
     }
 
     SetBookCopyrightAndLicenseButtonVisibility(container);

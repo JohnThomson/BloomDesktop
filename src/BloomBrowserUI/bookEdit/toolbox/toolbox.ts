@@ -4,7 +4,8 @@
 
 import 'jquery-ui/jquery-ui-1.10.3.custom.min.js';
 import '../../lib/jquery.i18n.custom';
-import "../../lib/jquery.onSafe"; 
+import "../../lib/jquery.onSafe";
+import {EditableDivUtils} from '../js/editableDivUtils';
 
 /**
  * The html code for a check mark character
@@ -28,8 +29,8 @@ export interface ITabModel {
 
 // Class that represents the whole toolbox. Gradually we will move more functionality in here.
 export class ToolBox {
-    toolboxIsShowing() { return (<HTMLInputElement>$(parent.window.document).find('#pure-toggle-right').get(0)).checked; }
-    configureElementsForTools(container: HTMLElement) {
+    static toolboxIsShowing() { return (<HTMLInputElement>$(parent.window.document).find('#pure-toggle-right').get(0)).checked; }
+    static configureElementsForTools(container: HTMLElement) {
         for (var i = 0; i < tabModels.length; i++) {
             tabModels[i].configureElements(container);
             // the toolbox itself handles keypresses in order to manage the process
@@ -192,7 +193,7 @@ function switchTool(newToolName: string)
 }
 
 function activateTool(newTool: ITabModel) {
-    if (newTool && toolbox.toolboxIsShowing()) {
+    if (newTool && ToolBox.toolboxIsShowing()) {
         // If we're activating this tool for the first time, restore its settings.
         if (!newTool.hasRestoredSettings) {
             newTool.hasRestoredSettings = true;
@@ -337,7 +338,7 @@ function doKeypressMarkup(): void {
 
         var atStart: boolean = myRange.endOffset === 0;
 
-        if (currentTool && toolbox.toolboxIsShowing()) currentTool.updateMarkup();
+        if (currentTool && ToolBox.toolboxIsShowing()) currentTool.updateMarkup();
 
         // Now we try to restore the selection at the specified position.
         EditableDivUtils.makeSelectionIn(active, offset, divBrCount, atStart);
@@ -395,7 +396,7 @@ function loadToolboxPanel(newContent, panelId) {
     toolboxElt.accordion('refresh');
 
     // if requested, open the panel that was just inserted
-    if (toolbox.toolboxIsShowing()) {
+    if (ToolBox.toolboxIsShowing()) {
         var id = tab.attr('id');
         var tabNumber = parseInt(id.substr(id.lastIndexOf('_')));
         toolboxElt.accordion('option', 'active', tabNumber); // must pass as integer

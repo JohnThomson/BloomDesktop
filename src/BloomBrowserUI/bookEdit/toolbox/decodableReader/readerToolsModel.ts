@@ -20,6 +20,7 @@ import {theOneLanguageDataInstance, theOneLibSynphony}  from './libSynphony/synp
 import SynphonyApi from './synphonyApi';
 import {DataWord,TextFragment} from './libSynphony/bloom_lib';
 import axios = require('axios');
+import {EditableDivUtils} from '../../js/editableDivUtils';
 
 var SortType = {
   alphabetic: "alphabetic",
@@ -70,7 +71,8 @@ export class ReaderToolsModel {
   maxAllowedWords: number = 10000;
 
   // remember words so we can update the counts real-time
-  bookPageWords = [];
+  // gets set to an object whose keys are page IDs and values are page text
+  bookPageWords = {};
 
   // BL-599: Speed up the decodable reader tool
   stageGraphemes = [];
@@ -604,7 +606,7 @@ export class ReaderToolsModel {
   }
 
   getPageWindow(): Window {
-      return (<HTMLIFrameElement>document.getElementById('page')).contentWindow;
+      return (<HTMLIFrameElement>parent.window.document.getElementById('page')).contentWindow;
   }
 
   /**
@@ -733,20 +735,18 @@ export class ReaderToolsModel {
 
   static getTextOfWholeBook(): void {
     axios.get<string>('/bloom/readers/getTextOfPages').then(result => {
-      var pageSource: string = result.data;
-      ReaderToolsModel.model.bookPageWords = JSON.parse(pageSource);
+      ReaderToolsModel.model.bookPageWords = result.data;
       ReaderToolsModel.model.doMarkup();
     });
   }
 
   displayBookTotals(): void {
 
-    if (this.bookPageWords.length === 0) {
-      ReaderToolsModel.getTextOfWholeBook();
-      return;
-    }
-
     var pageStrings = _.values(this.bookPageWords);
+    if (pageStrings.length === 0) {
+      ReaderToolsModel.getTextOfWholeBook();
+      return; // display will be updated as part of doMarkup when data is retrieved.
+    }
 
     ReaderToolsModel.updateActualCount(ReaderToolsModel.countWordsInBook(pageStrings), this.maxWordsPerBook(), 'actualWordCount');
     ReaderToolsModel.updateActualCount(ReaderToolsModel.maxWordsPerPageInBook(pageStrings), this.maxWordsPerPage(), 'actualWordsPerPageBook');
@@ -1025,8 +1025,9 @@ export class ReaderToolsModel {
     return words;
   }
 
+  // ReaderToolsModel is only loaded into the toolbox, so the toolbox window is simply the current window.
   static getToolboxWindow(): Window {
-      return (<HTMLIFrameElement>document.getElementById('toolbox')).contentWindow;
+      return window;
   }
 
   /**
@@ -1098,10 +1099,10 @@ export class ReaderToolsModel {
     // remember how many we are loading so we know when we're finished
     this.allowedWordFilesRemaining = stages.length;
 
-    stages.forEach(function(stage, index) {
+    stages.forEach((stage, index) => {
       if (stage.allowedWordsFile) {
           axios.get<string>('/bloom/readers/getAllowedWordsList?data=' + encodeURIComponent(stage.allowedWordsFile))
-              .then(result => this.setAllowedWordsListList(result.data, index));
+              .then(result => ReaderToolsModel.setAllowedWordsListList(result.data, index));
       }
     });
   }
