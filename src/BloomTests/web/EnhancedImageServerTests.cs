@@ -97,7 +97,7 @@ namespace BloomTests.web
 
 				// Verify
 				Assert.That(transaction.StatusCode, Is.EqualTo(404));
-				Assert.That(Logger.LogText, Contains.Substring("**EnhancedImageServer: File Missing: /non-existing-file.pdf"));
+				Assert.That(Logger.LogText, Contains.Substring("**TestImageServer: File Missing: /non-existing-file.pdf"));
 			}
 		}
 
@@ -154,7 +154,20 @@ namespace BloomTests.web
 
 		private EnhancedImageServer CreateImageServer()
 		{
-			return new EnhancedImageServer(new RuntimeImageProcessor(new BookRenamedEvent()), _fileLocator);
+			return new TestImageServer(new RuntimeImageProcessor(new BookRenamedEvent()), _fileLocator);
+		}
+
+		class TestImageServer : EnhancedImageServer
+		{
+			public TestImageServer(RuntimeImageProcessor cache, BloomFileLocator fileLocator) : base(cache, fileLocator)
+			{
+			}
+#if DEBUG
+			internal override void ReportMissingFile(string localPath, string path)
+			{
+				// ignore missing files in tests, even in debug
+			}
+#endif
 		}
 
 		private TempFile MakeTempImage()
