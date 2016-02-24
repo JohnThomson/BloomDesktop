@@ -101,7 +101,19 @@ namespace Bloom.Edit
 		internal void SetPeakLevel(string level)
 		{
 			if (this.IsHandleCreated)
-				Invoke((Action) (() =>_browser1.RunJavaScript("FrameExports.getToolboxFrameExports().TalkingBookModel.getTheOneAudioRecorder().setPeakLevel(" + level + ");")));
+			{
+				Invoke((Action) (() =>
+				{
+					try
+					{
+						_browser1.RunJavaScript("if (typeof(FrameExports) !=='undefined') {FrameExports.getToolboxFrameExports().setPeakLevel(" + level + ");}");
+					}
+					catch (GeckoException)
+					{
+						// Something sometimes goes wrong...perhaps we call it before the page has all the code loaded? Anyway if we can't set the level, too bad.
+					}
+				}));
+			}
 		}
 
 #if TooExpensive
@@ -864,7 +876,7 @@ namespace Bloom.Edit
 		/// </summary>
 		public void CleanHtmlAndCopyToPageDom()
 		{
-			RunJavaScript("FrameExports.getToolboxFrameExports().removeToolboxMarkup();");
+			RunJavaScript("if (typeof(FrameExports) !=='undefined') {FrameExports.getToolboxFrameExports().removeToolboxMarkup();}");
 			_browser1.ReadEditableAreasNow();
 		}
 
@@ -1170,14 +1182,14 @@ namespace Bloom.Edit
 			//_addPageDialogShowing = true;
 			var jsonTemplates = _model.GetAddPageArguments(false);
 			//if the dialog is already showing, it is up to this method we're calling to detect that and ignore our request
-			RunJavaScript("FrameExports.showAddPageDialog(" + jsonTemplates + ");");
+			RunJavaScript("if (typeof(FrameExports) !=='undefined') {FrameExports.showAddPageDialog(" + jsonTemplates + ");}");
 		}
 
 		internal void ShowChangeLayoutDialog(IPage page)
 		{
 			var jsonTemplates = _model.GetAddPageArguments(true, page);
 			//if the dialog is already showing, it is up to this method we're calling to detect that and ignore our request
-			RunJavaScript("FrameExports.showAddPageDialog(" + jsonTemplates + ");");
+			RunJavaScript("if (typeof(FrameExports) !=='undefined') {FrameExports.showAddPageDialog(" + jsonTemplates + ");}");
 		}
 	}
 }

@@ -26,6 +26,11 @@ export function undo() {
     ReaderToolsModel.model.undo();
 }
 
+export function setPeakLevel(level: string) {
+    var recorder = TalkingBookModel.getTheOneAudioRecorder();
+    if (recorder) recorder.setPeakLevel(level);
+}
+
 //this is currently inserted by c#. Enhance: get settings via ajax
 declare function GetToolboxSettings():any;
 

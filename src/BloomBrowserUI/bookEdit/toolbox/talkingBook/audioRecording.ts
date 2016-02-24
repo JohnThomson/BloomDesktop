@@ -347,6 +347,8 @@ export default class AudioRecording {
     // (reminiscent of leds in a hardware level meter) within the canvas in the
     //  top right of the bubble to indicate the current peak level.
     public setPeakLevel(level: string): void {
+        if (!this.levelCanvas)
+            return; // just in case C# calls this unexpectedly
         var ctx = this.levelCanvas.getContext("2d");
         // Erase the whole canvas
         var height = 15;

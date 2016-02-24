@@ -61,36 +61,38 @@ namespace Bloom
 		{
 			if (Xpcom.IsInitialized)
 				return;
+			Xpcom.Initialize("Firefox");
 
-			string xulRunnerPath = Environment.GetEnvironmentVariable("XULRUNNER");
-			if (!Directory.Exists(xulRunnerPath))
-			{
-				xulRunnerPath = Path.Combine(FileLocator.DirectoryOfApplicationOrSolution, "xulrunner");
-				if (!Directory.Exists(xulRunnerPath))
-				{
-					//if this is a programmer, go look in the lib directory
-					xulRunnerPath = Path.Combine(FileLocator.DirectoryOfApplicationOrSolution,
-						Path.Combine("lib", "xulrunner"));
+			// obsolete?
+			//string xulRunnerPath = Environment.GetEnvironmentVariable("XULRUNNER");
+			//if (!Directory.Exists(xulRunnerPath))
+			//{
+			//	xulRunnerPath = Path.Combine(FileLocator.DirectoryOfApplicationOrSolution, "xulrunner");
+			//	if (!Directory.Exists(xulRunnerPath))
+			//	{
+			//		//if this is a programmer, go look in the lib directory
+			//		xulRunnerPath = Path.Combine(FileLocator.DirectoryOfApplicationOrSolution,
+			//			Path.Combine("lib", "xulrunner"));
 
-					//on my build machine, I really like to have the dir labelled with the version.
-					//but it's a hassle to update all the other parts (installer, build machine) with this number,
-					//so we only use it if we don't find the unnumbered alternative.
-					if (!Directory.Exists(xulRunnerPath))
-					{
-						xulRunnerPath = Path.Combine(FileLocator.DirectoryOfApplicationOrSolution,
-							Path.Combine("lib", "xulrunner" + XulRunnerVersion));
-					}
+			//		//on my build machine, I really like to have the dir labelled with the version.
+			//		//but it's a hassle to update all the other parts (installer, build machine) with this number,
+			//		//so we only use it if we don't find the unnumbered alternative.
+			//		if (!Directory.Exists(xulRunnerPath))
+			//		{
+			//			xulRunnerPath = Path.Combine(FileLocator.DirectoryOfApplicationOrSolution,
+			//				Path.Combine("lib", "xulrunner" + XulRunnerVersion));
+			//		}
 
-					if (!Directory.Exists(xulRunnerPath))
-					{
-						throw new ConfigurationException(
-							"Can't find the directory where xulrunner (version {0}) is installed",
-							XulRunnerVersion);
-					}
-				}
-			}
+			//		if (!Directory.Exists(xulRunnerPath))
+			//		{
+			//			throw new ConfigurationException(
+			//				"Can't find the directory where xulrunner (version {0}) is installed",
+			//				XulRunnerVersion);
+			//		}
+			//	}
+			//}
 
-			Xpcom.Initialize(xulRunnerPath);
+			//Xpcom.Initialize(xulRunnerPath);
 
 			var errorsToHide = new List<string>
 			{
@@ -174,20 +176,20 @@ namespace Bloom
 			// while holding crtl. Code in bloomEditing.js provides a more controlled zoom of just the body.
 			GeckoPreferences.User["mousewheel.with_control.action"] = 0;
 
-			Application.ApplicationExit += OnApplicationExit;
+			//Application.ApplicationExit += OnApplicationExit;
 		}
 
-		private static void OnApplicationExit(object sender, EventArgs e)
-		{
-			// We come here iff we initialized Xpcom. In that case we want to call shutdown,
-			// otherwise the app might not exit properly.
-			if (XulRunnerShutdown != null)
-				XulRunnerShutdown(null, EventArgs.Empty);
+		//private static void OnApplicationExit(object sender, EventArgs e)
+		//{
+		//	// We come here iff we initialized Xpcom. In that case we want to call shutdown,
+		//	// otherwise the app might not exit properly.
+		//	if (XulRunnerShutdown != null)
+		//		XulRunnerShutdown(null, EventArgs.Empty);
 
-			if (Xpcom.IsInitialized)
-				Xpcom.Shutdown();
-			Application.ApplicationExit -= OnApplicationExit;
-		}
+		//	if (Xpcom.IsInitialized)
+		//		Xpcom.Shutdown();
+		//	Application.ApplicationExit -= OnApplicationExit;
+		//}
 
 		public Browser()
 		{
@@ -955,7 +957,7 @@ namespace Bloom
 			// Review JohnT: does this require integration with the NavigationIsolator?
 			if (_browser.Window != null) // BL-2313 two Alt-F4s in a row while changing a folder name can do this
 			{
-				using (var context = new AutoJSContext(_browser.Window.JSContext))
+				using (var context = new AutoJSContext(_browser.Window))
 				{
 					string result;
 					context.EvaluateScript(script, (nsISupports)_browser.Document.DomObject, out result);
