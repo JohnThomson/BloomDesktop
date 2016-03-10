@@ -890,7 +890,7 @@ namespace Bloom.Edit
 			var frame = _browser1.WebBrowser.Window.Document.GetElementById("page") as GeckoIFrameElement;
 			if (frame == null)
 				return null;
-			return frame.ContentDocument.Body;
+			return frame.ContentWindow.Document.GetElementsByTagName("body").First();
 		}
 
 		/// <summary>

@@ -371,6 +371,8 @@ namespace Bloom
 			// until we get past that, it's just annoying
 			GeckoPreferences.User["layout.spellcheckDefault"] = 0;
 
+			_browser.FrameEventsPropagateToMainWindow = true; // we want clicks in iframes to propagate all the way up to C#
+
 			RaiseGeckoReady();
 	   }
 

@@ -96,11 +96,13 @@
     <Reference Include="Fleck">
       <HintPath>..\..\packages\Fleck.0.12.0.39\lib\net40\Fleck.dll</HintPath>
     </Reference>
-    <Reference Include="Geckofx-Core">
-      <HintPath>..\..\packages\Geckofx45.45.0.7.0\lib\net35\Geckofx-Core.dll</HintPath>
+    <Reference Include="Geckofx-Core, Version=45.0.9.0, Culture=neutral, PublicKeyToken=3209ac31600d1857, processorArchitecture=x86">
+      <HintPath>..\..\packages\Geckofx45.45.0.9.0\lib\net40\Geckofx-Core.dll</HintPath>
+      <Private>True</Private>
     </Reference>
-    <Reference Include="Geckofx-Winforms">
-      <HintPath>..\..\packages\Geckofx45.45.0.7.0\lib\net35\Geckofx-Winforms.dll</HintPath>
+    <Reference Include="Geckofx-Winforms, Version=45.0.9.0, Culture=neutral, PublicKeyToken=3209ac31600d1857, processorArchitecture=MSIL">
+      <HintPath>..\..\packages\Geckofx45.45.0.9.0\lib\net40\Geckofx-Winforms.dll</HintPath>
+      <Private>True</Private>
     </Reference>
     <Reference Include="ICSharpCode.SharpZipLib, Version=0.86.0.518, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
@@ -1253,11 +1255,11 @@ copy /Y "$(SolutionDir)\lib\dotnet\Interop.Acrobat.dll" $(OutDir)
     <Copy SourceFiles="@(RemoteDebugFiles)" DestinationFolder="$(OutDir)/remoteDebugging" Condition="'$(Configuration)|$(Platform)' == 'Debug|x86'" />
     <Copy SourceFiles="@(GeckofxHtmlToPdf)" DestinationFolder="$(OutDir)" />
   </Target>
-  <Import Project="..\..\packages\Geckofx45.45.0.7.0\build\Geckofx45.targets" Condition="Exists('..\..\packages\Geckofx45.45.0.7.0\build\Geckofx45.targets')" />
+  <Import Project="..\..\packages\Geckofx45.45.0.9.0\build\Geckofx45.targets" Condition="Exists('..\..\packages\Geckofx45.45.0.9.0\build\Geckofx45.targets')" />
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
     <PropertyGroup>
       <ErrorText>This project references NuGet package(s) that are missing on this computer. Use NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
     </PropertyGroup>
-    <Error Condition="!Exists('..\..\packages\Geckofx45.45.0.7.0\build\Geckofx45.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\..\packages\Geckofx45.45.0.7.0\build\Geckofx45.targets'))" />
+    <Error Condition="!Exists('..\..\packages\Geckofx45.45.0.9.0\build\Geckofx45.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\..\packages\Geckofx45.45.0.9.0\build\Geckofx45.targets'))" />
   </Target>
 </Project>
