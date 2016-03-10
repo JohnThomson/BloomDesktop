@@ -1,7 +1,7 @@
-/// <reference path="../../bookEdit/sourceBubbles/BloomSourceBubbles.ts" />
+/// <reference path="./BloomSourceBubbles.ts" />
 ///<reference path="../../typings/bundledFromTSC.d.ts"/>
 
-import BloomSourceBubbles from "../../bookEdit/sourceBubbles/BloomSourceBubbles";
+import BloomSourceBubbles from "./BloomSourceBubbles";
 "use strict";
 
 describe("SourceBubbles", function () {
@@ -31,6 +31,7 @@ describe("SourceBubbles", function () {
     ].join("\n"));
     $('body').append(testHtml);
     var result = BloomSourceBubbles.MakeSourceTextDivForGroup($('body').find('#testTarget')[0]);
+    
     // English in test is vernacular, so no tab for it
     // Tok Pisin tab gets moved to first place, since it is currentCollectionLanguage2
     // French is second, since it is currentCollectionLanguage3

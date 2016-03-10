@@ -32,6 +32,7 @@ namespace Bloom.Publish
 		private EpubView _epubPreviewControl;
 		private Browser _epubPreviewBrowser;
 		private NavigationIsolator _isolator;
+		private bool _publishWithoutAudio = false; // True if the user has said to go ahead without audio
 
 		public delegate PublishView Factory();//autofac uses this
 
@@ -90,7 +91,12 @@ namespace Bloom.Publish
 
 			GeckoPreferences.Default["pdfjs.disabled"] = false;
 			SetupLocalization();
-			localizationChangedEvent.Subscribe(o=>SetupLocalization());
+			localizationChangedEvent.Subscribe(o =>
+			{
+				SetupLocalization();
+				UpdateLayoutChoiceLabels();
+				UpdateSaveButton();
+			});
 
 			// Make this extra box available to show when wanted.
 			_previewBox = new PictureBox();
@@ -133,10 +139,18 @@ namespace Bloom.Publish
 			LocalizeSuperToolTip(_epubRadio, "PublishTab.EpubRadio");
 		}
 
+		// Used by LocalizeSuperToolTip to remember original English keys
+		Dictionary<Control, string> _originalSuperToolTips = new Dictionary<Control, string>();
+
 		private void LocalizeSuperToolTip(Control controlThatHasSuperTooltipAttached, string l10nIdOfControl)
 		{
 			var tooltipinfo = _superToolTip.GetSuperStuff(controlThatHasSuperTooltipAttached);
-			var english = tooltipinfo.SuperToolTipInfo.BodyText;
+			string english;
+			if (!_originalSuperToolTips.TryGetValue(controlThatHasSuperTooltipAttached, out english))
+			{
+				english = tooltipinfo.SuperToolTipInfo.BodyText;
+				_originalSuperToolTips[controlThatHasSuperTooltipAttached] = english;
+			}
 			//enhance: GetLocalizingId didn't work: var l10nidForTooltip = _L10NSharpExtender.GetLocalizingId(controlThatHasSuperTooltipAttached) + ".tooltip";
 			var l10nidForTooltip = l10nIdOfControl + "-tooltip";
 			tooltipinfo.SuperToolTipInfo.BodyText = LocalizationManager.GetDynamicString("Bloom", l10nidForTooltip, english);
@@ -266,7 +280,7 @@ namespace Bloom.Publish
 		{
 			if (_model == null || _model.BookSelection.CurrentSelection==null)
 				return;
-			_epubRadio.Visible = Settings.Default.ShowExperimentalCommands;
+			_epubRadio.Visible = true;
 
 			_layoutChoices.Text = _model.PageLayout.ToString();
 
@@ -290,6 +304,13 @@ namespace Bloom.Publish
 			// or when uploading...and we do NOT want to update the check box when uploading temporarily changes the model.
 			//_showCropMarks.Checked = _model.ShowCropMarks;
 
+			UpdateLayoutChoiceLabels();
+		}
+
+		private void UpdateLayoutChoiceLabels()
+		{
+			if (_model == null || _model.BookSelection == null || _model.BookSelection.CurrentSelection == null)
+				return; // May get called when localization changes even though tab is not visible.
 			var layout = _model.PageLayout;
 			var layoutChoices = _model.BookSelection.CurrentSelection.GetLayoutChoices();
 			_layoutChoices.DropDownItems.Clear();
@@ -298,7 +319,7 @@ namespace Bloom.Publish
 			foreach (var lc in layoutChoices)
 			{
 				var text = LocalizationManager.GetDynamicString("Bloom", "LayoutChoices." + lc, lc.ToString());
-				ToolStripMenuItem item = (ToolStripMenuItem)_layoutChoices.DropDownItems.Add(text);
+				ToolStripMenuItem item = (ToolStripMenuItem) _layoutChoices.DropDownItems.Add(text);
 				item.Tag = lc;
 				item.Text = text;
 				item.Checked = lc.ToString() == layout.ToString();
@@ -308,7 +329,8 @@ namespace Bloom.Publish
 			_layoutChoices.Text = LocalizationManager.GetDynamicString("Bloom", "LayoutChoices." + layout, layout.ToString());
 
 			// "EditTab" because it is the same text.  No sense in having it listed twice.
-			_layoutChoices.ToolTipText = LocalizationManager.GetString("EditTab.PageSizeAndOrientation.Tooltip", "Choose a page size and orientation");
+			_layoutChoices.ToolTipText = LocalizationManager.GetString("EditTab.PageSizeAndOrientation.Tooltip",
+				"Choose a page size and orientation");
 		}
 
 		private void OnLayoutChosen(object sender, EventArgs e)
@@ -332,10 +354,6 @@ namespace Bloom.Publish
 			{
 				Controls.Remove(_epubPreviewControl);
 			}
-			if (displayMode == PublishModel.DisplayModes.Epub)
-				_saveButton.Text = LocalizationManager.GetString("PublishTab.SaveEpub", "&Save EPUB...");
-			else
-				_saveButton.Text = LocalizationManager.GetString("PublishTab.SaveButton", "&Save PDF...");
 			if (displayMode != PublishModel.DisplayModes.Upload && displayMode != PublishModel.DisplayModes.Epub)
 				_pdfViewer.Visible = true;
 			switch (displayMode)
@@ -407,6 +425,15 @@ namespace Bloom.Publish
 					break;
 				}
 			}
+			UpdateSaveButton();
+		}
+
+		private void UpdateSaveButton()
+		{
+			if (Controls.Contains(_epubPreviewControl))
+				_saveButton.Text = LocalizationManager.GetString("PublishTab.SaveEpub", "&Save EPUB...");
+			else
+				_saveButton.Text = LocalizationManager.GetString("PublishTab.SaveButton", "&Save PDF...");
 		}
 
 		private void SetupPublishControl()
@@ -433,7 +460,6 @@ namespace Bloom.Publish
 		private void SetupEpubControl()
 		{
 			Cursor =Cursors.WaitCursor;
-			_model.StageEpub();
 			if (_epubPreviewControl == null)
 			{
 				_epubPreviewControl = new EpubView();
@@ -453,7 +479,33 @@ namespace Bloom.Publish
 			_epubPreviewControl.BackColor = saveBackGround; // keep own color.
 			// Typically this control is dock.fill. It has to be in front of tableLayoutPanel1 (which is Left) for Fill to work.
 			_epubPreviewControl.BringToFront();
-			
+
+			_model.PrepareToStageEpub();
+			if (!_publishWithoutAudio && !LameEncoder.IsAvailable() && _model.IsCompressedAudioMissing)
+			{
+				var missingLameModulePath = BloomFileLocator.GetFileDistributedWithApplication(false, "BloomBrowserUI", "epub", "MissingLameModule.htm");
+				_epubPreviewBrowser.Navigate(missingLameModulePath, false);
+				_epubPreviewBrowser.OnBrowserClick += (sender, e) =>
+				{
+					var element = (GeckoHtmlElement)(e as DomEventArgs).Target.CastToGeckoElement();
+					if (element.Attributes["id"].NodeValue == "proceedWithoutAudio")
+					{
+						_publishWithoutAudio = true;
+						SetupEpubControlContent();
+					}
+				};
+			}
+			else
+			{
+				SetupEpubControlContent();
+			}
+			Cursor = Cursors.Default;
+		}
+
+		private void SetupEpubControlContent()
+		{
+			_model.StageEpub(_publishWithoutAudio);
+
 			var root = _model.BookSelection.CurrentSelection.GetFileLocator().LocateDirectoryWithThrow("Readium");
 			var tempFolder = Path.GetDirectoryName(_model.StagingDirectory);
 			// This is kludge. I hope it can be improved. To make a preview we currently need all the Readium
@@ -465,13 +517,23 @@ namespace Bloom.Publish
 			// if we modified it to have localhost: links to the JS and CSS. Haven't tried this yet. The current
 			// approach at least works.
 			DirectoryUtilities.CopyDirectoryContents(root, tempFolder);
-			
-			var previewHtmlTemplatePath = BloomFileLocator.GetBrowserFile("epub","bloomEpubPreview.htm");
-			var htmlContents = File.ReadAllText(previewHtmlTemplatePath).Replace("{EPUBFOLDER}", Path.GetFileName(_model.StagingDirectory));
+
+			var previewHtmlTemplatePath = BloomFileLocator.GetFileDistributedWithApplication(false, "BloomBrowserUI", "epub",
+				"bloomEpubPreview.html");
+
+			var audioSituationClass = "noAudioAvailable";
+			if(_publishWithoutAudio)
+				audioSituationClass = "haveAudioButNotMakingTalkingBook";
+			else if(_model.BookHasAudio)
+				audioSituationClass = "isTalkingBook";
+
+			var htmlContents = File.ReadAllText(previewHtmlTemplatePath)
+				.Replace("{EPUBFOLDER}", Path.GetFileName(_model.StagingDirectory))
+				.Replace("_AudioSituationClass_", audioSituationClass);
+
 			var previewHtmlInstancePath = Path.Combine(tempFolder, "bloomEpubPreview.htm");
 			File.WriteAllText(previewHtmlInstancePath, htmlContents);
 			_epubPreviewBrowser.Navigate(previewHtmlInstancePath.ToLocalhost(), false);
-			Cursor = Cursors.Default;
 		}
 
 		private void OnBookletRadioChanged(object sender, EventArgs e)

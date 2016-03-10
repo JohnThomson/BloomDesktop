@@ -23,7 +23,6 @@ function GetSettings() {
   return v;
 }
 
-
 //noinspection JSUnusedGlobalSymbols
 /**
  * Test substitute for RuntimeInformationInjector.cs AddUIDictionaryToDom()

@@ -78,6 +78,7 @@ function Cleanup() {
 
     bloomQtipUtils.cleanupBubbles(); // all 3 kinds!
 
+    $("*.resize-sensor").remove(); // from css-element-queries
     $("*.editTimeOnly").remove();
     $("*.dragHandle").remove();
     $("*").removeAttr("data-easytabs");
@@ -261,6 +262,22 @@ function IsInTranslationMode() {
     }
 }
 
+
+
+function getToolbox() {
+    // I (GJM) tried to define this is readerTools.ts, but it wasn't loaded if no reader tools were active!
+    var toolbox = parent.window.document.getElementById("toolbox") as HTMLIFrameElement;
+
+    // toolbox will be undefined during unit testing
+    if (toolbox) {
+        var result = toolbox.contentWindow['toolbox'];
+        // This is a way of checking that it really is our instance of Toolbox.
+        // Somehow at some point an HTML element can get assigned to that variable.
+        if (result && result.toolboxIsShowing) {return result;}
+    }
+    return null;
+}
+
 // Originally, all this code was in document.load and the selectors were acting
 // on all elements (not bound by the container).  I added the container bound so we
 // can add new elements (such as during layout mode) and call this on only newly added elements.
@@ -283,14 +300,15 @@ function SetupElements(container) {
         this.innerHTML = this.value;
     });
 
-    var toolbox = getToolboxFrameExports().ToolBox;
+    var toolbox = getToolbox();
     var toolboxVisible = false;
     // toolbox might be undefined in unit testing?
    
     //TODO: how to properly access toolbox from here? this is yet another *#$!% global in our code, grrrr
     if (toolbox) {
-        toolboxVisible = toolbox.toolboxIsShowing();
-        toolbox.configureElementsForTools(container);
+        //TODO: this is broken with the switch to proper TS
+        // toolboxVisible = toolbox.toolboxIsShowing();
+        //toolbox.configureElementsForTools(container);
     }
 
     SetBookCopyrightAndLicenseButtonVisibility(container);
@@ -570,7 +588,7 @@ function SetupElements(container) {
         }
         else {
             // already have a format cog, better make sure it's in the right place
-            editor.AdjustFormatButton($(this));
+            editor.AdjustFormatButton(this);
         }
     });
 
@@ -649,7 +667,13 @@ export function bootstrap(){
 
         // Map from ckeditor id strings to the div the ckeditor is wrapping.
         var mapCkeditDiv = new Object();
-
+        if ($(this).find('.bloom-imageContainer').length) {
+            // We would *like* to wire up ckeditor, but would need to get it to stop interfering 
+            // with the embedded image. See https://silbloom.myjetbrains.com/youtrack/issue/BL-3125.
+            // Currently this is only possible in the grade 4 Uganda books by SIL-LEAD.
+            // So for now, we just going to say that you don't get ckeditor inside fields that have an embedded image.
+            return;
+        }
         // attach ckeditor to the contenteditable="true" class="bloom-content1"
         // also to contenteditable="true" and class="bloom-content2" or class="bloom-content3"
         // but skip any element with class="bloom-userCannotModifyStyles"

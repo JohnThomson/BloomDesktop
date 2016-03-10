@@ -24,11 +24,6 @@ export default class TalkingBookModel implements ITabModel {
     name() { return 'talkingBook'; }
 
     hasRestoredSettings: boolean;
-
-    // Called by CSharp, and I'd rather not have C# aware of the AudioRecorder object.
-    static getTheOneAudioRecorder() {
-        return theOneAudioRecorder;
-    }
 }
 
 ToolBox.getTabModels().push(new TalkingBookModel());

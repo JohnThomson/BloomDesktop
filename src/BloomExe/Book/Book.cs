@@ -8,6 +8,7 @@ using System.Linq;
 using System.Net;
 using System.Text;
 using System.Web;
+using System.Windows.Forms;
 using System.Xml;
 using Bloom.Collection;
 using Bloom.Edit;
@@ -76,7 +77,7 @@ namespace Bloom.Book
 			BookRefreshEvent bookRefreshEvent)
 		{
 			BookInfo = info;
-			UserPrefs = UserPrefs.Load(Path.Combine(info.FolderPath, "book.userPrefs"));
+			UserPrefs = UserPrefs.LoadOrMakeNew(Path.Combine(info.FolderPath, "book.userPrefs"));
 
 			Guard.AgainstNull(storage,"storage");
 
@@ -107,17 +108,21 @@ namespace Bloom.Book
 				WriteLanguageDisplayStyleSheet(); //NB: if you try to do this on a file that's in program files, access will be denied
 				OurHtmlDom.AddStyleSheet(@"languageDisplay.css");
 			}
+
+			//if we're showing the user a shell/template book, pick a color for it 
+			//If it is editable, then we don't want to change to the next color, we
+			//want to use the color that we used for the sample shell/template we
+			//showed them previously.
+			if (!info.IsEditable)
+			{
+				Book.SelectNextCoverColor(); // we only increment when showing a template or shell
+				InitCoverColor();
+			}
+
 			// If it doesn't already have a cover color give it one.
 			if (OurHtmlDom.SafeSelectNodes("//head/style/text()[contains(., 'coverColor')]").Count == 0)
 			{
-				InitCoverColor();
-				if (info.IsEditable)
-				{
-					// make that cover color permanent!
-					// We don't use simply Save() because that does some extra work we don't need here
-					// and it causes at least one unit test to fail.
-					_storage.Save();
-				}
+				InitCoverColor(); // should use the same color as what they saw in the preview of the template/shell
 			}
 			FixBookIdAndLineageIfNeeded();
 			_storage.Dom.RemoveExtraBookTitles();
@@ -131,9 +136,14 @@ namespace Bloom.Book
 			UserPrefs.UpdateFileLocation(_storage.FolderPath);
 		}
 
-		public static Color NextBookColor()
+		/// <summary>
+		/// This just increments the color index so that the next book to be constructed that doesn't already have a color will use it
+		/// </summary>
+		public static void SelectNextCoverColor()
 		{
-			return CoverColors[_coverColorIndex++ % CoverColors.Length];
+			_coverColorIndex = _coverColorIndex+1;
+			if( _coverColorIndex >= CoverColors.Length)
+				_coverColorIndex = 0;
 		}
 
 		public CollectionSettings CollectionSettings { get { return _collectionSettings; }}
@@ -150,7 +160,7 @@ namespace Bloom.Book
 		/// If we have to just show title in one language, which should it be?
 		/// Note, this isn't going to be the best for choosing a filename, which we are more likely to want in a national language
 		/// </summary>
-		public string TitleBestForUserDisplay
+		public virtual string TitleBestForUserDisplay
 		{
 			get
 			{
@@ -163,12 +173,12 @@ namespace Bloom.Book
 					//to not show English names. But the order was also critical. So we want those old books to go ahead and use their
 					//English names.
 					var englishTitle = title.GetExactAlternative("en").ToLowerInvariant();
-					var SHRPMatches = new string[] {"p1", "p2", "p3", "p4", "SHRP"};
+					var SHRPMatches = new string[] { "p1", "p2", "p3", "p4", "SHRP" };
 					var couldBeOldStyleUgandaSHRPBook = SHRPMatches.Any(m => englishTitle.Contains(m.ToLowerInvariant()));
 
 					//if this book is one of the ones we're editing in our collection, it really
 					//needs a title in our main language, it would be confusing to show a title from some other langauge
-					if(!couldBeOldStyleUgandaSHRPBook && (IsEditable || title.Empty))
+					if (!couldBeOldStyleUgandaSHRPBook && (IsEditable || title.Empty))
 					{
 						display = LocalizationManager.GetString("CollectionTab.TitleMissing", "Title Missing",
 							"Shown as the thumbnail caption when the book doesn't have a title");
@@ -199,7 +209,7 @@ namespace Bloom.Book
 				}
 				// Handle both Windows and Linux line endings in case a file copied between the two
 				// ends up with the wrong one.
-				display = display.Replace("<br />", " ").Replace("\r\n"," ").Replace("\n", " ").Replace("  "," ");
+				display = display.Replace("<br />", " ").Replace("\r\n", " ").Replace("\n", " ").Replace("  ", " ");
 				display = RemoveXmlMarkup(display).Trim();
 				return display;
 			}
@@ -293,7 +303,7 @@ namespace Bloom.Book
 			//reviewslog: four lines are prompted by the qtip "too much recursion" error, which I got on certain pages. The qtip
 			//code in question says it is for when jquery-ui is not found. I "solved" this by loading jquery, jquery-ui,
 			//and finally qtip into the global space here
-			dom.AddJavascriptFile("jquerY.min.js".ToLocalhost());
+			dom.AddJavascriptFile("jquery.min.js".ToLocalhost());
 			dom.AddJavascriptFile("modified_libraries/jquery-ui/jquery-ui-1.10.3.custom.min.js".ToLocalhost());
 //			dom.AddJavascriptFile("lib/jquery.qtip.js".ToLocalhost());
 //			dom.AddJavascriptFile("lib/jquery.qtipSecondary.js".ToLocalhost());
@@ -498,7 +508,14 @@ namespace Bloom.Book
 			var builder = new StringBuilder();
 			builder.Append("<html><body style='font-family:arial,sans'>");
 
-			builder.AppendLine(_storage.GetBrokenBookRecommendationHtml());
+			if(_storage != null)
+			{
+				builder.AppendLine(_storage.GetBrokenBookRecommendationHtml());
+			}
+			else
+			{
+				builder.AppendLine(BookStorage.GenericBookProblemNotice);
+			}
 
 			builder.Append(((StringBuilderProgress) _log).Text);//review: is this ever non-empty?
 
@@ -783,6 +800,9 @@ namespace Bloom.Book
 			OurHtmlDom.MigrateEditableData(page, newPage, lineage.Replace(originalTemplateGuid, updateTo.Guid));
 		}
 
+		private object _updateLock = new object();
+		private bool _doingBookUpdate = false;
+
 		/// <summary>
 		/// As the bloom format evolves, including structure and classes and other attributes, this
 		/// makes changes to old books. It needs to be very fast, because currently we dont' have
@@ -797,54 +817,124 @@ namespace Bloom.Book
 		/// <param name="progress"></param>
 		private void BringBookUpToDate(HtmlDom bookDOM /* may be a 'preview' version*/, IProgress progress)
 		{
-			progress.WriteStatus("Updating Front/Back Matter...");
-			BringXmatterHtmlUpToDate(bookDOM);
-
-			progress.WriteStatus("Gathering Data...");
-			TranslationGroupManager.PrepareElementsInPageOrDocument(bookDOM.RawDom, _collectionSettings);
-			progress.WriteStatus("Updating Data...");
-
-			InjectStringListingActiveLanguagesOfBook();
-
-			//hack
-			if(bookDOM == OurHtmlDom)//we already have a data for this
+			if (Title.Contains("allowSharedUpdate"))
 			{
-				_bookData.SynchronizeDataItemsThroughoutDOM();
+				// Original version of this code that suffers BL_3166
+				progress.WriteStatus("Updating Front/Back Matter...");
+				BringXmatterHtmlUpToDate(bookDOM);
 
-				// I think we should only mess with tags if we are updating the book for real.
-				var oldTagsPath = Path.Combine(_storage.FolderPath, "tags.txt");
-				if (File.Exists(oldTagsPath))
+				progress.WriteStatus("Gathering Data...");
+				TranslationGroupManager.PrepareElementsInPageOrDocument(bookDOM.RawDom, _collectionSettings);
+				progress.WriteStatus("Updating Data...");
+
+				InjectStringListingActiveLanguagesOfBook();
+
+				//hack
+				if (bookDOM == OurHtmlDom) //we already have a data for this
 				{
-					ConvertTagsToMetaData(oldTagsPath, BookInfo);
-					File.Delete(oldTagsPath);
+					_bookData.SynchronizeDataItemsThroughoutDOM();
+
+					// I think we should only mess with tags if we are updating the book for real.
+					var oldTagsPath = Path.Combine(_storage.FolderPath, "tags.txt");
+					if (File.Exists(oldTagsPath))
+					{
+						ConvertTagsToMetaData(oldTagsPath, BookInfo);
+						File.Delete(oldTagsPath);
+					}
+				}
+				else //used for making a preview dom
+				{
+					var bd = new BookData(bookDOM, _collectionSettings, UpdateImageMetadataAttributes);
+					bd.SynchronizeDataItemsThroughoutDOM();
+				}
+				// get any license info into the json and restored in the replaced front matter.
+				BookCopyrightAndLicense.SetMetadata(GetLicenseMetadata(), bookDOM, FolderPath, CollectionSettings);
+
+				bookDOM.RemoveMetaElement("bloomBookLineage", () => BookInfo.BookLineage, val => BookInfo.BookLineage = val);
+				bookDOM.RemoveMetaElement("bookLineage", () => BookInfo.BookLineage, val => BookInfo.BookLineage = val);
+				// BookInfo will always have an ID, the constructor makes one even if there is no json file.
+				// To allow migration, pretend it has no ID if there is not yet a meta.json.
+				bookDOM.RemoveMetaElement("bloomBookId", () => (File.Exists(BookInfo.MetaDataPath) ? BookInfo.Id : null),
+					val => BookInfo.Id = val);
+
+				// Title should be replicated in json
+				//if (!string.IsNullOrWhiteSpace(Title)) // check just in case we somehow have more useful info in json.
+				//    bookDOM.Title = Title;
+				// Bit of a kludge, but there's no way to tell whether a boolean is already set in the JSON, so we fake that it is not,
+				// thus ensuring that if something is in the metadata we use it.
+				// If there is nothing there the default of true will survive.
+				bookDOM.RemoveMetaElement("SuitableForMakingVernacularBooks", () => null,
+					val => BookInfo.IsSuitableForVernacularLibrary = val == "yes" || val == "definitely");
+
+				UpdateTextsNewlyChangedToRequiresParagraph(bookDOM);
+
+				//we've removed and possible added pages, so our page cache is invalid
+				_pagesCache = null;
+			}
+			else
+			{
+				// New version that we hope prevents BL_3166
+				if (_doingBookUpdate)
+					MessageBox.Show("Caught Bloom doing two updates at once! Possible BL-3166 is being prevented");
+				lock (_updateLock)
+				{
+					_doingBookUpdate = true;
+					progress.WriteStatus("Updating Front/Back Matter...");
+					// Nothing in the update process should change the license info, so save what is current before we mess with
+					// anything (may fix BL-3166).
+					var licenseMetadata = GetLicenseMetadata();
+					BringXmatterHtmlUpToDate(bookDOM);
+
+					progress.WriteStatus("Gathering Data...");
+					TranslationGroupManager.PrepareElementsInPageOrDocument(bookDOM.RawDom, _collectionSettings);
+					progress.WriteStatus("Updating Data...");
+
+					InjectStringListingActiveLanguagesOfBook();
+
+					//hack
+					if (bookDOM == OurHtmlDom) //we already have a data for this
+					{
+						_bookData.SynchronizeDataItemsThroughoutDOM();
+
+						// I think we should only mess with tags if we are updating the book for real.
+						var oldTagsPath = Path.Combine(_storage.FolderPath, "tags.txt");
+						if (File.Exists(oldTagsPath))
+						{
+							ConvertTagsToMetaData(oldTagsPath, BookInfo);
+							File.Delete(oldTagsPath);
+						}
+					}
+					else //used for making a preview dom
+					{
+						var bd = new BookData(bookDOM, _collectionSettings, UpdateImageMetadataAttributes);
+						bd.SynchronizeDataItemsThroughoutDOM();
+					}
+					// get any license info into the json and restored in the replaced front matter.
+					BookCopyrightAndLicense.SetMetadata(licenseMetadata, bookDOM, FolderPath, CollectionSettings);
+
+					bookDOM.RemoveMetaElement("bloomBookLineage", () => BookInfo.BookLineage, val => BookInfo.BookLineage = val);
+					bookDOM.RemoveMetaElement("bookLineage", () => BookInfo.BookLineage, val => BookInfo.BookLineage = val);
+					// BookInfo will always have an ID, the constructor makes one even if there is no json file.
+					// To allow migration, pretend it has no ID if there is not yet a meta.json.
+					bookDOM.RemoveMetaElement("bloomBookId", () => (File.Exists(BookInfo.MetaDataPath) ? BookInfo.Id : null),
+						val => BookInfo.Id = val);
+
+					// Title should be replicated in json
+					//if (!string.IsNullOrWhiteSpace(Title)) // check just in case we somehow have more useful info in json.
+					//    bookDOM.Title = Title;
+					// Bit of a kludge, but there's no way to tell whether a boolean is already set in the JSON, so we fake that it is not,
+					// thus ensuring that if something is in the metadata we use it.
+					// If there is nothing there the default of true will survive.
+					bookDOM.RemoveMetaElement("SuitableForMakingVernacularBooks", () => null,
+						val => BookInfo.IsSuitableForVernacularLibrary = val == "yes" || val == "definitely");
+
+					UpdateTextsNewlyChangedToRequiresParagraph(bookDOM);
+
+					//we've removed and possible added pages, so our page cache is invalid
+					_pagesCache = null;
+					_doingBookUpdate = false;
 				}
 			}
-			else //used for making a preview dom
-			{
-				var bd = new BookData(bookDOM, _collectionSettings, UpdateImageMetadataAttributes);
-				bd.SynchronizeDataItemsThroughoutDOM();
-			}
-			// get any license info into the json
-			BookCopyrightAndLicense.SetMetadata(GetLicenseMetadata(), bookDOM, FolderPath, CollectionSettings);
-
-			bookDOM.RemoveMetaElement("bloomBookLineage", () => BookInfo.BookLineage, val => BookInfo.BookLineage = val);
-			bookDOM.RemoveMetaElement("bookLineage", () => BookInfo.BookLineage, val => BookInfo.BookLineage = val);
-			// BookInfo will always have an ID, the constructor makes one even if there is no json file.
-			// To allow migration, pretend it has no ID if there is not yet a meta.json.
-			bookDOM.RemoveMetaElement("bloomBookId", () => (File.Exists(BookInfo.MetaDataPath) ? BookInfo.Id : null), val => BookInfo.Id = val);
-
-			// Title should be replicated in json
-			//if (!string.IsNullOrWhiteSpace(Title)) // check just in case we somehow have more useful info in json.
-			//    bookDOM.Title = Title;
-			// Bit of a kludge, but there's no way to tell whether a boolean is already set in the JSON, so we fake that it is not,
-			// thus ensuring that if something is in the metadata we use it.
-			// If there is nothing there the default of true will survive.
-			bookDOM.RemoveMetaElement("SuitableForMakingVernacularBooks", () => null, val => BookInfo.IsSuitableForVernacularLibrary = val == "yes" || val == "definitely");
-
-			UpdateTextsNewlyChangedToRequiresParagraph(bookDOM);
-
-			//we've removed and possible added pages, so our page cache is invalid
-			_pagesCache = null;
 		}
 
 		private void BringXmatterHtmlUpToDate(HtmlDom bookDOM)
@@ -1247,7 +1337,7 @@ namespace Bloom.Book
 			get { return _bookData.MultilingualContentLanguage3; }
 		}
 
-		public BookInfo BookInfo { get; private set; }
+		public BookInfo BookInfo { get; protected set; }
 
 		public UserPrefs UserPrefs { get; private set; }
 
@@ -1362,7 +1452,7 @@ namespace Bloom.Book
 			} //todo add other ui languages
 		}
 
-		public bool HasAboutBookInformationToShow { get { return File.Exists(AboutBookMarkdownPath); } }
+		public bool HasAboutBookInformationToShow { get { return _storage!=null && File.Exists(AboutBookMarkdownPath); } }
 		public string AboutBookMarkdownPath  {
 			get
 			{
@@ -1370,12 +1460,9 @@ namespace Bloom.Book
 			}
 		}
 
-		// Assign the next of the standard cover colors which will be used consistently henceforth for this book
-		// (except when actually printing...for that we switch to white so the
-		// actual cardstock color comes through unchanged).
-		internal void InitCoverColor()
+		public void InitCoverColor()
 		{
-			AddCoverColor(this.OurHtmlDom, NextBookColor());
+			AddCoverColor(this.OurHtmlDom, CoverColors[_coverColorIndex]);
 		}
 
 		private void AddCoverColor(HtmlDom dom, Color coverColor)
@@ -1433,13 +1520,14 @@ namespace Bloom.Book
 			{
 				//review: we want to show titles for template books, numbers for other books.
 				//this here requires that titles be removed when the page is inserted, kind of a hack.
-				var caption = GetPageLabelFromDiv(pageNode);
+				string captionI18nId;
+				var caption = GetPageLabelFromDiv(pageNode, out captionI18nId);
 				if (String.IsNullOrEmpty(caption))
 				{
 					caption = "";
 						//we aren't keeping these up to date yet as thing move around, so.... (pageNumber + 1).ToString();
 				}
-				_pagesCache.Add(CreatePageDecriptor(pageNode, caption));
+				_pagesCache.Add(CreatePageDecriptor(pageNode, caption, captionI18nId));
 			}
 		}
 
@@ -1472,8 +1560,9 @@ namespace Bloom.Book
 
 			foreach (XmlElement pageNode in OurHtmlDom.SafeSelectNodes("//div[contains(@class,'bloom-page') and not(contains(@data-page, 'singleton'))]"))
 			{
-				var caption = GetPageLabelFromDiv(pageNode);
-				result.Add(GetPageIdFromDiv(pageNode), CreatePageDecriptor(pageNode, caption));
+				string captionI18nId;
+				var caption = GetPageLabelFromDiv(pageNode, out captionI18nId);
+				result.Add(GetPageIdFromDiv(pageNode), CreatePageDecriptor(pageNode, caption, captionI18nId));
 			}
 			return result;
 		}
@@ -1483,16 +1572,19 @@ namespace Bloom.Book
 			return pageNode.GetAttribute("id");
 		}
 
-		private static string GetPageLabelFromDiv(XmlElement pageNode)
+		private static string GetPageLabelFromDiv(XmlElement pageNode, out string captionI18nId)
 		{
 			var englishDiv = pageNode.SelectSingleNode("div[contains(@class,'pageLabel') and @lang='en']");
 			var caption = (englishDiv == null) ? String.Empty : englishDiv.InnerText;
+			captionI18nId = null;
+			if (englishDiv != null && englishDiv.Attributes["data-i18n"] != null)
+			captionI18nId = englishDiv.Attributes["data-i18n"].Value;
 			return caption;
 		}
 
-		private IPage CreatePageDecriptor(XmlElement pageNode, string caption)//, Action<Image> thumbNailReadyCallback)
+		private IPage CreatePageDecriptor(XmlElement pageNode, string caption, string captionI18nId)//, Action<Image> thumbNailReadyCallback)
 		{
-			return new Page(this, pageNode, caption,
+			return new Page(this, pageNode, caption, captionI18nId,
 				(page => FindPageDiv(page)));
 		}
 
@@ -1988,7 +2080,7 @@ namespace Bloom.Book
 			_storage.CheckBook(progress, pathToFolderOfReplacementImages);
 		}
 
-		public Layout GetLayout()
+		public virtual Layout GetLayout()
 		{
 			return Layout.FromDom(OurHtmlDom, Layout.A5Portrait);
 		}
@@ -2023,7 +2115,11 @@ namespace Bloom.Book
 
 		public Metadata GetLicenseMetadata()
 		{
-			return BookCopyrightAndLicense.GetMetadata(OurHtmlDom);
+			BookCopyrightAndLicense.LogMetdata(OurHtmlDom);
+			var result = BookCopyrightAndLicense.GetMetadata(OurHtmlDom);
+			Logger.WriteEvent("After");
+			BookCopyrightAndLicense.LogMetdata(OurHtmlDom);
+			return result;
 		}
 
 		public void SetMetadata(Metadata metadata)

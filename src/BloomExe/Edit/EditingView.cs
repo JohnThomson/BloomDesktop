@@ -98,23 +98,6 @@ namespace Bloom.Edit
 			}
 		}
 
-		internal void SetPeakLevel(string level)
-		{
-			if (this.IsHandleCreated)
-			{
-				Invoke((Action) (() =>
-				{
-					try
-					{
-						_browser1.RunJavaScript("if (typeof(FrameExports) !=='undefined') {FrameExports.getToolboxFrameExports().setPeakLevel(" + level + ");}");
-					}
-					catch (GeckoException)
-					{
-						// Something sometimes goes wrong...perhaps we call it before the page has all the code loaded? Anyway if we can't set the level, too bad.
-					}
-				}));
-			}
-		}
 
 #if TooExpensive
 		void OnBrowserFocusChanged(object sender, GeckoDomEventArgs e)
@@ -230,6 +213,7 @@ namespace Bloom.Edit
 				}
 
 				_model.SaveNow();//in case we were in this dialog already and made changes, which haven't found their way out to the Book yet
+				
 				var metadata = _model.CurrentBook.GetLicenseMetadata();
 
 				Logger.WriteEvent("Showing Metadata Editor Dialog");
@@ -238,6 +222,24 @@ namespace Bloom.Edit
 					dlg.ShowCreator = false;
 					if (DialogResult.OK == dlg.ShowDialog())
 					{
+						Logger.WriteEvent("For BL-3166 Investigation");
+						if(metadata.License == null)
+						{
+							Logger.WriteEvent("old LicenseUrl was null ");
+						}
+						else
+						{
+							Logger.WriteEvent("old LicenseUrl was " + metadata.License.Url);
+						}
+						if (dlg.Metadata.License == null)
+						{
+							Logger.WriteEvent("new LicenseUrl was null ");
+						}
+						else
+						{
+							Logger.WriteEvent("new LicenseUrl: " + dlg.Metadata.License.Url);
+						}
+							
 						_model.ChangeBookLicenseMetaData(dlg.Metadata);
 					}
 				}
@@ -346,10 +348,8 @@ namespace Bloom.Edit
 				HtmlDom domForCurrentPage = _model.GetXmlDocumentForCurrentPage();
 				var dom = _model.GetXmlDocumentForEditScreenWebPage();
 				_model.RemoveStandardEventListeners();
-				_browser1.Focus();
 				_browser1.Navigate(dom, domForCurrentPage);
 				_pageListView.Focus();
-				_browser1.Focus();
 				// So far, the most reliable way I've found to detect that the page is fully loaded and we can call
 				// initialize() is the ReadyStateChanged event (combined with checking that ReadyState is "complete").
 				// This works for most pages but not all...some (e.g., the credits page in a basic book) seem to just go on
@@ -372,6 +372,8 @@ namespace Bloom.Edit
 			_browser1.WebBrowser.DocumentCompleted -= WebBrowser_ReadyStateChanged;
 			ChangingPages = false;
 			_model.DocumentCompleted();
+			_browser1.Focus(); //fix BL-3078 No Initial Insertion Point when any page shown
+
 #if MEMORYCHECK
 			// Check memory for the benefit of developers.
 			SIL.Windows.Forms.Reporting.MemoryManagement.CheckMemory(true, "EditingView - page change completed", false);

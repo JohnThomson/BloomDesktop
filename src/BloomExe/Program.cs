@@ -7,6 +7,7 @@ using System.Runtime.ExceptionServices;
 using System.Threading;
 using System.Windows.Forms;
 using System.Collections.Generic;
+using System.Configuration;
 using Bloom.Collection;
 using Bloom.Collection.BloomPack;
 using Bloom.Properties;
@@ -25,6 +26,7 @@ using System.Linq;
 using Bloom.Edit;
 using Bloom.MiscUI;
 using SIL.Windows.Forms.HtmlBrowser;
+using SIL.WritingSystems;
 
 namespace Bloom
 {
@@ -61,6 +63,10 @@ namespace Bloom
 		[HandleProcessCorruptedStateExceptions]
 		static void Main(string[] args1)
 		{
+			Logger.Init();
+			CheckForCorruptUserConfig();
+
+			//Debug.Fail("Attach Now");
 			bool skipReleaseToken = false;
 			try
 			{
@@ -75,6 +81,7 @@ namespace Bloom
 				{
 					OldVersionCheck();
 				}
+
 				//bring in settings from any previous version
 				if (Settings.Default.NeedUpgrade)
 				{
@@ -125,6 +132,7 @@ namespace Bloom
 				propertiesThatGoWithEveryEvent.Remove("UserName");
 				propertiesThatGoWithEveryEvent.Remove("UserDomainName");
 				propertiesThatGoWithEveryEvent.Add("channel", ApplicationUpdateSupport.ChannelName);
+
 #if DEBUG
 				using (new DesktopAnalytics.Analytics("sje2fq26wnnk8c2kzflf", RegistrationDialog.GetAnalyticsUserInfo(), propertiesThatGoWithEveryEvent, true))
 #else
@@ -148,6 +156,7 @@ namespace Bloom
 						using (_applicationContainer = new ApplicationContainer())
 						{
 							SetUpLocalization();
+							
 							var path = args[0];
 							// This allows local links to bloom packs.
 							if (path.ToLowerInvariant().StartsWith("bloom://"))
@@ -179,7 +188,6 @@ namespace Bloom
 						using (_applicationContainer = new ApplicationContainer())
 						{
 							SetUpLocalization();
-							Logger.Init();
 							InstallerSupport.MakeBloomRegistryEntries();
 							Browser.SetUpXulRunner();
 							Browser.XulRunnerShutdown += OnXulRunnerShutdown;
@@ -202,8 +210,7 @@ namespace Bloom
 								{
 									var caption = LocalizationManager.GetString("Download.CompletedCaption", "Download complete");
 									var message = LocalizationManager.GetString("Download.Completed",
-										@"Your download ({0}) is complete. You can see it in the 'Books from BloomLibrary.org' section of your Collections. "
-										+ "If you don't seem to be in the middle of doing something, Bloom will select it for you.");
+										@"Your download ({0}) is complete. You can see it in the 'Books from BloomLibrary.org' section of your Collections.");
 									message = string.Format(message, Path.GetFileName(PathToBookDownloadedAtStartup));
 									MessageBox.Show(message, caption);
 								}
@@ -239,7 +246,6 @@ namespace Bloom
 						InstallerSupport.MakeBloomRegistryEntries();
 
 						SetUpLocalization();
-						Logger.Init();
 
 
 						if (args.Length == 1 && !IsInstallerLaunch(args))
@@ -357,6 +363,7 @@ namespace Bloom
 
 			Application.Idle += Startup;
 
+			Sldr.Initialize();
 			try
 			{
 				Application.Run();
@@ -368,7 +375,7 @@ namespace Bloom
 			}
 
 			Settings.Default.Save();
-
+			Sldr.Cleanup();
 			Logger.ShutDown();
 
 
@@ -405,6 +412,12 @@ namespace Bloom
 				_splashForm = SplashScreen.CreateAndShow();//warning: this does an ApplicationEvents()
 			else if (DateTime.Now > _earliestWeShouldCloseTheSplashScreen)
 			{
+				// BL-3192. If there is some modal in front (e.g. dropbox or screen DPI warnings), just wait. We'll keep getting called with these
+				// on idle warnings until it closes, then we can proceed.
+				if (_splashForm.Visible && !_splashForm.CanFocus)
+				{
+					return;
+				}
 				_alreadyHadSplashOnce = true;
 				Application.Idle -= CareForSplashScreenAtIdleTime;
 				CloseSplashScreenAndCheckRegistration();
@@ -1014,6 +1027,49 @@ Anyone looking specifically at our issue tracking system can read what you sent 
 		public static BloomFileLocator OptimizedFileLocator
 		{
 			get { return _projectContext.OptimizedFileLocator; }
+		}
+
+		private static void CheckForCorruptUserConfig()
+		{
+			//First check the user.config we get through using the palaso stuff.  This is the one in a folder with a name like Bloom/3.5.0.0
+			var palasoSettings = new SIL.Settings.CrossPlatformSettingsProvider();
+			palasoSettings.Initialize(null,null);
+			var error = palasoSettings.CheckForErrorsInSettingsFile();
+			if (error != null)
+			{
+				//Note: this is probably too early to do anything more complicated that writing to a log...
+				//Enhance: we might be able to do a MessageBox.Show(), but it would be better to save this error 
+				//and inform the user later when the UI can interact with them.
+				Logger.WriteEvent("error reading palaso user config: "+error.Message);
+				Logger.WriteEvent("Should self-heal");
+			}
+
+			//Now check the plain .net user.config we also use (sigh). This is the one in a folder with a name like Bloom.exe_Url_avygitvf1lws5lpjrmoh5j0ggsx4tkj0
+
+			//roughly from http://stackoverflow.com/questions/9572243/what-causes-user-config-to-empty-and-how-do-i-restore-without-restarting
+			try
+			{
+				ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.PerUserRoamingAndLocal);
+			}
+			catch (ConfigurationErrorsException ex)
+			{
+				Logger.WriteEvent("Cannot open user config file "+ex.Filename);
+				Logger.WriteEvent(ex.Message);
+
+				if (File.Exists(ex.Filename))
+				{
+					Logger.WriteEvent("Config file content:\n{0}", File.ReadAllText(ex.Filename));
+					Logger.WriteEvent("Deleting "+ ex.Filename);
+					File.Delete(ex.Filename);
+					Properties.Settings.Default.Upgrade();
+					// Properties.Settings.Default.Reload();
+					// you could optionally restart the app instead
+				}
+				else
+				{
+					Logger.WriteEvent("Config file {0} does not exist", ex.Filename);
+				}
+			}
 		}
 	}
 }

@@ -5,6 +5,7 @@ using System.Linq;
 using System.Net;
 using Bloom.Collection;
 using SIL.Extensions;
+using SIL.Reporting;
 using SIL.Text;
 using SIL.Windows.Forms.ClearShare;
 
@@ -27,6 +28,8 @@ namespace Bloom.Book
 			var metadata = new Metadata();
 			if (ShouldSetToDefaultLicense(dom))
 			{
+				Logger.WriteEvent("For BL-3166 Investigation: GetMetadata() setting to default license");
+
 				//start the book off with a simple cc-by
 				metadata.License = new CreativeCommonsLicense(true, true, CreativeCommonsLicense.DerivativeRules.Derivatives);
 				return metadata;
@@ -77,6 +80,12 @@ namespace Bloom.Book
 		{
 			dom.SetBookSetting("copyright","*",metadata.CopyrightNotice);
 			dom.SetBookSetting("licenseUrl","*",metadata.License.Url);
+			// This is for backwards compatibility. The book may have  licenseUrl in 'en' created by an earlier version of Bloom.
+			// For backwards compatibiilty, GetMetaData will read that if it doesn't find a '*' license first. So now that we're
+			// setting a licenseUrl for '*', we must make sure the 'en' one is gone, because if we're setting a non-CC license,
+			// the new URL will be empty and the '*' one will go away, possibly exposing the 'en' one to be used by mistake.
+			// See BL-3166.
+			dom.SetBookSetting("licenseUrl", "en", null);
 			string languageUsedForDescription;
 
 			//This part is unfortunate... the license description, which is always localized, doesn't belong in the datadiv; it
@@ -190,6 +199,14 @@ namespace Bloom.Book
 
 			//Enhance: this logic is perhaps overly restrictive?
 			return !hasCopyright && !hasLicenseUrl && !hasLicenseNotes;
+		}
+
+		public static void LogMetdata(HtmlDom dom)
+		{
+			Logger.WriteEvent("For BL-3166 Investigation");
+			Logger.WriteEvent("LicenseUrl: " + dom.GetBookSetting("licenseUrl"));
+			Logger.WriteEvent("LicenseNotes: " + dom.GetBookSetting("licenseNotes"));
+			Logger.WriteEvent("");
 		}
 	}
 }

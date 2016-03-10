@@ -116,7 +116,7 @@ namespace Bloom.web
 			}
 			catch (HttpListenerException error)
 			{
-				Logger.WriteEvent(error.Message);
+				Logger.WriteEvent("Here, file not found is actually what you get if the port is in use:" +error.Message);
 				if (!SIL.PlatformUtilities.Platform.IsWindows) throw;
 
 				//Note: we could as easily *remove* this, as it appears to only needed if there is a registration that is more specific than some other.
@@ -280,7 +280,8 @@ namespace Bloom.web
 						Logger.WriteEvent("At ServerBase: ListenerCallback(): stack=");
 						Logger.WriteEvent(error.StackTrace);
 #if DEBUG
-						throw;
+						//NB: "throw" here makes it impossible for even the programmer to continue and try to see how it happens
+						Debug.Fail("(Debug Only) "+error.Message);
 #endif
 					}
 				}

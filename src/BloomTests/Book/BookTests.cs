@@ -262,20 +262,6 @@ namespace BloomTests.Book
 			Assert.AreEqual("changed", vernacularTextNodesInStorage.Item(0).InnerText, "the value didn't get copied to  the storage dom");
 		 }
 
-		[Test]
-		public void GetEditableHtmlDomForPage_HasInjectedElementForEditTimeScript()
-		{
-			var book = CreateBook();
-			var dom = book.GetEditableHtmlDomForPage(book.GetPages().ToArray()[2]);
-			var scriptNodes = dom.SafeSelectNodes("//script");
-			// JohnT: as of 23 Feb 2016, there are eight
-			// None of these appears to be anything to do with an EditTimeScript (nor does this string occur elsewhere in our codebase).
-			// So this test may be simply obsolete.
-			Assert.AreEqual(8, scriptNodes.Count);
-			Assert.IsNotEmpty(scriptNodes[0].Attributes["src"].Value);
-			Assert.IsTrue(scriptNodes[0].Attributes["src"].Value.Contains(".js"));
-		}
-
 
 		[Test]
 		public void SetupPage_LanguageSettingsHaveChanged_LangAttributesUpdated()
