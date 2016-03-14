@@ -24,5 +24,5 @@ export function handleBookSettingCheckboxClick(clickedButton: any) {
 
 function bookSettingsFireCSharpEvent(eventName, eventData): void {
     var event = new MessageEvent(eventName, { 'bubbles': true, 'cancelable': true, 'data': eventData });
-    document.dispatchEvent(event);
+    top.document.dispatchEvent(event);
 }

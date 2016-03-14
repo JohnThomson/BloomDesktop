@@ -36,7 +36,7 @@ import axios = require("axios");
 export function fireCSharpEditEvent(eventName, eventData) {
 
     var event = new MessageEvent(eventName, {/*'view' : window,*/ 'bubbles' : true, 'cancelable' : true, 'data' : eventData});
-    document.dispatchEvent(event);
+    top.document.dispatchEvent(event);
 }
 
 export function GetDifferenceBetweenHeightAndParentHeight(jqueryNode) {

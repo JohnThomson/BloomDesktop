@@ -816,7 +816,7 @@ export default class AudioRecording {
         // not like this. It seems to work fine without it, and I don't know why we had it, so I am just
         // leaving it out.
         var event = new MessageEvent(eventName, {'bubbles': true, 'cancelable': true, 'data': eventData });
-        document.dispatchEvent(event);
+        top.document.dispatchEvent(event);
     }
     
     

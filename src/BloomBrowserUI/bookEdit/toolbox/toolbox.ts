@@ -49,7 +49,7 @@ export class ToolBox {
     static fireCSharpToolboxEvent(eventName: string, eventData: string) {
 
     var event = new MessageEvent(eventName, {'bubbles' : true, 'cancelable' : true, 'data' : eventData});
-    document.dispatchEvent(event);
+    top.document.dispatchEvent(event);
     }
 
     static getTabModels() { return tabModels;}
