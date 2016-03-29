@@ -761,7 +761,8 @@ namespace Bloom
 					var frameElement = _browser.Window.Document.GetElementById("page") as GeckoIFrameElement;
 					if (frameElement == null)
 						return;
-					contentDocument = frameElement.ContentDocument;
+					// contentDocument = frameElement.ContentDocument; unreliable in Gecko45
+					contentDocument = (GeckoDocument) frameElement.ContentWindow.Document; // TomH says this will always succeed
 				}
 				if (contentDocument == null)
 					return; // can this happen?

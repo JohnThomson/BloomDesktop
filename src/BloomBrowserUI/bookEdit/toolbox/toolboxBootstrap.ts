@@ -17,7 +17,6 @@ export {default as BloomHelp} from '../../BloomHelp';
 export {TalkingBookModel}; // one function is called by CSharp; also, exporting something from it gets it included in the bundle.
 export {LeveledReaderModel}; // just to make sure it gets included in the bundle (and adds an instance of itself to the collection in toolbox.ts)
 export {handleBookSettingCheckboxClick}; // called by click handler in jade; also, exporting something from it gets it included in the bundle.
-export {LeveledReaderModel} from './leveledReader/leveledReader'; // don't actually need to export, but forces it to be really included.
 export {ToolBox};
 
 export function canUndo() :boolean {
@@ -26,11 +25,6 @@ export function canUndo() :boolean {
 
 export function undo() {
     ReaderToolsModel.model.undo();
-}
-
-export function setPeakLevel(level: string) {
-    var recorder = TalkingBookModel.getTheOneAudioRecorder();
-    if (recorder) recorder.setPeakLevel(level);
 }
 
 //this is currently inserted by c#. Enhance: get settings via ajax
