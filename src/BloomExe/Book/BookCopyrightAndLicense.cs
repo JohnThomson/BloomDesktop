@@ -177,18 +177,37 @@ namespace Bloom.Book
 		{
 			var licenseImage = metadata.License.GetImage();
 			var imagePath = bookFolderPath.CombineForPath("license.png");
-			if (licenseImage != null)
+			// Don't try to overwrite the license image for a template book.  (See BL-3284.)
+			if (File.Exists(imagePath) && IsInstalledFile(imagePath))
+				return;
+			try
 			{
-				using (Stream fs = new FileStream(imagePath, FileMode.Create))
+				if(licenseImage != null)
 				{
-					licenseImage.Save(fs, ImageFormat.Png);
+					using(Stream fs = new FileStream(imagePath, FileMode.Create))
+					{
+						licenseImage.Save(fs, ImageFormat.Png);
+					}
+				}
+				else
+				{
+					if(File.Exists(imagePath))
+						File.Delete(imagePath);
 				}
 			}
-			else
+			catch(Exception error)
 			{
-				if (File.Exists(imagePath))
-					File.Delete(imagePath);
+				//BL-3227 Occasionally get The process cannot access the file '...\license.png' because it is being used by another process
+				NonFatalProblem.Report(ModalIf.Alpha, PassiveIf.All, "Could not update license image (BL-3227).", "Image was at" +imagePath, exception: error);
 			}
+		}
+
+		/// <summary>
+		/// Check whether this file was installed with Bloom (and likely to be read-only on Linux).
+		/// </summary>
+		private static bool IsInstalledFile(string filepath)
+		{
+			return filepath.Contains(ProjectContext.FactoryCollectionsDirectory);
 		}
 
 		private static bool ShouldSetToDefaultLicense(HtmlDom dom)
@@ -203,7 +222,6 @@ namespace Bloom.Book
 
 		public static void LogMetdata(HtmlDom dom)
 		{
-			Logger.WriteEvent("For BL-3166 Investigation");
 			Logger.WriteEvent("LicenseUrl: " + dom.GetBookSetting("licenseUrl"));
 			Logger.WriteEvent("LicenseNotes: " + dom.GetBookSetting("licenseNotes"));
 			Logger.WriteEvent("");

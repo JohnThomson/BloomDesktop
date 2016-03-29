@@ -1623,6 +1623,19 @@ namespace Bloom.Book
 			_pageSelection.SelectPage(newPage);
 			//_pageSelection.SelectPage(CreatePageDecriptor(newPageDiv, "should not show", _collectionSettings.Language1Iso639Code));
 
+			// If copied page references images, copy them.
+			foreach (var pathFromBook in BookStorage.GetImagePathsRelativeToBook(newPageDiv))
+			{
+				var path = Path.Combine(FolderPath, pathFromBook);
+				if (!File.Exists(path))
+				{
+					var fileName = Path.GetFileName(path);
+					var sourcePath = Path.Combine(templatePage.Book.FolderPath, fileName);
+					if (File.Exists(sourcePath))
+						File.Copy(sourcePath, path);
+				}
+			}
+
 			Save();
 			if (_pageListChangedEvent != null)
 				_pageListChangedEvent.Raise(null);
@@ -1653,6 +1666,14 @@ namespace Bloom.Book
 			if (currentPageIndex < 0)
 				return;
 
+			// If we copy audio markup, the new page will be linked to the SAME audio files,
+			// and the pages might well continue to share markup even when text on one of them
+			// is changed. If we WANT to copy the audio links, we need to do something like
+			// assigning a new guid each time a new recording is made, or at least if we
+			// find another sentence in the book sharing the same recording and with different
+			// text.
+			RemoveAudioMarkup(newpageDiv);
+
 			body.InsertAfter(newpageDiv, pages[currentPageIndex]);
 
 			ClearPagesCache();
@@ -1665,6 +1686,20 @@ namespace Bloom.Book
 			if (_pagesCache == null)
 				BuildPageCache();
 			_pageSelection.SelectPage(_pagesCache[currentPageIndex + 1]);
+		}
+
+		private static void RemoveAudioMarkup(XmlElement newpageDiv)
+		{
+			foreach (var span in newpageDiv.SafeSelectNodes(".//span[contains(@class,'audio-sentence')]").Cast<XmlElement>().ToList())
+			{
+				XmlNode after = span;
+				foreach (XmlNode child in span.ChildNodes)
+				{
+					span.ParentNode.InsertAfter(child, after);
+					after = child;
+				}
+				span.ParentNode.RemoveChild(span);
+			}
 		}
 
 		public void DeletePage(IPage page)
@@ -2115,10 +2150,10 @@ namespace Bloom.Book
 
 		public Metadata GetLicenseMetadata()
 		{
-			BookCopyrightAndLicense.LogMetdata(OurHtmlDom);
+			//BookCopyrightAndLicense.LogMetdata(OurHtmlDom);
 			var result = BookCopyrightAndLicense.GetMetadata(OurHtmlDom);
-			Logger.WriteEvent("After");
-			BookCopyrightAndLicense.LogMetdata(OurHtmlDom);
+			//Logger.WriteEvent("After");
+			//BookCopyrightAndLicense.LogMetdata(OurHtmlDom);
 			return result;
 		}
 

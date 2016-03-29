@@ -14,8 +14,18 @@ namespace Bloom
 	{
 		private readonly string _notEncoded;
 
+		/*	file: red & green, One + One
+			URL-in-query-portion encoded? red+%26+green, One+%2B+One
+			HTML/XML encoded: red &amp; green
+			HttpUtility.UrlPathEncode: red%20&%20green,   One%20+%20One
+		*/
+
+		/// <summary>
+		/// NOTE: Assumes '+' is literal. See BL-3259
+		/// </summary>
 		public static UrlPathString CreateFromUrlEncodedString(string encoded)
 		{
+			encoded = encoded.Replace("+", "%2B");
 			return new UrlPathString(HttpUtility.UrlDecode(encoded));
 		}
 
@@ -39,9 +49,34 @@ namespace Bloom
 			return new UrlPathString(unencoded);
 		}
 
+		/// <summary>
+		/// In these strings, "&" would be &amp;  space would just be " "
+		/// </summary>
+		public static UrlPathString CreateFromHtmlXmlEncodedString(string encoded)
+		{
+			return new UrlPathString(HttpUtility.HtmlDecode(encoded));
+		}
+
 		public string UrlEncoded
 		{
-			get { return HttpUtility.UrlPathEncode(_notEncoded); }
+			get
+			{
+				//HttpUtility.UrlEncode gives spaces as "+" which is only good for query strings, not @src attributes
+				//HttpUtility.UrlPathEncode, on the other hand, encodes % as %, when it we want %25.
+				//Neither seems right.  We have to do a hack either way.
+				//Since the docs ask you not to use UrlPathEncode, we'll use the other and hack it
+				string standInForSpace = "_SpAcE_";
+				//protect spaces from UrlEncode()
+				var x = _notEncoded.Replace(" ",standInForSpace);
+				x  = HttpUtility.UrlEncode(x);
+				//now do our own encoding for the protected space
+				return x.Replace(standInForSpace,"%20");
+			}
+		}
+
+		public string HtmlXmlEncoded
+		{
+			get { return HttpUtility.HtmlEncode(_notEncoded); }
 		}
 
 		public string NotEncoded
@@ -65,6 +100,7 @@ namespace Bloom
 
 		private UrlPathString(string notEncodedString)
 		{
+			Debug.Assert(!notEncodedString.Contains("&amp;"));
 			_notEncoded = notEncodedString;
 		}
 
@@ -107,5 +143,7 @@ namespace Bloom
 		{
 			return (_notEncoded != null ? _notEncoded.GetHashCode() : 0);
 		}
+
+
 	}
 }

@@ -30,10 +30,12 @@ namespace Bloom.Edit
 	/// It also delivers real time microphone peak level numbers over a WebSocket.
 	/// The client can be found at audioRecording.ts.
 	/// </summary>
-	public class AudioRecording
+	public class AudioRecording :IDisposable
 	{
 		private readonly BookSelection _bookSelection;
+#if !__MonoCS__
 		private AudioRecorder _recorder;
+#endif
 		BloomWebSocketServer _peakLevelWebSocketServer;
 		
 		/// <summary>
@@ -57,6 +59,7 @@ namespace Bloom.Edit
 		private  Timer _startRecordingTimer;
 
 		private double _previousLevel;
+		private bool _disposed;
 
 		// This is a bit of a kludge. The server needs to be able to retrieve the data from AudioDevicesJson.
 		// It would be quite messy to give the image server access to the EditingModel which owns the instance of AudioRecording.
@@ -212,6 +215,7 @@ namespace Bloom.Edit
 #endif
 		}
 
+#if !__MonoCS__
 		private void Recorder_Stopped(IAudioRecorder arg1, ErrorEventArgs arg2)
 		{
 			Recorder.Stopped -= Recorder_Stopped;
@@ -229,17 +233,18 @@ namespace Bloom.Edit
 			}
 
 			//We don't actually need the mp3 now, so let people play with recording even without LAME (previously it could crash BL-3159).
-			//We could put this off entirely until we make the epub.
+			//We could put this off entirely until we make the ePUB.
 			//I'm just gating this for now because maybe the thought was that it's better to do it a little at a time?
 			//That's fine so long as it doesn't make the UI unresponsive on slow machines.
 			if (LameEncoder.IsAvailable())
 			{
 				_mp3Encoder.Encode(PathToCurrentAudioSegment, PathToCurrentAudioSegment.Substring(0, PathToCurrentAudioSegment.Length - 4), new NullProgress());
 				// Note: we need to keep the .wav file as well as the mp3 one. The mp3 format (or alternative mp4)
-				// is required for epub. The wav file is a better permanent record of the recording; also,
+				// is required for ePUB. The wav file is a better permanent record of the recording; also,
 				// it is used for playback.
 			}
 		}
+#endif
 
 		private bool TestForTooShortAndSendFailIfSo(SimpleHandlerRequest request)
 		{
@@ -260,7 +265,7 @@ namespace Bloom.Edit
 		{
 #if __MonoCS__
 						MessageBox.Show("Recording does not yet work on Linux", "Cannot record");
-						return false;
+						return;
 #else
 			if(Recording)
 			{
@@ -383,7 +388,10 @@ namespace Bloom.Edit
 			{
 				try
 				{
+#if __MonoCS__
+#else
 					Recorder.Stop();
+#endif
 					Application.DoEvents();
 				}
 				catch (Exception)
@@ -526,5 +534,45 @@ namespace Bloom.Edit
 			}
 		}
 #endif
+
+		public virtual void Dispose()
+		{
+			Dispose(true);
+			GC.SuppressFinalize(this);
+		}
+
+		protected virtual void Dispose(bool disposing)
+		{
+			if (!_disposed)
+			{
+				if (disposing)
+				{
+					// dispose-only, i.e. non-finalizable logic
+#if __MonoCS__
+#else
+					if (_recorder != null)
+					{
+						_recorder.Dispose();
+						_recorder = null;
+					}
+#endif
+					if (_peakLevelWebSocketServer != null)
+					{
+						_peakLevelWebSocketServer.Dispose();
+						_peakLevelWebSocketServer = null;
+					}
+				}
+
+				// shared (dispose and finalizable) cleanup logic
+				_disposed = true;
+			}
+		}
+		~AudioRecording()
+		{
+			if (!_disposed)
+			{
+				NonFatalProblem.Report(ModalIf.Alpha,PassiveIf.Alpha,"AudioRecording was not disposed");
+			}
+		}
 	}
 }

@@ -10,7 +10,7 @@ namespace Bloom.Book
 	public class UserPrefs
 	{
 		private bool _loading = true;
-		private string _fileName;
+		private string _filePath;
 		private int _mostRecentPage;
 
 		private UserPrefs() {}
@@ -39,7 +39,7 @@ namespace Bloom.Book
 			}
 			if(userPrefs == null)
 				userPrefs = new UserPrefs();
-			userPrefs._fileName = fileName;
+			userPrefs._filePath = fileName;
 			userPrefs._loading = false;
 			return userPrefs;
 		}
@@ -50,7 +50,7 @@ namespace Bloom.Book
 		/// <param name="newDirectoryName"></param>
 		public void UpdateFileLocation(string newDirectoryName)
 		{
-			_fileName = Path.Combine(newDirectoryName, Path.GetFileName(_fileName));
+			_filePath = Path.Combine(newDirectoryName, Path.GetFileName(_filePath));
 		}
 
 		[JsonProperty("mostRecentPage")]
@@ -71,19 +71,27 @@ namespace Bloom.Book
 		{
 			// We're checking this because the deserialization routine calls the property setters which triggers a save. We don't
 			// want to save while loading.
-			if (_loading)
+			if(_loading)
 				return;
 			var prefs = JsonConvert.SerializeObject(this);
+
 			Debug.Assert(!string.IsNullOrWhiteSpace(prefs));
 
-			if (!string.IsNullOrWhiteSpace(prefs))
+			try
 			{
-				var temp = new SIL.IO.TempFileForSafeWriting(_fileName);
-				File.WriteAllText(temp.TempFilePath, prefs);
-				temp.WriteWasSuccessful();
+				if(!string.IsNullOrWhiteSpace(prefs))
+				{
+					var temp = new SIL.IO.TempFileForSafeWriting(_filePath);
+					File.WriteAllText(temp.TempFilePath, prefs);
+					temp.WriteWasSuccessful();
+				}
+			}
+			catch(Exception error)
+			{
+				//For https://silbloom.myjetbrains.com/youtrack/issue/BL-3222  we did a real fix for 3.6.
+				//But this will cover us for future errors here, which are not worth stopping the user from doing work.
+				NonFatalProblem.Report(ModalIf.Alpha, PassiveIf.All, "Problem saving book preferences", "book.userprefs could not be saved to " + _filePath, error);
 			}
 		}
 	}
-
-
 }
