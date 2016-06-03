@@ -155,7 +155,7 @@ export default class OverflowChecker {
           $box.addClass('overflow');
           theOneLocalizationManager.asyncGetText('EditTab.Overflow', 'This box has more text than will fit').done(overflowText => {
             $box.qtip({
-              content: '<img height="20" width="20" style="vertical-align:middle" src="/bloom/BloomBrowserUI/images/Attention.svg">' + overflowText,
+              content: '<img height="20" width="20" style="vertical-align:middle" src="/bloom/BloomBrowserUI/images/Warning.svg">' + overflowText,
               show: { event: 'mouseenter' },
               hide: { event: 'mouseleave' },
               position: { my: 'top right', at: 'right bottom' }
@@ -186,7 +186,7 @@ export default class OverflowChecker {
             $overflowingAncestor.addClass('childOverflowingThis');
             theOneLocalizationManager.asyncGetText('EditTab.OverflowContainer', 'A container on this page is overflowing').done(overflowText => {
               $overflowingAncestor.qtip({
-                content: '<img height="20" width="20" style="vertical-align:middle" src="/bloom/BloomBrowserUI/images/Attention.svg">' + overflowText,
+                content: '<img height="20" width="20" style="vertical-align:middle" src="/bloom/BloomBrowserUI/images/Warning.svg">' + overflowText,
                 show: { event: 'enterBorder' }, // nonstandard events triggered by mouse move in code below
                 hide: { event: 'leaveBorder' },
                 position: { my: 'top right', at: 'right bottom' }
