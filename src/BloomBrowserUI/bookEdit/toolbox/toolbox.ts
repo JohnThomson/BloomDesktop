@@ -357,7 +357,8 @@ function beginAddPanel(checkBoxId: string, panelId: string): Promise<void> {
             'decodableReaderTool': 'readers/decodableReader/decodableReaderToolboxPanel.html',
             'leveledReaderTool': 'readers/leveledReader/leveledReaderToolboxPanel.html',
             'bookSettingsTool': 'bookSettings/bookSettingsToolboxPanel.html',
-            'toolboxSettingsTool': 'toolboxSettingsTool/toolboxSettingsToolboxPanel.html'
+            'toolboxSettingsTool': 'toolboxSettingsTool/toolboxSettingsToolboxPanel.html',
+            'cartoonBubblesTool': 'cartoonBubbles/cartoonBubblesToolboxPanel.html'
         }
         return axios.get<any>("/bloom/bookEdit/toolbox/" + subpath[panelId]).then(result => {
             loadToolboxPanel(result.data, panelId);
@@ -489,6 +490,9 @@ function loadToolboxPanel(newContent, panelId) {
         var tabNumber = parseInt(id.substr(id.lastIndexOf('_')));
         toolboxElt.accordion('option', 'active', tabNumber); // must pass as integer
     }
+
+    // Any styles defined in the file should be inserted into our header
+    $("head").append(parts.filter("style"));
 }
 
 function showToolboxChanged(wasShowing: boolean): void {

@@ -65,8 +65,9 @@ namespace Bloom.Edit
 				case LeveledReaderTool.StaticToolId: return new LeveledReaderTool();
 				case TalkingBookTool.StaticToolId: return new TalkingBookTool();
 				case BookSettingsTool.StaticToolId: return new BookSettingsTool();
-			}
-			throw new ArgumentException("Unexpected tool name "+toolId);
+                case CartoonBubblesTool.StaticToolId: return new CartoonBubblesTool();
+            }
+            throw new ArgumentException("Unexpected tool name "+toolId);
 		}
 
 		/// <summary>

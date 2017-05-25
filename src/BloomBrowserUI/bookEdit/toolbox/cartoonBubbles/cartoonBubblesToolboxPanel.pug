@@ -1,0 +1,25 @@
+html
+	head
+		style.
+			.bloom-arrow {
+				position: relative;
+				width:100px;
+				height:40px;
+				margin-left:40px;
+				padding:15px;
+				background:#fff;
+				border-radius:10px;
+				cursor: move;}
+			.bloom-arrow:after {
+				content:"";
+				position:absolute;
+				top:30px;
+				left:-40px;
+				border-width:0 0 20px 40px; /* vary these values to change the angle of the vertex */
+				border-style:solid;
+				border-color:#fff transparent;
+			}
+	body
+		h3(data-panelId='cartoonBubblesTool', data-order='40', data-i18n='EditTab.Toolbox.CartoonBubbles.Heading') Cartoon Bubbles Tool
+		div(data-panelId='cartoonBubblesTool')
+			#prototype.bloom-arrow(draggable='true')
