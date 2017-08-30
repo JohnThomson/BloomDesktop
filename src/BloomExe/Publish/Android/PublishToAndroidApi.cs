@@ -102,6 +102,7 @@ namespace Bloom.Publish.Android
 #endif
 				_wifiPublisher.Stop();
 				SetState("stopped");
+				_webSocketServer.Send("disconnect", "");
 				request.Succeeded();
 			}, true);
 		}

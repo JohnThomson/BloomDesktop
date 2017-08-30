@@ -9,18 +9,25 @@ interface ComponentState {
 // Note that this component does not do localization; we expect the progress messages
 // to already be localized when they are sent over the websocket.
 export default class ProgressBox extends React.Component<{}, ComponentState> {
+    webSocket: WebSocket;
+    messageHandler: (event: any) => void;
     constructor(props) {
         super(props);
         let self = this;
         this.state = { progress: "" };
         //get progress messages from c#
-        this.getWebSocket().addEventListener("message", event => {
+        this.messageHandler = event => {
             var e = JSON.parse(event.data);
             if (e.id === "progress") {
                 self.setState({ progress: self.state.progress + "<br/>" + e.payload });
                 this.tryScrollToBottom();
+            } else if (e.id === "disconnect") {
+                console.log("removing progress listener");
+                this.webSocket.removeEventListener("message", this.messageHandler);
             }
-        });
+        };
+        this.webSocket = this.getWebSocket();
+        this.webSocket.addEventListener("message", this.messageHandler);
     }
 
     tryScrollToBottom() {

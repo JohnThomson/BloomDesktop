@@ -19,6 +19,7 @@ interface IComponentState {
 class AndroidPublishUI extends React.Component<IUILanguageAwareProps, IComponentState> {
     webSocket: WebSocket;
     isLinux: boolean;
+    messageHandler: (event: any) => void;
     constructor(props) {
         super(props);
 
@@ -32,12 +33,14 @@ class AndroidPublishUI extends React.Component<IUILanguageAwareProps, IComponent
         this.handleUpdateState = this.handleUpdateState.bind(this);
 
         this.webSocket = this.getWebSocket();
-        this.webSocket.addEventListener("message", event => {
+
+        this.messageHandler = event => {
             var e = JSON.parse(event.data);
             if (e.id === "publish/android/state") {
                 this.handleUpdateState(e.payload);
             }
-        });
+        };
+        this.webSocket.addEventListener("message", this.messageHandler);
 
         axios.get("/bloom/api/publish/android/method").then(result => {
             this.setState({ method: result.data });
@@ -52,11 +55,15 @@ class AndroidPublishUI extends React.Component<IUILanguageAwareProps, IComponent
     // componentWillUnmount will not get called in those cases.
     public componentWillUnmount() {
         this.componentCleanup();
-        window.removeEventListener("beforeunload", this.componentCleanup);
     }
 
     componentCleanup() {
+        console.log("posting cleanup");
         axios.post("/bloom/api/publish/android/cleanup");
+        window.removeEventListener("beforeunload", this.componentCleanup);
+        console.log("removing main listener and closing");
+        this.webSocket.removeEventListener("message", this.messageHandler);
+        this.webSocket.close();
     }
 
     handleUpdateState(s: string): void {
