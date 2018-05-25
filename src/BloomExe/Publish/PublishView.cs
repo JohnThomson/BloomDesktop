@@ -449,6 +449,8 @@ namespace Bloom.Publish
 			switch (displayMode)
 			{
 				case PublishModel.DisplayModes.WaitForUserToChooseSomething:
+					// _pdfViewer.Visible must be set true at least once momentarily for other display controls to get the right size.  (BL-6006)
+					_pdfViewer.Visible = true;
 					_printButton.Enabled = _saveButton.Enabled = false;
 					Cursor = Cursors.Default;
 					_workingIndicator.Visible = false;
@@ -552,7 +554,7 @@ namespace Bloom.Publish
 							// We get multiple DocumentCompleted events, e.g., when setting a new preview.
 							// Just do this the first time.
 							firstTime = false;
-							PublishEpubApi.ReportProgress(_webSocketServer,
+							PublishEpubApi.ReportProgress(this,_webSocketServer,
 								LocalizationManager.GetString("PublishTab.Epub.PreparingPreview", "Preparing Preview"));
 							_webSocketServer.Send("publish/epub/state", GetImageDescriptionState(_desiredImageDescriptionPublishing));
 						}
@@ -602,18 +604,15 @@ namespace Bloom.Publish
 					_needNewPreview = true;
 					return;
 				}
+				_previewWorker = new BackgroundWorker();
 			}
 
 			_model.EpubMaker.PublishImageDescriptions = newImageMode;
 			// clear the obsolete preview, if any; this also ensures that when the new one gets done,
 			// we will really be changing the src attr in the preview iframe so the display will update.
 			_webSocketServer.Send(kWebsocketPreviewId, "");
-			Invoke((Action) (() =>
-			{
-				PublishEpubApi.ReportProgress(_webSocketServer,
-					LocalizationManager.GetString("PublishTab.Epub.PreparingPreview", "Preparing Preview"));
-			}));
-			_previewWorker = new BackgroundWorker();
+			PublishEpubApi.ReportProgress(this, _webSocketServer,
+				LocalizationManager.GetString("PublishTab.Epub.PreparingPreview", "Preparing Preview"));
 			_previewWorker.RunWorkerCompleted += _previewWorker_RunWorkerCompleted;
 			_previewWorker.DoWork += (sender, args) =>
 			{
@@ -669,7 +668,7 @@ namespace Bloom.Publish
 			Invoke((Action) (() =>
 			{
 				_webSocketServer.Send(kWebsocketPreviewId, _previewSrc);
-				PublishEpubApi.ReportProgress(_webSocketServer,
+				PublishEpubApi.ReportProgress(this,_webSocketServer,
 					LocalizationManager.GetString("PublishTab.Epub.Done", "Done"));
 			}));
 		}
@@ -756,6 +755,14 @@ namespace Bloom.Publish
 		private void OnPublishRadioChanged(object sender, EventArgs e)
 		{
 			if (!_activated)
+				return;
+
+			// This method is triggered both by a radio button being set and by a button being cleared.
+			// Since we share the same method across all radio buttons, it gets called twice whenever
+			// a user changes the publish mode, once for the new mode being set and once for the old
+			// mode being cleared.  We want to respond only to the new mode being set.
+			// See https://silbloom.myjetbrains.com/youtrack/issue/BL-6009.
+			if (!((RadioButton)sender).Checked)
 				return;
 
 			// BL-625: One of the RadioButtons is now checked, so it is safe to re-enable AutoCheck.
