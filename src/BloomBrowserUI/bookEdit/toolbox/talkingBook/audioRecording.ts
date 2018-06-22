@@ -40,6 +40,29 @@
 //   (or maybe on the sentence they right-clicked?)
 // - Some more obvious affordance for launching the Record feature
 // - Extract content of bubble HTML into its own file?
+
+// Todo for BL-6147 drag end of sentence:
+// 1. Finish debugging the code that adjusts the sentence boundaries to correctly handle all the
+// special cases caused by breaking up and recombining child <strong>, <em> etc elements.
+// I've observed a problem where dragging into a following sentence that contains a <strong> element
+// moves the first letter correctly, but somehow leaves an empty <strong> at the paragraph level between the two sentences.
+// I've also observed text get visibly reordered when dragging back and forth through a <strong> element with nested <em>.
+// (My sheep book)
+// 2. Remove code that resets things to the sentence boundaries when we open the tool on a page.
+// 3. Enhance the "move to next" function to detect text that is not in a sentence span and make one when necessary.
+//  Note: it is tempting to instead enhance adjustEndOfCurrentAudioSpan to move text to a new span
+//  rather than to the root. But: it would be easy to end up with a lot of little sentence fragments, and we have
+//  to be careful about moving stuff into the following segment if it might invalidate a recording.
+//  Also, we somehow have to get an initial partition done, now that we can't redo it every time the tool opens. 
+// 4. Delete recordings that are no longer valid because of moving boundary.
+// 5. Handle Undo of drag-boundary changes, including restore of deleted files??
+// 6. Figure what to do if they drag the current sentence down to nothing, and implement.
+// 7. Make 'next' go the next unrecorded segment?? This was part of the original design,
+//   but I'm dubious...how will the user work through and review?
+// and possibly
+// 8. Improve whatever the PM doesn't like :-)
+// I think the most risky things...except perhaps 8...have been done; what remains will probably take about 2-6 days.
+// A UI review before going much further would be good. There is at least something to look at now.
 ///<reference path="../../../typings/jquery/jquery.d.ts"/>
 ///<reference path="../../../typings/toastr/toastr.d.ts"/>
 
@@ -49,6 +72,7 @@ import { theOneLibSynphony } from "../readers/libSynphony/synphony_lib";
 import { TextFragment } from "../readers/libSynphony/bloomSynphonyExtensions";
 import axios from "axios";
 import * as toastr from "toastr";
+import ToolboxToolReactAdaptor from "../toolboxToolReactAdaptor";
 
 enum Status {
     Disabled, // Can't use button now (e.g., Play when there is no recording)
@@ -68,6 +92,7 @@ export default class AudioRecording {
     private playingAll: boolean; // true during listen.
     private idOfCurrentSentence: string;
     private awaitingNewRecording: boolean;
+    private sentenceEndDraggingEnabled: boolean;
 
     listenerFunction: (MessageEvent) => void;
 
@@ -279,10 +304,106 @@ export default class AudioRecording {
         this.idOfCurrentSentence = changeTo.attr("id");
         this.updatePlayerStatus();
         this.changeStateAndSetExpected("record");
+        if (this.sentenceEndDraggingEnabled) {
+            this.setupSentenceEndDragging();
+        }
+    }
+
+    private setupSentenceEndDragging(): void {
+        var page = ToolboxToolReactAdaptor.getPage();
+        var currentAudioElts = page.getElementsByClassName("ui-audioCurrent");
+        if (!currentAudioElts.length) { return; } // weird, but can't do anything.
+        var current = currentAudioElts[0];
+        var markerCollection = page.getElementsByClassName("ui-sentenceDrag");
+        var marker: HTMLElement;
+        if (markerCollection.length) {
+            marker = markerCollection[0] as HTMLElement;
+        } else {
+            marker = page.ownerDocument.createElement("span");
+            marker.classList.add("ui-sentenceDrag");
+            page.ownerDocument.body.appendChild(marker);
+            this.dragMarker(marker);
+        }
+        var endSel = document.createRange();
+        var lastChild = this.getLastChild(current);
+        endSel.selectNodeContents(lastChild);
+        endSel.collapse(false);
+        var bounds = endSel.getBoundingClientRect();
+        const halfMarkerWidth = 8;
+        marker.style.left = (bounds.left - halfMarkerWidth) + "px";
+        marker.style.top = bounds.bottom + "px";
+    }
+
+    private dragMarker(marker: HTMLElement) {
+        var posX = 0;
+        var posY = 0;
+        var initLeft = 0;
+        var initTop = 0;
+        var doc = marker.ownerDocument;
+        marker.onmousedown = dragMouseDown;
+
+        function dragMouseDown(e) {
+            e.preventDefault();
+            posX = e.clientX;
+            posY = e.clientY;
+            initLeft = marker.offsetLeft;
+            initTop = marker.offsetTop;
+            // Todo: use addEventListener, just in case anything else wants to know about these events.
+            doc.onmouseup = closeDragElement;
+            doc.onmousemove = elementDrag;
+        }
+
+        function elementDrag(e) {
+            e.preventDefault();
+            // set the element's new position:
+            var newLeft = initLeft + e.clientX - posX;
+            var newTop = initTop + e.clientY - posY;
+            marker.style.left = (newLeft) + "px";
+            marker.style.top = (newTop) + "px";
+            var bounds = marker.getBoundingClientRect();
+            const caretPos = (<any>doc).caretPositionFromPoint(bounds.left + 8, bounds.top - 10);
+            if (caretPos) {
+                if (caretPos.offset === 0) {
+                    // occasionally we don't get a sensible position.
+                    // We wouldn't move the sentence anyway for this position.
+                    return;
+                }
+                // fix the marker to right below some text line.
+                var sel = doc.createRange();
+                sel.setEnd(caretPos.offsetNode, caretPos.offset);
+                sel.collapse(false);
+                const boundsT = sel.getBoundingClientRect();
+                //posY -= boundsT.bottom - newTop;
+                marker.style.top = boundsT.bottom + "px";
+
+                const startNode = caretPos.offsetNode;
+                AudioRecording.adjustEndOfCurrentAudioSpan(startNode, caretPos.offset);
+            } else {
+                //alert("caretPositionFromPoint not working");
+            }
+        }
+        function closeDragElement() {
+            // stop moving when mouse button is released:
+            // Todo: something to make it stop if the mouse is released outside the document?
+            // Todo: use removeEventListener
+            doc.onmouseup = null;
+            doc.onmousemove = null;
+        }
+    }
+
+    private getLastChild(root) {
+        if (root.childNodes.length === 0) {
+            return root;
+        }
+        return this.getLastChild(root.childNodes[root.childNodes.length - 1]);
     }
 
     private currentAudioUrl(id: string): string {
         return this.urlPrefix() + id + ".wav";
+    }
+
+    public enableDraggingSentenceEnd() {
+        this.sentenceEndDraggingEnabled = true;
     }
 
     private urlPrefix(): string {
@@ -1085,6 +1206,200 @@ export default class AudioRecording {
             data: eventData
         });
         top.document.dispatchEvent(event);
+    }
+
+    public static isChild(possibleParent: Element, child: Node): boolean {
+        let parent = child.parentElement;
+        while (parent) {
+            if (parent == possibleParent) {
+                return true;
+            }
+            parent = parent.parentElement;
+        }
+        return false;
+    }
+
+    // Given an element that is a child of the root, find the child of root
+    // which is a parent of (or is itself) child. Return its index in the
+    // children of root. If not a child of root, return -1.
+    public static indexOfChildOfParent(root: Element, child: Node): number {
+        for (var i = 0; i < root.childNodes.length; i++) {
+            var possibleParent = root.childNodes[i];
+            if (possibleParent == child ||
+                (possibleParent as Element) && AudioRecording.isChild(possibleParent as Element, child))
+                return i;
+        }
+        return -1;
+    }
+
+    // Given a position in the document, find the span with class ui-audioCurrent
+    // in the containing <p>.
+    // If the indicated position is after the end of that span,
+    // move the content from the end of the span to the indicated position into the span,
+    // preserving properties of child characters as indicated by any <spans> with classes
+    // (other than audio-sentence), <b>, <i>, <strong>, <sup>, <u>, and also moving any <br>
+    // elements intact.
+    // If the position is inside the span, shorten it to that position, moving the extra
+    // content up to the parent paragraph.
+    // The process, when applied in the middle of a nested element, will split it in two.
+    // To help reduce this, if the moved element has the same properties as its neighbor,
+    // we merge them.
+    public static adjustEndOfCurrentAudioSpan(childNode: Node, offset: number) {
+        var root = childNode.parentNode as Element;
+        while (root && root.tagName.toLowerCase() != 'p') {
+            root = root.parentNode as HTMLElement;
+        }
+        if (!root) return; // shouldn't happen; give up.
+        var selectedAudioSpan = root.getElementsByClassName("ui-audioCurrent")[0];
+        var indexOfSelected = AudioRecording.indexOfChildOfParent(root, selectedAudioSpan);
+        var indexOfChildContainer = AudioRecording.indexOfChildOfParent(root, childNode);
+        if (indexOfSelected == indexOfChildContainer) {
+            // Inside the selected audio span, truncate it
+            var insertBefore = selectedAudioSpan.nextSibling; // may be null, correctly means insert at end.
+            // move content of child after offset
+            const textToMove = childNode.textContent.substring(offset);
+            var newNode = document.createTextNode(textToMove);
+            var nodeToAppend: Node = newNode;
+            childNode.textContent = childNode.textContent.substring(0, offset);
+            let childNode2 = childNode;
+            while (childNode2.parentElement != selectedAudioSpan) {
+                // Make a new element similar to childNode2.parentElement,
+                // which will contain the current nodeToAppend followed by whatever comes
+                // after childNode2 in its parent.
+                var newElt = document.createElement(childNode2.parentElement.tagName);
+                for (var i = 0; i < childNode2.parentElement.attributes.length; i++) {
+                    var attr = childNode2.parentElement.attributes[i];
+                    newElt.setAttribute(attr.name, attr.value);
+                }
+                newElt.appendChild(nodeToAppend);
+                // Move any children after the target one
+                let moving = false;
+                for (var j = 0; j < childNode2.parentElement.childNodes.length;) {
+                    var node = childNode2.parentElement.childNodes[j];
+                    if (node == childNode2) {
+                        moving = true;
+                        j++;
+                        continue;
+                    }
+                    if (moving) {
+                        newElt.appendChild(node);
+                        // Do NOT increment j; the next node to move is now at that same index.
+                    } else {
+                        j++;
+                    }
+                }
+
+                nodeToAppend = newElt;
+                childNode2 = childNode2.parentElement;
+            }
+
+            selectedAudioSpan.parentNode.insertBefore(nodeToAppend, insertBefore);
+            this.consolidatePrevious(nodeToAppend.nextSibling);
+            // Move anything following the child to the parent
+            var indexOfChildInSentence = AudioRecording.indexOfChildOfParent(selectedAudioSpan, childNode);
+            while (indexOfChildInSentence + 1 < selectedAudioSpan.childNodes.length) {
+                root.insertBefore(selectedAudioSpan.childNodes[indexOfChildInSentence + 1], insertBefore);
+            }
+            root.normalize();
+        } else if (indexOfChildContainer > indexOfSelected) {
+            // after it: extend selected audio span
+            // Move any children of the root between the selected span and the one that has the child node
+            // entirely. (If some are audio sentences, move their contents and delete them.)
+            AudioRecording.moveChildNodes(indexOfSelected + 1, indexOfChildContainer, root, selectedAudioSpan);
+            indexOfChildContainer = indexOfSelected + 1; // may have moved.
+            var parentOfChild = root.childNodes[indexOfChildContainer] as HTMLElement;
+            var rootForMovingPartialChild = root;
+            if (parentOfChild && parentOfChild.classList && parentOfChild.classList.contains("audio-sentence")) {
+                // The limit child is in another audio-sentence.
+                // We will move stuff before it from that sentence to the selected one.
+                // todo: delete its recording.
+                AudioRecording.moveChildNodes(0, AudioRecording.indexOfChildOfParent(parentOfChild, childNode),
+                    parentOfChild, selectedAudioSpan);
+                rootForMovingPartialChild = parentOfChild;
+            }
+            // Finally move any text before offset in the child itself
+            var textToMove = childNode.textContent.substring(0, offset);
+            var newNode = document.createTextNode(textToMove);
+            var nodeToAppend: Node = newNode;
+            childNode.textContent = childNode.textContent.substring(offset);
+            let childNode2 = childNode; // loops through its parents.
+            while (childNode2.parentElement != rootForMovingPartialChild) {
+                // Make a new element similar to childNode2.parentElement,
+                // which will contain the current nodeToAppend preceded by whatever comes
+                // before childNode2 in its parent.
+                var newElt = document.createElement(childNode2.parentElement.tagName);
+                for (var i = 0; i < childNode2.parentElement.attributes.length; i++) {
+                    var attr = childNode2.parentElement.attributes[i];
+                    newElt.setAttribute(attr.name, attr.value);
+                }
+                // Move any children before the target one
+                for (var j = 0; j < childNode2.parentElement.childNodes.length; j++) {
+                    var node = childNode2.parentElement.childNodes[j];
+                    if (node == childNode2) { break; }
+                    newElt.appendChild(node);
+                }
+                newElt.appendChild(nodeToAppend);
+                nodeToAppend = newElt;
+                childNode2 = childNode2.parentElement;
+            }
+            selectedAudioSpan.appendChild(nodeToAppend);
+            AudioRecording.consolidatePrevious(nodeToAppend);
+            // If we removed all the content of an element remove the element itself.
+            if (parentOfChild && !parentOfChild.textContent) {
+                parentOfChild.parentElement.removeChild(parentOfChild);
+            }
+            root.normalize();
+        } // do nothing if BEFORE selected span.
+    }
+
+    // If there is an element before target in its parent and they are both elements
+    // with the same tag and attributes, merge them.
+    // Recursively merge the first child of target, if any.
+    // If target is an empty element just delete it.
+    private static consolidatePrevious(target: Node) {
+        if (!target) { return; }
+        var targetElt = target as HTMLElement;
+        if (targetElt && targetElt.tagName && target.childNodes.length == 0) {
+            targetElt.parentElement.removeChild(targetElt);
+        }
+        var previous = target.previousSibling;
+        if (!previous) { return; }
+
+        var previousElt = previous as HTMLElement;
+        if (!targetElt || !targetElt.tagName || !previous || targetElt.tagName != previousElt.tagName
+            || targetElt.attributes.length != previousElt.attributes.length) {
+            return;
+        }
+        for (var i = 0; i < targetElt.attributes.length; i++) {
+            var attrName = targetElt.attributes[i].name;
+            if (previousElt.getAttribute(name) != targetElt.getAttribute(name)) { return; }
+        }
+        var newTarget = targetElt.childNodes[0];
+        while (targetElt.childNodes.length) {
+            previousElt.appendChild(targetElt.childNodes[0]);
+        }
+        targetElt.parentElement.removeChild(targetElt);
+        this.consolidatePrevious(newTarget);
+    }
+
+    private static moveChildNodes(firstIndex: number, limIndex: number, src: Element, dest: Element) {
+        for (var i = firstIndex; i < limIndex; i++) {
+            // note that we use a constant index here, since each one appended is removed.
+            var nodeToMove = src.childNodes[firstIndex];
+            var eltToMove = nodeToMove as HTMLElement;
+            if (eltToMove && eltToMove.classList && eltToMove.classList.contains("audio-sentence")) {
+                // move its content and delete it
+                while (eltToMove.childNodes.length) {
+                    dest.appendChild(eltToMove.childNodes[0]);
+                }
+                eltToMove.parentElement.removeChild(eltToMove);
+                // todo: delete its audio
+            }
+            else {
+                // move it entirely.
+                dest.appendChild(nodeToMove);
+            }
+        }
     }
 
     // ------------ State Machine ----------------

@@ -27,6 +27,7 @@ export default class TalkingBookTool implements ITool {
     showTool() {
         this.showImageDescriptionsIfAny();
         AudioRecorder.initializeTalkingBookTool();
+        AudioRecorder.theOneAudioRecorder.enableDraggingSentenceEnd();
         AudioRecorder.theOneAudioRecorder.setupForRecording();
     }
 
