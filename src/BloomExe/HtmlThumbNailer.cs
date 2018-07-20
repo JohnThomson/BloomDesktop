@@ -374,7 +374,9 @@ namespace Bloom
 					// 100 and 200ms can be needed by a really large (24mp/14M) image. 200ms is based on hoping that
 					// most computers are no worse than five times slower than mine and accepting that the slower ones
 					// might have problems with huge images.
-					Thread.Sleep(200);
+					// Then the problem reared its ugly head again (BL-6257), even for smaller files (typically just over 2M)
+					// so trying doubling again.
+					Thread.Sleep(400);
 					//BUG (April 2013) found that the initial call to GetBitMap always had a zero width, leading to an exception which
 					//the user doesn't see and then all is well. So at the moment, we avoid the exception, and just leave with
 					//the placeholder thumbnail.
