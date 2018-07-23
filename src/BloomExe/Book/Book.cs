@@ -476,6 +476,7 @@ namespace Bloom.Book
 			var bookDom = GetBookDomWithStyleSheets("previewMode.css","thumbnail.css");
 
 			HideEverythingButFirstPageAndRemoveScripts(bookDom.RawDom);
+			bookDom.AddJavascriptFile("thumbnailerReadinessBundle.js");
 			return bookDom;
 		}
 

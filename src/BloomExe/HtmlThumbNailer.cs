@@ -249,7 +249,11 @@ namespace Bloom
 				}
 				if (_disposed || !navigationHappened)
 					return false;
-				if (!order.Done)
+				for (int i = 0; i < 50 && !ImagesAreLoaded(browser); i++)
+				{
+					Thread.Sleep(50);
+				}
+				if (!order.NavigationCompleted || !ImagesAreLoaded(browser))
 				{
 					Logger.WriteEvent("HtmlThumbNailer ({1}): Timed out on ({0})", order.ThumbNailFilePath,
 						Thread.CurrentThread.ManagedThreadId);
@@ -266,7 +270,7 @@ namespace Bloom
 			else
 			{
 				_isolator.Navigate(browser, filePath); // main thread, not async, we really need it now.
-				while (!order.Done)
+				while (!order.NavigationCompleted || !ImagesAreLoaded(browser))
 				{
 					Application.DoEvents();
 					Application.RaiseIdle(new EventArgs());		// needed on Linux to avoid deadlock starving browser navigation
@@ -348,7 +352,7 @@ namespace Bloom
 			thumbnail = null;
 			using (var temp = EnhancedImageServer.MakeSimulatedPageFileInBookFolder(order.Document, source:"thumb"))
 			{
-				order.Done = false;
+				order.NavigationCompleted = false;
 				browser.Tag = order;
 				if (!OpenTempFileInBrowser(browser, temp.Key))
 					return false;
@@ -376,7 +380,7 @@ namespace Bloom
 					// might have problems with huge images.
 					// Then the problem reared its ugly head again (BL-6257), even for smaller files (typically just over 2M)
 					// so trying doubling again.
-					Thread.Sleep(400);
+					Thread.Sleep(50);
 					//BUG (April 2013) found that the initial call to GetBitMap always had a zero width, leading to an exception which
 					//the user doesn't see and then all is well. So at the moment, we avoid the exception, and just leave with
 					//the placeholder thumbnail.
@@ -512,11 +516,35 @@ namespace Bloom
 			order.Callback(pendingThumbnail);
 		}
 
+		private bool ImagesAreLoaded(GeckoWebBrowser browser)
+		{
+			if (_syncControl.InvokeRequired)
+			{
+				return (bool) _syncControl.Invoke((Func<bool>) (() => ImagesAreLoadedUi(browser)));
+			}
+
+			return ImagesAreLoadedUi(browser);
+		}
+
+		private bool ImagesAreLoadedUi(GeckoWebBrowser browser)
+		{
+			// Should work but GeckoFx says it can't compile it
+			//return Browser.RunJavaScriptOn(browser,
+			//	       "Array.prototype.every.call(document.getElementsByTagName('img'), function(item) {return item.complete && item.naturalHeight !==0;}) ? 'true' : 'false'") ==
+			//       "true";
+			// Should work as long as there's exactly one image, but we still get images with blank content.
+			//return Browser.RunJavaScriptOn(browser,
+			//		   "(document.getElementsByTagName('img')[0].complete && document.getElementsByTagName('img')[0].naturalHeight !==0) ? 'true' : 'false'") ==
+			//	   "true";
+			return browser.Document.GetHtmlElementById("loadedIndicator") != null;
+		}
+
 		private void _browser_OnDocumentCompleted(object sender, GeckoDocumentCompletedEventArgs geckoDocumentCompletedEventArgs)
 		{
 			Debug.WriteLine("_browser_OnDocumentCompleted ({0})", Thread.CurrentThread.ManagedThreadId);
-			var order = (ThumbnailOrder)((GeckoWebBrowser)sender).Tag;
-			order.Done = true;
+			var geckoWebBrowser = (GeckoWebBrowser)sender;
+			var order = (ThumbnailOrder)geckoWebBrowser.Tag;
+			order.NavigationCompleted = true;
 			if (order.WaitHandle != null)
 				order.WaitHandle.Set();
 		}
@@ -747,7 +775,7 @@ namespace Bloom
 		public HtmlDom Document;
 		public string FolderForThumbNailCache;
 		public string Key;
-		public bool Done;
+		public bool NavigationCompleted;
 		public string ThumbNailFilePath;
 		public HtmlThumbNailer.ThumbnailOptions Options;
 		public AutoResetEvent WaitHandle;
