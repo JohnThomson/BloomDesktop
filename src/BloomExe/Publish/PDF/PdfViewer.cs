@@ -8,6 +8,7 @@ using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
+using Bloom.Properties;
 using Gecko;
 using Gecko.Interop;
 using L10NSharp;
@@ -43,14 +44,24 @@ namespace Bloom.Publish.PDF
 			InitializeComponent();
 
 #if !__MonoCS__
-			// In Windows we would prefer to use Acrobat to display and print PDFs. It avoids various bugs in
-			// PDFjs, such as BL-1177 (Andika sometimes lost when printing directly from Bloom),
-			// BL-1170 Printing stops after certain point
-			// BL-1037 PDFjs sometimes fails to display if use certain jpg images
-			// If Acrobat is not installed, it will fall back to PDFjs, and we hope for the best.
-			// Todo: we need a better solution in Linux, also. Ghostscript might provide something but
-			// has a GPL license.
-			_pdfViewerControl = new AdobeReaderControl();
+			// For some reason we already had this setting but weren't using it. AFAIK, there's as yet no way to set it true.
+			// So the following code, intended to be only enough for testing pdfjs, effectively disables the Adobe option
+			// completely.
+			if (Settings.Default.UseAdobePdfViewer)
+			{
+				// In Windows we would prefer to use Acrobat to display and print PDFs. It avoids various bugs in
+				// PDFjs, such as BL-1177 (Andika sometimes lost when printing directly from Bloom),
+				// BL-1170 Printing stops after certain point
+				// BL-1037 PDFjs sometimes fails to display if use certain jpg images
+				// If Acrobat is not installed, it will fall back to PDFjs, and we hope for the best.
+				// Todo: we need a better solution in Linux, also. Ghostscript might provide something but
+				// has a GPL license.
+				_pdfViewerControl = new AdobeReaderControl();
+			}
+			else
+			{
+				_pdfViewerControl = new GeckoWebBrowser();
+			}
 #else
 			_pdfViewerControl = new GeckoWebBrowser();
 #endif
@@ -93,67 +104,77 @@ namespace Bloom.Publish.PDF
 		{
 			_pdfPath = pdfFile;
 #if !__MonoCS__
-			var arc = _pdfViewerControl as AdobeReaderControl;
-			if (arc != null) // We haven't yet had a problem displaying with Acrobat...
+			if (Settings.Default.UseAdobePdfViewer)
 			{
-				if (arc.ShowPdf(pdfFile))
-					return true; // success using acrobat
-				// Acrobat not working (probably not installed). Switch to using Gecko to display PDF.
-				UpdatePdfViewer(new GeckoWebBrowser());
-				// and continue to show it using that.
+				var arc = _pdfViewerControl as AdobeReaderControl;
+				if (arc != null) // We haven't yet had a problem displaying with Acrobat...
+				{
+					if (arc.ShowPdf(pdfFile))
+						return true; // success using acrobat
+					// Acrobat not working (probably not installed). Switch to using Gecko to display PDF.
+					UpdatePdfViewer(new GeckoWebBrowser());
+					// and continue to show it using that.
+				}
 			}
-#endif
-			// Escaping the filename twice for characters like # is needed in order to get the
-			// pdf filename through Geckofx/xulrunner to our local server on Linux.  This is to
-			// prevent the filename from being cut short at the # character.  As far as I can
-			// tell, Linux xulrunner strips one level of escaping on input, then before passing
-			// the query on to the localhost server it truncates the query portion at the first
-			// # it sees.  The localhost processor expects one level of encoding, and we deal
-			// with having a # in the query (file path) there without any problem.  You may
-			// regard this double escaping as a hack to get around the Linux xulrunner which
-			// behaves differently than the Windows xulrunner.  It is an exception to the rule
-			// of matching EscapeCharsForHttp() with UnescapeCharsForHttp().  See a comment in
-			// https://jira.sil.org/browse/BL-951 for a description of the buggy program
-			// behavior without this hack.
-			var file = pdfFile;
-			if (SIL.PlatformUtilities.Platform.IsUnix)
-				file = file.EscapeCharsForHttp().EscapeCharsForHttp();
-			var url = string.Format("{0}{1}?file=/bloom/{2}",
-				Api.BloomServer.ServerUrlWithBloomPrefixEndingInSlash,
-				FileLocationUtilities.GetFileDistributedWithApplication("pdf/web/viewer.html"),
-				file);
-
-			var browser = ((GeckoWebBrowser)_pdfViewerControl);
-			browser.Navigate(url);
-			browser.DocumentCompleted += (sender, args) =>
+			else
 			{
-				// We want to suppress several of the buttons that the control normally shows.
-				// It's nice if we don't have to modify the html and related files, because they are unzipped from a package we install
-				// from a source I'm not sure we control, and installed into a directory we can't modify at runtime.
-				// A workaround is to tweak the stylesheet to hide them. The actual buttons (and two menu items) are easily
-				// hidden by ID.
-				// Unfortunately we're getting rid of a complete group in the pull-down menu, which leaves an ugly pair of
-				// adjacent separators. And the separators don't have IDs so we can't easily select just one to hide.
-				// Fortunately there are no other divs in the parent (besides the separator) so we just hide the second one.
-				// This is unfortunately rather fragile and may not do exactly what we want if the viewer.html file
-				// defining the pdfjs viewer changes.
-				GeckoStyleSheet stylesheet = browser.Document.StyleSheets.First();
-				stylesheet.CssRules.Add("#toolbarViewerRight, #viewOutline, #viewAttachments, #viewThumbnail, #viewFind {display: none}");
-				stylesheet.CssRules.Add("#previous, #next, #pageNumberLabel, #pageNumber, #numPages {display: none}");
-				stylesheet.CssRules.Add("#toolbarViewerLeft .splitToolbarButtonSeparator {display: none}");
+#endif
+				// Escaping the filename twice for characters like # is needed in order to get the
+				// pdf filename through Geckofx/xulrunner to our local server on Linux.  This is to
+				// prevent the filename from being cut short at the # character.  As far as I can
+				// tell, Linux xulrunner strips one level of escaping on input, then before passing
+				// the query on to the localhost server it truncates the query portion at the first
+				// # it sees.  The localhost processor expects one level of encoding, and we deal
+				// with having a # in the query (file path) there without any problem.  You may
+				// regard this double escaping as a hack to get around the Linux xulrunner which
+				// behaves differently than the Windows xulrunner.  It is an exception to the rule
+				// of matching EscapeCharsForHttp() with UnescapeCharsForHttp().  See a comment in
+				// https://jira.sil.org/browse/BL-951 for a description of the buggy program
+				// behavior without this hack.
+				var file = pdfFile;
+				if (SIL.PlatformUtilities.Platform.IsUnix)
+					file = file.EscapeCharsForHttp().EscapeCharsForHttp();
+				var url = string.Format("{0}{1}?file=/bloom/{2}",
+					Api.BloomServer.ServerUrlWithBloomPrefixEndingInSlash,
+					FileLocationUtilities.GetFileDistributedWithApplication("pdfjs/web/viewer.html"),
+					file);
+
+				var browser = ((GeckoWebBrowser) _pdfViewerControl);
+				browser.Navigate(url);
+				browser.DocumentCompleted += (sender, args) =>
+				{
+					// We want to suppress several of the buttons that the control normally shows.
+					// It's nice if we don't have to modify the html and related files, because they are unzipped from a package we install
+					// from a source I'm not sure we control, and installed into a directory we can't modify at runtime.
+					// A workaround is to tweak the stylesheet to hide them. The actual buttons (and two menu items) are easily
+					// hidden by ID.
+					// Unfortunately we're getting rid of a complete group in the pull-down menu, which leaves an ugly pair of
+					// adjacent separators. And the separators don't have IDs so we can't easily select just one to hide.
+					// Fortunately there are no other divs in the parent (besides the separator) so we just hide the second one.
+					// This is unfortunately rather fragile and may not do exactly what we want if the viewer.html file
+					// defining the pdfjs viewer changes.
+					GeckoStyleSheet stylesheet = browser.Document.StyleSheets.First();
+					stylesheet.CssRules.Add(
+						"#toolbarViewerRight, #viewOutline, #viewAttachments, #viewThumbnail, #viewFind {display: none}");
+					stylesheet.CssRules.Add("#previous, #next, #pageNumberLabel, #pageNumber, #numPages {display: none}");
+					stylesheet.CssRules.Add("#toolbarViewerLeft .splitToolbarButtonSeparator {display: none}");
 
 #if !__MonoCS__
-				if (!_haveShownAdobeReaderRecommendation)
-				{
-					_haveShownAdobeReaderRecommendation = true;
-					var message = LocalizationManager.GetString("PublishTab.Notifications.AdobeReaderRecommendation",
-						"This PDF viewer can be improved by installing the free Adobe Reader on this computer.");
-					RunJavaScript("toastr.remove();" +
-								  "toastr.options = { 'positionClass': 'toast-bottom-right','timeOut': '15000'};" +
-								  "toastr['info']('" + message + "')");
-				}
+					if (!_haveShownAdobeReaderRecommendation)
+					{
+						_haveShownAdobeReaderRecommendation = true;
+						var message = LocalizationManager.GetString("PublishTab.Notifications.AdobeReaderRecommendation",
+							"This PDF viewer can be improved by installing the free Adobe Reader on this computer.");
+						RunJavaScript("toastr.remove();" +
+						              "toastr.options = { 'positionClass': 'toast-bottom-right','timeOut': '15000'};" +
+						              "toastr['info']('" + message + "')");
+					}
 #endif
-			};
+				};
+#if !__MonoCS__
+			} // to match else above.
+
+#endif
 			return true;
 		}
 
@@ -187,8 +208,11 @@ namespace Bloom.Publish.PDF
 			}
 
 			// PDFjs printing has proved unreliable, so GhostScript is preferable even on Windows.
-			if (TryGhostcriptPrint())
-				return;
+			// But for now we're trying pdfjs again. If it proves unreliable, we may have to re-enable
+			// the process of trying ghostscript first, or make sure it gets installed with Bloom,
+			// or go back to Acrobat...
+			//if (TryGhostcriptPrint())
+			//	return;
 
 			var browser = ((GeckoWebBrowser)_pdfViewerControl);
 			using (AutoJSContext context = new AutoJSContext(browser.Window))
