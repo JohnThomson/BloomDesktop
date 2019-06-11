@@ -500,7 +500,7 @@ namespace Bloom.Book
 		/// </summary>
 		/// <param name="element"></param>
 		/// <returns></returns>
-		internal static List<string> GetImagePathsRelativeToBook(XmlElement element)
+		public static List<string> GetImagePathsRelativeToBook(XmlElement element)
 		{
 			return (from XmlElement img in HtmlDom.SelectChildImgAndBackgroundImageElements(element)
 				select HtmlDom.GetImageElementUrl(img).PathOnly.NotEncoded).Distinct().ToList();
@@ -592,7 +592,13 @@ namespace Bloom.Book
 		/// /// <param name="includeSplitTextBoxAudio">True if the function should also return the filenames for text boxes which are not audio sentences but contain sub-elements which are (e.g. after a hard split of whole-text-box audio)</param>
 		public IEnumerable<string> GetNarrationAudioFileNamesReferencedInBook(bool includeWav, bool includeSplitTextBoxAudio)
 		{
-			var narrationElements = HtmlDom.SelectChildNarrationAudioElements(Dom.RawDom.DocumentElement, includeSplitTextBoxAudio);
+			return GetNarrationAudioFileNamesReferencedInBook(Dom.RawDom.DocumentElement, includeWav, includeSplitTextBoxAudio);
+		}
+
+
+		public static IEnumerable<string> GetNarrationAudioFileNamesReferencedInBook(XmlElement root, bool includeWav, bool includeSplitTextBoxAudio)
+		{
+			var narrationElements = HtmlDom.SelectChildNarrationAudioElements(root, includeSplitTextBoxAudio);
 			var narrationIds = narrationElements.Cast<XmlNode>().Select(node => node.GetOptionalStringAttribute("id", null)).Where(id => id != null);
 
 			var extensionsToInclude = AudioProcessor.NarrationAudioExtensions.ToList();
@@ -612,7 +618,11 @@ namespace Bloom.Book
 		/// </summary>
 		public IEnumerable<string> GetBackgroundMusicFileNamesReferencedInBook()
 		{
-			return GetAudioSourceIdentifiers(HtmlDom.SelectChildBackgroundMusicElements(Dom.RawDom.DocumentElement))
+			return GetBackgroundMusicFileNamesReferencedInBook(Dom.RawDom.DocumentElement);
+		}
+		public static IEnumerable<string> GetBackgroundMusicFileNamesReferencedInBook(XmlElement root)
+		{
+			return GetAudioSourceIdentifiers(HtmlDom.SelectChildBackgroundMusicElements(root))
 				.Where(AudioProcessor.HasBackgroundMusicFileExtension)
 				.Select(GetNormalizedPathForOS);
 		}
@@ -621,7 +631,7 @@ namespace Bloom.Book
 		/// Could be simply an ID without an extension (as for narration)
 		/// or an actual file name (as for background music)
 		/// </summary>
-		private List<string> GetAudioSourceIdentifiers(XmlNodeList nodeList)
+		private static List<string> GetAudioSourceIdentifiers(XmlNodeList nodeList)
 		{
 			return (from XmlElement audio in nodeList
 				select HtmlDom.GetAudioElementUrl(audio).PathOnly.NotEncoded).Distinct().ToList();
