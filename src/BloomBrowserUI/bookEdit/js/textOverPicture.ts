@@ -79,7 +79,26 @@ export class TextOverPictureManager {
         }
     }
 
+    private getParent(
+        element: HTMLElement | undefined
+    ): HTMLElement | undefined {
+        if (!element) {
+            return undefined;
+        }
+        return element.parentElement || undefined;
+    }
+
     private setActiveElement(element: HTMLElement | undefined) {
+        const oldParent = this.getParent(this.activeElement);
+        const newParent = this.getParent(element);
+        if (oldParent != newParent) {
+            if (oldParent) {
+                BubbleEdit.convertCanvasToSvgImg(oldParent);
+            }
+            if (newParent) {
+                BubbleEdit.convertBubbleJsonToCanvas(newParent);
+            }
+        }
         this.activeElement = element;
         if (this.notifyBubbleChange) {
             this.notifyBubbleChange(this.getSelectedItemBubble());
