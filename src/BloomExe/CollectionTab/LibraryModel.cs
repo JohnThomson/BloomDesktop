@@ -244,15 +244,12 @@ namespace Bloom.CollectionTab
 			var body = _bookSelection.CurrentSelection?.OurHtmlDom.Body;
 			if (body == null)
 				return;
-			var classVal = body.GetAttribute("class");
-			if (shouldHaveClass && !classVal.Contains(className))
+			if (shouldHaveClass)
 			{
-				body.SetAttribute("class", (classVal + " " + className).Trim());
-				_bookSelection.CurrentSelection.Save();
-			} else if (!shouldHaveClass && classVal.Contains(className))
+				HtmlDom.AddClassIfMissing(body, className);
+			} else
 			{
-				body.SetAttribute("class", classVal.Replace(className, "").Trim());
-				_bookSelection.CurrentSelection.Save();
+				HtmlDom.RemoveClass(body, className);
 			}
 		}
 
