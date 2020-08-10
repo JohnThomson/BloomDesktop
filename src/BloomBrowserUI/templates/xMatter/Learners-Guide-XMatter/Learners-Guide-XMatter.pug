@@ -1,0 +1,139 @@
+
+include ../../xMatter/bloom-xmatter-mixins.pug
+
+mixin page-cover-nmb(label)
+	- requireOneArgument('page-cover',arguments)
+	+page-xmatter-nmb(label).cover.coverColor.bloom-frontMatter&attributes(attributes)
+		block
+
+mixin page-xmatter-nmb(label)
+	+page-nmb(label)(data-page="required singleton")&attributes(attributes)
+		block
+
+mixin page-nmb(label)
+	+pageWithJustPageSize.bloom-page(data-page="required singleton", attributes=attributes)
+		+page-label-english(label)
+		block
+
+doctype html
+html
+	head
+		meta(charset='UTF-8')
+		meta(name='BloomFormatVersion', content='2.0')
+		title Learners Guide Front & Back Matter
+		+stylesheets('Factory-XMatter.css')
+	body
+		// FRONT COVER
+		+pageWithJustPageSize.bloom-page.cover.coverColor.bloom-frontMatter.frontCover.outsideFrontCover#82AEEA58-500E-4414-854E-267B71FA7803(data-page="required singleton" data-export='front-matter-cover', data-xmatter-page='frontCover')
+			+page-label-english('Front Cover')
+			.marginBox
+				+field-prototypeDeclaredExplicity("V,N1").bookTitle
+					label.bubble Book title in {lang}
+					+editable(kLanguageForPrototypeOnly).bloom-nodefaultstylerule.Title-On-Cover-style.bloom-padForOverflow(data-book='bookTitle')
+				+field-prototypeDeclaredExplicity("V,N1").bookTitle2
+					label.bubble Book title2 in {lang}
+					+editable(kLanguageForPrototypeOnly).bloom-nodefaultstylerule.Title-On-Cover-style.TitleLine2.bloom-padForOverflow(data-book='bookTitle2')
+				.coverPicContainer
+					img.coverPic(src="Cover Year 1 PNG.png")
+					svg.coverPicOverlay(viewBox="0 0 577 620")
+						path(id="curve1" d="m150,520 a240,240 0 0 1 0,-380" fill="transparent")
+						text(width="500" fill='white')
+							textPath(href="#curve1" startOffset="50%" font-family='Andika New Basic' lang="V" data-book="curve-left" data-textonly="true") When I love like Jesus,
+					svg.coverPicOverlay(viewBox="0 0 577 620")
+						path(id="curve2" d="m430,140 a240,240 0 0 1 0,380" fill="transparent")
+						text(width="500" fill='white')
+							textPath(href="#curve2" startOffset="50%" font-family='Andika New Basic' lang="V" data-book="curve-right" data-textonly="true") everything goes so much better!
+					svg.coverPicOverlay.title(viewBox="0 0 577 620")
+						path(id="curve3" d="m140,495 a240,240 0 0 0 300,0" fill="transparent")
+						text(width="500" fill='white')
+							textPath(href="#curve3" startOffset="50%" font-family='Andika New Basic' lang="V" data-book="curve-center" data-textonly="true") Loving
+					svg.coverPicOverlay.title(viewBox="0 0 577 620")
+						path(id="curve4" d="m140,540 a240,240 0 0 0 300,0" fill="transparent")
+						text(width="500" fill='white')
+							textPath(href="#curve4" startOffset="50%" font-family='Andika New Basic' lang="V" data-book="curve-bottom" data-textonly="true") Like Jesus
+				+field-prototypeDeclaredExplicity("V,N1").bookTitle3
+					label.bubble Book title2 in {lang}
+					+editable(kLanguageForPrototypeOnly).bloom-nodefaultstylerule.bloom-padForOverflow(data-book='bookTitle3')
+			.qm.q1 ?
+			.qm.q2 ?
+			.qm.q3 ?
+			.qm.q4 ?
+			.qm.q5 ?
+			.qm.q6 ?
+			.qm.q7 ?
+			.qm.q8 ?
+			.qm.q9 ?
+			.qm.q10 ?
+			.qm.q11 ?
+			.qm.q12 ?
+		// Inside Front Cover CREDITS PAGE
+		+page-cover("Credits Page").credits(data-export='front-matter-credits', data-xmatter-page='credits')&attributes(attributes)#B7DB9AC7-5DCC-4D55-86B5-6DD2A5303AA9
+			+credits-contents
+			+field-prototypeDeclaredExplicity("V").coverData
+				label.bubble For left curve on cover picture; will not print here.
+				+editable(kLanguageForPrototypeOnly).bloom-nodefaultstylerule(data-book='curve-left')
+			+field-prototypeDeclaredExplicity("V").coverData
+				label.bubble For right curve on cover picture; will not print here.
+				+editable(kLanguageForPrototypeOnly).bloom-nodefaultstylerule(data-book='curve-right')
+			+field-prototypeDeclaredExplicity("V").coverData
+				label.bubble For upper curve at bottom of cover picture; will not print here.
+				+editable(kLanguageForPrototypeOnly).bloom-nodefaultstylerule(data-book='curve-center')
+			+field-prototypeDeclaredExplicity("V").coverData
+				label.bubble For bottom curve on cover picture; will not print here.
+				+editable(kLanguageForPrototypeOnly).bloom-nodefaultstylerule(data-book='curve-bottom')
+			+field-prototypeDeclaredExplicity("V").coverData
+				label.bubble For left curve on back cover picture; will not print here.
+				+editable(kLanguageForPrototypeOnly).bloom-nodefaultstylerule(data-book='back-curve-left')
+			+field-prototypeDeclaredExplicity("V").coverData
+				label.bubble For right curve on back cover picture; will not print here.
+				+editable(kLanguageForPrototypeOnly).bloom-nodefaultstylerule(data-book='back-curve-right')
+			+field-prototypeDeclaredExplicity("V").coverData
+				label.bubble For bottom curve on back cover picture; will not print here.
+				+editable(kLanguageForPrototypeOnly).bloom-nodefaultstylerule(data-book='back-curve-center')
+		// The important thing here, with countPageButDoNotShowNumber,
+		// is to get the left pages being even, else the professional publishing folks freak.
+		// Beyond that, it's not yet clear what is best, needs some research
+		+factoryStandard-titlePage.countPageButDoNotShowNumber
+		+factoryStandard-insideBackCover
+		// special outside back cover
+		+pageWithJustPageSize.bloom-page.cover.coverColor.bloom-backMatter.outsideBackCover#7D499376-DC77-4939-9B49-FCF5788762D9(data-page="required singleton" data-export='back-matter-back-cover', data-xmatter-page='backCover')
+			+page-label-english('Outside Back Cover')
+			.marginBox
+				+outside-back-cover-branding-top
+				+field-prototypeDeclaredExplicity("V").backTitle.backTitle1
+					label.bubble Back cover top title in {lang}
+					+editable(kLanguageForPrototypeOnly).bloom-nodefaultstylerule.Title-On-Cover-style.bloom-padForOverflow(data-book='backTitle1')
+				+field-prototypeDeclaredExplicity("V").backTitle.backTitle2
+					label.bubble Back cover lower title in {lang}
+					+editable(kLanguageForPrototypeOnly).bloom-nodefaultstylerule.Title-On-Cover-style.bloom-padForOverflow(data-book='backTitle2')
+				.coverPicContainer
+					img.coverPic(src="Back Cover Learner's Book.png")
+					svg.coverPicOverlay(viewBox="0 0 577 620")
+						path(id="curve5" d="m70,340 a240,240 0 0 1 130,-230" fill="transparent")
+						text(width="500" fill='#3260AC')
+							textPath(href="#curve5" startOffset="50%" font-family='Andika New Basic' lang="V" data-book="back-curve-left" data-textonly="true") In Class
+					svg.coverPicOverlay(viewBox="0 0 577 620")
+						path(id="curve6" d="m390,100 a240,240 0 0 1 130,230" fill="transparent")
+						text(width="500" fill='#EC1D25')
+							textPath(href="#curve6" startOffset="50%" font-family='Andika New Basic' lang="V" data-book="back-curve-right" data-textonly="true") At Home
+					svg.coverPicOverlay(viewBox="0 0 577 620")
+						path(id="curve7" d="m140,542 a240,240 0 0 0 300,0" fill="transparent")
+						text(width="500" fill='#3260AC')
+							textPath(href="#curve7" startOffset="50%" font-family='Andika New Basic' lang="V" data-book="back-curve-center" data-textonly="true") With God
+				+outside-back-cover-branding-bottom
+			.qm.q1 ?
+			.qm.q2 ?
+			.qm.q3 ?
+			.qm.q4 ?
+			.qm.q5 ?
+			.qm.q6 ?
+			.qm.q7 ?
+			.qm.q8 ?
+			.qm.q9 ?
+			.qm.q10 ?
+			.qm.q11 ?
+			.qm.q12 ?
+
+
+
+

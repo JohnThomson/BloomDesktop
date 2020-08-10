@@ -1,0 +1,640 @@
+<!-- Standard cover image has a (normally hidden) image description field.-->
+<!-- The usual code for creating image description on demand is not satisfactory,-->
+<!-- because the cover image description needs to have a data-book attribute-->
+<!-- so that the contents will survive changes to xmatter (and updates in bringBookUpToDate)--><!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="BloomFormatVersion" content="2.0" />
+        <title>Learners Guide Front & Back Matter</title>
+        <link rel="stylesheet" href="basePage.css" type="text/css" />
+        <link rel="stylesheet" href="editMode.css" type="text/css" />
+        <link rel="stylesheet" href="editPaneGlobal.css" type="text/css" />
+        <link rel="stylesheet" href="origami.css" type="text/css" />
+        <link rel="stylesheet" href="Factory-XMatter.css" type="text/css" />
+    </head>
+    <body>
+        <!-- FRONT COVER-->
+        <div
+            class="A5Portrait bloom-page cover coverColor bloom-frontMatter frontCover outsideFrontCover"
+            id="82AEEA58-500E-4414-854E-267B71FA7803"
+            data-page="required singleton"
+            data-export="front-matter-cover"
+            data-xmatter-page="frontCover"
+        >
+            <div
+                class="pageLabel"
+                lang="en"
+                data-i18n="TemplateBooks.PageLabel.Front Cover"
+            >
+                Front Cover
+            </div>
+            <div class="pageDescription" lang="en"></div>
+            <div class="marginBox">
+                <div
+                    class="bloom-translationGroup bookTitle"
+                    data-default-languages="V,N1"
+                >
+                    <label class="bubble">Book title in {lang}</label>
+                    <div
+                        class="bloom-editable bloom-nodefaultstylerule Title-On-Cover-style bloom-padForOverflow"
+                        lang="z"
+                        contenteditable="true"
+                        data-book="bookTitle"
+                    ></div>
+                </div>
+                <div
+                    class="bloom-translationGroup bookTitle2"
+                    data-default-languages="V,N1"
+                >
+                    <label class="bubble">Book title2 in {lang}</label>
+                    <div
+                        class="bloom-editable bloom-nodefaultstylerule Title-On-Cover-style TitleLine2 bloom-padForOverflow"
+                        lang="z"
+                        contenteditable="true"
+                        data-book="bookTitle2"
+                    ></div>
+                </div>
+                <div class="coverPicContainer">
+                    <img class="coverPic" src="Cover Year 1 PNG.png" />
+                    <svg class="coverPicOverlay" viewBox="0 0 577 620">
+                        <path
+                            id="curve1"
+                            d="m150,520 a240,240 0 0 1 0,-380"
+                            fill="transparent"
+                        ></path>
+                        <text width="500" fill="white">
+                            <textPath
+                                href="#curve1"
+                                startOffset="50%"
+                                font-family="Andika New Basic"
+                                lang="V"
+                                data-book="curve-left"
+                                data-textonly="true"
+                            >
+                                When I love like Jesus,
+                            </textPath>
+                        </text>
+                    </svg>
+                    <svg class="coverPicOverlay" viewBox="0 0 577 620">
+                        <path
+                            id="curve2"
+                            d="m430,140 a240,240 0 0 1 0,380"
+                            fill="transparent"
+                        ></path>
+                        <text width="500" fill="white">
+                            <textPath
+                                href="#curve2"
+                                startOffset="50%"
+                                font-family="Andika New Basic"
+                                lang="V"
+                                data-book="curve-right"
+                                data-textonly="true"
+                            >
+                                everything goes so much better!
+                            </textPath>
+                        </text>
+                    </svg>
+                    <svg class="coverPicOverlay title" viewBox="0 0 577 620">
+                        <path
+                            id="curve3"
+                            d="m140,495 a240,240 0 0 0 300,0"
+                            fill="transparent"
+                        ></path>
+                        <text width="500" fill="white">
+                            <textPath
+                                href="#curve3"
+                                startOffset="50%"
+                                font-family="Andika New Basic"
+                                lang="V"
+                                data-book="curve-center"
+                                data-textonly="true"
+                            >
+                                Loving
+                            </textPath>
+                        </text>
+                    </svg>
+                    <svg class="coverPicOverlay title" viewBox="0 0 577 620">
+                        <path
+                            id="curve4"
+                            d="m140,540 a240,240 0 0 0 300,0"
+                            fill="transparent"
+                        ></path>
+                        <text width="500" fill="white">
+                            <textPath
+                                href="#curve4"
+                                startOffset="50%"
+                                font-family="Andika New Basic"
+                                lang="V"
+                                data-book="curve-bottom"
+                                data-textonly="true"
+                            >
+                                Like Jesus
+                            </textPath>
+                        </text>
+                    </svg>
+                </div>
+                <div
+                    class="bloom-translationGroup bookTitle3"
+                    data-default-languages="V,N1"
+                >
+                    <label class="bubble">Book title2 in {lang}</label>
+                    <div
+                        class="bloom-editable bloom-nodefaultstylerule bloom-padForOverflow"
+                        lang="z"
+                        contenteditable="true"
+                        data-book="bookTitle3"
+                    ></div>
+                </div>
+            </div>
+            <div class="qm q1">?</div>
+            <div class="qm q2">?</div>
+            <div class="qm q3">?</div>
+            <div class="qm q4">?</div>
+            <div class="qm q5">?</div>
+            <div class="qm q6">?</div>
+            <div class="qm q7">?</div>
+            <div class="qm q8">?</div>
+            <div class="qm q9">?</div>
+            <div class="qm q10">?</div>
+            <div class="qm q11">?</div>
+            <div class="qm q12">?</div>
+        </div>
+        <!-- Inside Front Cover CREDITS PAGE-->
+        <div
+            class="A5Portrait bloom-page cover coverColor bloom-frontMatter credits"
+            data-page="required singleton"
+            data-export="front-matter-credits"
+            data-xmatter-page="credits"
+            id="B7DB9AC7-5DCC-4D55-86B5-6DD2A5303AA9"
+        >
+            <div
+                class="pageLabel"
+                lang="en"
+                data-i18n="TemplateBooks.PageLabel.Credits Page"
+            >
+                Credits Page
+            </div>
+            <div class="pageDescription" lang="en"></div>
+            <div class="marginBox">
+                <div data-book="credits-page-branding-top-html" lang="*"></div>
+                <div
+                    class="bloom-metaData licenseAndCopyrightBlock"
+                    data-functiononhintclick="bookMetadataEditor"
+                    data-hint="Click to Edit Copyright &amp; License"
+                    lang="V"
+                >
+                    <div
+                        class="copyright Credits-Page-style"
+                        data-derived="copyright"
+                        lang="*"
+                    >
+                        {copyright}
+                    </div>
+                    <!-- no default content-->
+                    <div class="licenseBlock">
+                        <img
+                            class="licenseImage"
+                            src="license.png"
+                            data-derived="licenseImage"
+                        />
+                        <div
+                            class="licenseUrl"
+                            data-derived="licenseUrl"
+                            lang="en"
+                        >
+                            http://creativecommons.org/licenses/by/4.0/
+                        </div>
+                        <div
+                            class="licenseDescription Credits-Page-style"
+                            data-derived="licenseDescription"
+                            lang="en"
+                        >
+                            You are free to make commercial use of this work.
+                            You may adapt and add to this work. You must keep
+                            the copyright and credits for authors, illustrators,
+                            etc.
+                        </div>
+                        <div
+                            class="licenseNotes Credits-Page-style"
+                            data-derived="licenseNotes"
+                            lang="en"
+                        >
+                            {License Notes}
+                        </div>
+                    </div>
+                </div>
+                <!-- readOnlyInAuthorMode: we want to leave this blank for if/when someone takes this doc and is translating it.-->
+                <!-- removed .bloom-readOnlyInAuthorMode because when you're putting together a shell book, you often have to put in the name of the translator-->
+                <div
+                    class="bloom-translationGroup versionAcknowledgments"
+                    data-default-languages="N1"
+                >
+                    <label class="bubble"
+                        >Acknowledgments for this version, in {lang}. For
+                        example, give credit to the translator for this
+                        version.</label
+                    >
+                    <div
+                        class="bloom-editable versionAcknowledgments Credits-Page-style"
+                        lang="N1"
+                        contenteditable="true"
+                        data-book="versionAcknowledgments"
+                    ></div>
+                </div>
+                <div
+                    class="copyright Credits-Page-style"
+                    data-derived="originalCopyrightAndLicense"
+                ></div>
+                <div
+                    class="bloom-translationGroup originalAcknowledgments"
+                    data-default-languages="N1"
+                >
+                    <label class="bubble"
+                        >Original (or Shell) Acknowledgments in {lang}</label
+                    >
+                    <div
+                        class="bloom-editable bloom-copyFromOtherLanguageIfNecessary Credits-Page-style"
+                        lang="z"
+                        contenteditable="true"
+                        data-book="originalAcknowledgments"
+                    >
+                        {Original Acknowledgments}
+                    </div>
+                </div>
+                <div
+                    class="ISBNContainer"
+                    data-hint="International Standard Book Number. Leave blank if you don't have one of these."
+                >
+                    <span
+                        class="bloom-doNotPublishIfParentOtherwiseEmpty Credits-Page-style"
+                        >ISBN</span
+                    >
+                    <div
+                        class="bloom-translationGroup bloom-recording-optional"
+                        data-default-languages="*"
+                    >
+                        <div
+                            class="bloom-editable Credits-Page-style"
+                            data-book="ISBN"
+                            lang="*"
+                        ></div>
+                    </div>
+                </div>
+                <div
+                    data-book="credits-page-branding-bottom-html"
+                    lang="*"
+                ></div>
+                <div
+                    class="bloom-translationGroup coverData"
+                    data-default-languages="V"
+                >
+                    <label class="bubble"
+                        >For left curve on cover picture; will not print
+                        here.</label
+                    >
+                    <div
+                        class="bloom-editable bloom-nodefaultstylerule"
+                        lang="z"
+                        contenteditable="true"
+                        data-book="curve-left"
+                    ></div>
+                </div>
+                <div
+                    class="bloom-translationGroup coverData"
+                    data-default-languages="V"
+                >
+                    <label class="bubble"
+                        >For right curve on cover picture; will not print
+                        here.</label
+                    >
+                    <div
+                        class="bloom-editable bloom-nodefaultstylerule"
+                        lang="z"
+                        contenteditable="true"
+                        data-book="curve-right"
+                    ></div>
+                </div>
+                <div
+                    class="bloom-translationGroup coverData"
+                    data-default-languages="V"
+                >
+                    <label class="bubble"
+                        >For upper curve at bottom of cover picture; will not
+                        print here.</label
+                    >
+                    <div
+                        class="bloom-editable bloom-nodefaultstylerule"
+                        lang="z"
+                        contenteditable="true"
+                        data-book="curve-center"
+                    ></div>
+                </div>
+                <div
+                    class="bloom-translationGroup coverData"
+                    data-default-languages="V"
+                >
+                    <label class="bubble"
+                        >For bottom curve on cover picture; will not print
+                        here.</label
+                    >
+                    <div
+                        class="bloom-editable bloom-nodefaultstylerule"
+                        lang="z"
+                        contenteditable="true"
+                        data-book="curve-bottom"
+                    ></div>
+                </div>
+                <div
+                    class="bloom-translationGroup coverData"
+                    data-default-languages="V"
+                >
+                    <label class="bubble"
+                        >For left curve on back cover picture; will not print
+                        here.</label
+                    >
+                    <div
+                        class="bloom-editable bloom-nodefaultstylerule"
+                        lang="z"
+                        contenteditable="true"
+                        data-book="back-curve-left"
+                    ></div>
+                </div>
+                <div
+                    class="bloom-translationGroup coverData"
+                    data-default-languages="V"
+                >
+                    <label class="bubble"
+                        >For right curve on back cover picture; will not print
+                        here.</label
+                    >
+                    <div
+                        class="bloom-editable bloom-nodefaultstylerule"
+                        lang="z"
+                        contenteditable="true"
+                        data-book="back-curve-right"
+                    ></div>
+                </div>
+                <div
+                    class="bloom-translationGroup coverData"
+                    data-default-languages="V"
+                >
+                    <label class="bubble"
+                        >For bottom curve on back cover picture; will not print
+                        here.</label
+                    >
+                    <div
+                        class="bloom-editable bloom-nodefaultstylerule"
+                        lang="z"
+                        contenteditable="true"
+                        data-book="back-curve-center"
+                    ></div>
+                </div>
+            </div>
+        </div>
+        <!-- The important thing here, with countPageButDoNotShowNumber,-->
+        <!-- is to get the left pages being even, else the professional publishing folks freak.-->
+        <!-- Beyond that, it's not yet clear what is best, needs some research-->
+        <div
+            class="A5Portrait bloom-page titlePage bloom-frontMatter countPageButDoNotShowNumber"
+            data-page="required singleton"
+            data-export="front-matter-title-page"
+            data-xmatter-page="titlePage"
+            id="5dcd48df-e9ab-4a07-afd4-6a24d0398381"
+        >
+            <div
+                class="pageLabel"
+                lang="en"
+                data-i18n="TemplateBooks.PageLabel.Title Page"
+            >
+                Title Page
+            </div>
+            <div class="pageDescription" lang="en"></div>
+            <div class="marginBox">
+                <!-- TITLE PAGE-->
+                <div
+                    class="bloom-translationGroup"
+                    data-default-languages="V,N1"
+                    id="titlePageTitleBlock"
+                >
+                    <label class="bubble">Book title in {lang}</label>
+                    <div
+                        class="bloom-editable bloom-nodefaultstylerule Title-On-Title-Page-style bloom-padForOverflow"
+                        lang="z"
+                        contenteditable="true"
+                        data-book="bookTitle"
+                    ></div>
+                </div>
+                <div class="largeFlexGap"></div>
+                <div
+                    class="bloom-translationGroup"
+                    data-default-languages="N1"
+                    id="originalContributions"
+                >
+                    <label
+                        class="bubble"
+                        data-link-text="Paste Image Credits"
+                        data-link-target="PasteImageCredits()"
+                        >The contributions made by writers, illustrators,
+                        editors, etc., in {lang}</label
+                    >
+                    <div
+                        class="bloom-editable credits bloom-copyFromOtherLanguageIfNecessary Content-On-Title-Page-style"
+                        lang="z"
+                        contenteditable="true"
+                        data-book="originalContributions"
+                    ></div>
+                </div>
+                <div class="smallFlexGap"></div>
+                <div
+                    class="bloom-translationGroup"
+                    data-default-languages="N1"
+                    id="funding"
+                >
+                    <label class="bubble"
+                        >Use this to acknowledge any funding agencies.</label
+                    >
+                    <div
+                        class="bloom-editable funding Content-On-Title-Page-style bloom-copyFromOtherLanguageIfNecessary"
+                        lang="z"
+                        contenteditable="true"
+                        data-book="funding"
+                    ></div>
+                </div>
+                <div class="largeFlexGap"></div>
+                <div
+                    class="Content-On-Title-Page-style"
+                    id="languageInformation"
+                ></div>
+                <div class="languagesOfBook" data-book="languagesOfBook"></div>
+                <div class="langName" data-library="dialect"></div>
+                <div
+                    class="langName bloom-writeOnly"
+                    data-library="languageLocation"
+                ></div>
+                <div class="fillPageFlexGap"></div>
+                <div data-book="title-page-branding-bottom-html" lang="*"></div>
+            </div>
+        </div>
+        <!-- Inside Back Cover-->
+        <div
+            class="A5Portrait bloom-page cover coverColor insideBackCover bloom-backMatter"
+            data-page="required singleton"
+            data-export="back-matter-inside-back-cover"
+            data-xmatter-page="insideBackCover"
+            id="502BE62F-A4D0-4225-A598-1A203FA73239"
+        >
+            <div
+                class="pageLabel"
+                lang="en"
+                data-i18n="TemplateBooks.PageLabel.Inside Back Cover"
+            >
+                Inside Back Cover
+            </div>
+            <div class="pageDescription" lang="en"></div>
+            <div class="marginBox">
+                <div class="bloom-translationGroup" data-default-languages="N1">
+                    <div
+                        class="bloom-editable Inside-Back-Cover-style"
+                        lang="N1"
+                        contenteditable="true"
+                        data-book="insideBackCover"
+                    >
+                        <label class="bubble"
+                            >If you need somewhere to put more information about
+                            the book, you can use this page, which is the inside
+                            of the back cover.</label
+                        >
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- special outside back cover-->
+        <div
+            class="A5Portrait bloom-page cover coverColor bloom-backMatter outsideBackCover"
+            id="7D499376-DC77-4939-9B49-FCF5788762D9"
+            data-page="required singleton"
+            data-export="back-matter-back-cover"
+            data-xmatter-page="backCover"
+        >
+            <div
+                class="pageLabel"
+                lang="en"
+                data-i18n="TemplateBooks.PageLabel.Outside Back Cover"
+            >
+                Outside Back Cover
+            </div>
+            <div class="pageDescription" lang="en"></div>
+            <div class="marginBox">
+                <div
+                    data-book="outside-back-cover-branding-top-html"
+                    lang="*"
+                ></div>
+                <div
+                    class="bloom-translationGroup backTitle backTitle1"
+                    data-default-languages="V"
+                >
+                    <label class="bubble">Back cover top title in {lang}</label>
+                    <div
+                        class="bloom-editable bloom-nodefaultstylerule Title-On-Cover-style bloom-padForOverflow"
+                        lang="z"
+                        contenteditable="true"
+                        data-book="backTitle1"
+                    ></div>
+                </div>
+                <div
+                    class="bloom-translationGroup backTitle backTitle2"
+                    data-default-languages="V"
+                >
+                    <label class="bubble"
+                        >Back cover lower title in {lang}</label
+                    >
+                    <div
+                        class="bloom-editable bloom-nodefaultstylerule Title-On-Cover-style bloom-padForOverflow"
+                        lang="z"
+                        contenteditable="true"
+                        data-book="backTitle2"
+                    ></div>
+                </div>
+                <div class="coverPicContainer">
+                    <img class="coverPic" src="Back Cover Learner's Book.png" />
+                    <svg class="coverPicOverlay" viewBox="0 0 577 620">
+                        <path
+                            id="curve5"
+                            d="m70,340 a240,240 0 0 1 130,-230"
+                            fill="transparent"
+                        ></path>
+                        <text width="500" fill="#3260AC">
+                            <textPath
+                                href="#curve5"
+                                startOffset="50%"
+                                font-family="Andika New Basic"
+                                lang="V"
+                                data-book="back-curve-left"
+                                data-textonly="true"
+                            >
+                                In Class
+                            </textPath>
+                        </text>
+                    </svg>
+                    <svg class="coverPicOverlay" viewBox="0 0 577 620">
+                        <path
+                            id="curve6"
+                            d="m390,100 a240,240 0 0 1 130,230"
+                            fill="transparent"
+                        ></path>
+                        <text width="500" fill="#EC1D25">
+                            <textPath
+                                href="#curve6"
+                                startOffset="50%"
+                                font-family="Andika New Basic"
+                                lang="V"
+                                data-book="back-curve-right"
+                                data-textonly="true"
+                            >
+                                At Home
+                            </textPath>
+                        </text>
+                    </svg>
+                    <svg class="coverPicOverlay" viewBox="0 0 577 620">
+                        <path
+                            id="curve7"
+                            d="m140,542 a240,240 0 0 0 300,0"
+                            fill="transparent"
+                        ></path>
+                        <text width="500" fill="#3260AC">
+                            <textPath
+                                href="#curve7"
+                                startOffset="50%"
+                                font-family="Andika New Basic"
+                                lang="V"
+                                data-book="back-curve-center"
+                                data-textonly="true"
+                            >
+                                With God
+                            </textPath>
+                        </text>
+                    </svg>
+                </div>
+                <div
+                    data-book="outside-back-cover-branding-bottom-html"
+                    lang="*"
+                >
+                    <img src="full-bloom-logo-grey.svg" />
+                </div>
+            </div>
+            <div class="qm q1">?</div>
+            <div class="qm q2">?</div>
+            <div class="qm q3">?</div>
+            <div class="qm q4">?</div>
+            <div class="qm q5">?</div>
+            <div class="qm q6">?</div>
+            <div class="qm q7">?</div>
+            <div class="qm q8">?</div>
+            <div class="qm q9">?</div>
+            <div class="qm q10">?</div>
+            <div class="qm q11">?</div>
+            <div class="qm q12">?</div>
+        </div>
+    </body>
+</html>

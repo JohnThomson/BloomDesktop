@@ -1,0 +1,233 @@
+@import "../../xMatter/bloom-xmatter-common.less";
+
+@XMatterPackName: "Learners Guide";
+
+// has to be very specific to beat normal cover color rule
+div.bloom-page.coverColor {
+    &.outsideFrontCover,
+    &.outsideBackCover {
+        background-color: #fff100 !important;
+    }
+}
+div.bloom-page.coverColor {
+    &.insideFrontCover,
+    &.insideBackCover {
+        background-color: white !important;
+    }
+}
+
+// lots of extra selectors for specificity win
+.frontCover .bloom-translationGroup {
+    &.bookTitle,
+    &.bookTitle2 {
+        .Title-On-Cover-style.bloom-editable.bloom-content1 {
+            font-family: "Astounder Squared BB";
+            font-size: 80px;
+            font-variant: small-caps;
+            text-align: center;
+            color: #ec1d25;
+            font-weight: bold;
+            text-shadow: 4px 4px #dddddd, -4px -4px white;
+            line-height: 1em;
+            min-height: 1em; // override a 1.8em rule
+            &.TitleLine2 {
+                color: #3260ac;
+            }
+        }
+    }
+}
+.bookTitle3 {
+    .bloom-editable[lang] {
+        font-family: "Astounder Squared BB";
+    }
+    font-size: 60px;
+    font-variant: small-caps;
+    text-align: center;
+    color: #ec1d25;
+    font-weight: bold;
+    text-shadow: 3px 3px #dddddd, -3px -3px white;
+}
+
+@media print {
+    .coverData {
+        display: none;
+    }
+}
+
+.qm {
+    font-family: "ObelixPro";
+    font-size: 100px;
+    color: #fff799; // 255, 247, 153
+    position: absolute;
+    z-index: 1;
+}
+
+.q1 {
+    top: 40px;
+    left: 100px;
+    font-size: 40pt;
+}
+
+.q2 {
+    top: 110px;
+    left: 50px;
+    font-size: 30pt;
+}
+
+.q3 {
+    top: 260px;
+    left: 60px;
+}
+
+.q4 {
+    top: 600px;
+    left: 50px;
+    font-size: 80px;
+    .backCover & {
+        top: 700px;
+    }
+}
+
+.q5 {
+    top: 740px;
+    left: 60px;
+    font-size: 80px;
+    .backCover & {
+        top: 800px;
+        left: 80px;
+    }
+}
+
+.q6 {
+    top: 740px;
+    left: 150px;
+    font-size: 25pt;
+    .backCover & {
+        left: 200px;
+    }
+}
+
+.q7 {
+    top: 40px;
+    left: 540px;
+    font-size: 30pt;
+}
+
+.q8 {
+    top: 110px;
+    left: 580px;
+    font-size: 40pt;
+}
+
+.q9 {
+    top: 200px;
+    left: 500px;
+}
+
+.q10 {
+    top: 330px;
+    left: 570px;
+    font-size: 70px;
+}
+
+.q11 {
+    top: 640px;
+    left: 570px;
+    font-size: 70px;
+    .backCover & {
+        top: 720px;
+        left: 540px;
+    }
+}
+
+.q12 {
+    top: 830px;
+    left: 580px;
+    font-size: 30px;
+}
+
+.coverPicContainer {
+    margin-left: auto;
+    margin-right: auto;
+    margin-top: 20px;
+    background-color: white;
+    overflow: hidden;
+}
+.coverPic,
+.coverPicOverlay {
+    width: 500px;
+    display: block;
+}
+.coverPic {
+    margin-top: -135px;
+    transform: scale(1.3);
+}
+.coverPicOverlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    &.title {
+        font-size: 1.3em;
+    }
+}
+
+svg text {
+    text-anchor: middle;
+    font-size: 1.5em;
+}
+svg {
+    position: absolute;
+}
+
+// Lots of classes to be more specific than normal rule for
+// outside back cover marginBox bloom-translationGroup.
+.outsideBackCover .marginBox {
+    .bloom-translationGroup.backTitle {
+        flex-grow: 0;
+        flex-basis: initial;
+        min-height: 1em;
+        &.backTitle1 {
+            color: #ec1d25;
+        }
+        &.backTitle2 {
+            color: #3260ac;
+        }
+        .bloom-editable.bloom-content1 {
+            font-family: "Astounder Squared BB";
+            font-size: 80px;
+            font-variant: small-caps;
+            text-align: center;
+            font-weight: bold;
+            text-shadow: 4px 4px #dddddd, -4px -4px white;
+            line-height: 1em;
+            min-height: 1em; // override a 1.8em rule
+        }
+    }
+
+    svg text {
+        font-variant: small-caps;
+        font-size: 3em;
+        text-shadow: 2px 2px white, -2px -2px white, 2px -2px white,
+            -2px 2px white;
+    }
+}
+
+.bloom-page {
+}
+
+:not(.calendarFold)
+    :not(.outsideFrontCover):not(.outsideBackCover):not(.screen-only) {
+    &.side-left  // maintained by c#
+ {
+        .marginBox {
+            left: @MarginOuter - 5mm;
+        }
+    }
+
+    &.side-right // maintained by c#
+ {
+        .marginBox {
+            left: @MarginInner - 5mm;
+        }
+    }
+}
