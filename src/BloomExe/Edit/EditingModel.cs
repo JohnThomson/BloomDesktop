@@ -754,6 +754,14 @@ namespace Bloom.Edit
 			if (_currentPage != null)
 				_currentPage.Dispose();
 			InsertLabelAndLayoutTogglePane(_domForCurrentPage);
+			//var head = _domForCurrentPage.RawDom.DocumentElement.GetElementsByTagName("head")[0];
+			//var scripts = head.SelectNodes("script").Cast<XmlNode>().ToArray();
+			//foreach (var s in scripts)
+			//{
+			//	if (s.Attributes["src"]?.Value?.Contains("editablePage")??false)
+			//		head.RemoveChild(s);
+			//}
+
 			_currentPage = BloomServer.MakeSimulatedPageFileInBookFolder(_domForCurrentPage, true);
 			CheckForBL2634("made simulated page");
 			CommonApi.AuthorMode = CanAddPages;

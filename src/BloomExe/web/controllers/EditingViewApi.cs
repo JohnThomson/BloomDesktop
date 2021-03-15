@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 using System.Windows.Forms;
 using Bloom.Api;
 using Bloom.Edit;
@@ -19,6 +20,15 @@ namespace Bloom.web.controllers
 			apiHandler.RegisterEndpointHandler("editView/setModalState", HandleSetModalState, true);
 			apiHandler.RegisterEndpointHandler("editView/chooseWidget", HandleChooseWidget, true);
 			apiHandler.RegisterEndpointHandler("editView/getBookColors", HandleGetColors, true);
+			apiHandler.RegisterEndpointHandler("editView/editPagePainted", HandleEditPagePainted, true);
+		}
+
+		public Action NotifyEditPagePainted;
+
+		private void HandleEditPagePainted(ApiRequest request)
+		{
+			NotifyEditPagePainted?.Invoke();
+			request.PostSucceeded();
 		}
 
 		public void HandleSetModalState(ApiRequest request)

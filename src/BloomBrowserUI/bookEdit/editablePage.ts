@@ -13,7 +13,8 @@ import { theOneBubbleManager, BubbleManager } from "./js/bubbleManager";
 // This allows strong typing to be done for exported functions
 export interface IPageFrameExports {
     pageSelectionChanging(): void;
-    prepareToSavePage(): void;
+    prepareToSavePage(): string;
+    userStylesheetContent(): string;
     pageUnloading(): void;
     disconnectForGarbageCollection(): void;
     makeElement(
@@ -41,6 +42,7 @@ export interface IPageFrameExports {
 import {
     pageSelectionChanging,
     prepareToSavePage,
+    userStylesheetContent,
     pageUnloading,
     disconnectForGarbageCollection,
     makeElement,
@@ -50,6 +52,7 @@ import {
 export {
     pageSelectionChanging,
     prepareToSavePage,
+    userStylesheetContent,
     pageUnloading,
     disconnectForGarbageCollection,
     makeElement,

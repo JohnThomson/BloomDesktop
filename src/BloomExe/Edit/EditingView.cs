@@ -72,6 +72,9 @@ namespace Bloom.Edit
 			_webSocketServer = model.EditModelSocketServer;
 			_pageListApi = pageListApi;
 			InitializeComponent();
+			editingViewApi.NotifyEditPagePainted = () => Invoke((Action)(() => {
+				model.NavigatingSoSuspendSaving = false;
+			}));
 
 			this._splitContainer2.BackColor = Palette.GeneralBackground;
 			SetupThumnailLists();
@@ -519,7 +522,7 @@ namespace Bloom.Edit
 				// We only get one notification per call to this function, so we need
 				// to set it up again each time we load a page. It's important to set it up before we start
 				// navigation; otherwise, we might miss the event and never enable saving for this page.
-				Browser.RequestJsNotification("editPagePainted", () => _model.NavigatingSoSuspendSaving = false);
+				//Browser.RequestJsNotification("editPagePainted", () => _model.NavigatingSoSuspendSaving = false);
 				_model.NavigatingSoSuspendSaving = true;
 				if (_model.AreToolboxAndOuterFrameCurrent())
 				{
@@ -1350,9 +1353,10 @@ namespace Bloom.Edit
 		/// </summary>
 		public void CleanHtmlAndCopyToPageDom()
 		{
-			RunJavaScript("if (typeof(FrameExports) !=='undefined') {FrameExports.getToolboxFrameExports().removeToolboxMarkup();}");
-			RunJavaScript("if (typeof(FrameExports) !=='undefined') {FrameExports.getPageFrameExports().prepareToSavePage();}");
-			_browser1.ReadEditableAreasNow();
+			//RunJavaScript("if (typeof(FrameExports) !=='undefined') {FrameExports.getToolboxFrameExports().removeToolboxMarkup();}");
+			var bodyHtml = RunJavaScript("if (typeof(FrameExports) !=='undefined') {return FrameExports.getPageFrameExports().prepareToSavePage();}");
+			var userCssContent = RunJavaScript("if (typeof(FrameExports) !=='undefined') {return FrameExports.getPageFrameExports().userStylesheetContent();}");
+			_browser1.ReadEditableAreasNow(bodyHtml, userCssContent);
 		}
 
 		public GeckoInputElement GetShowToolboxCheckbox()
