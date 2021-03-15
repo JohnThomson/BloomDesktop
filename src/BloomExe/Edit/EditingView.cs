@@ -31,6 +31,11 @@ using Bloom.web;
 using ICSharpCode.SharpZipLib.Zip;
 using SIL.Extensions;
 using System.Reflection;
+using System.Threading;
+using Application = System.Windows.Forms.Application;
+using DateTime = System.DateTime;
+using Settings = Bloom.Properties.Settings;
+using Timer = System.Windows.Forms.Timer;
 
 namespace Bloom.Edit
 {
@@ -1354,8 +1359,29 @@ namespace Bloom.Edit
 		public void CleanHtmlAndCopyToPageDom()
 		{
 			//RunJavaScript("if (typeof(FrameExports) !=='undefined') {FrameExports.getToolboxFrameExports().removeToolboxMarkup();}");
-			var bodyHtml = RunJavaScript("if (typeof(FrameExports) !=='undefined') {return FrameExports.getPageFrameExports().prepareToSavePage();}");
-			var userCssContent = RunJavaScript("if (typeof(FrameExports) !=='undefined') {return FrameExports.getPageFrameExports().userStylesheetContent();}");
+			string bodyHtml = null;
+			while (bodyHtml == null)
+			{
+				bodyHtml = RunJavaScript(
+					"if (typeof(FrameExports) !=='undefined') {return FrameExports.getPageFrameExports().prepareToSavePage();}");
+				if (bodyHtml == null)
+				{
+					Thread.Sleep(50);
+					Application.DoEvents();
+				}
+			}
+
+			string userCssContent = null;
+			while (userCssContent == null) {
+				userCssContent =
+					RunJavaScript(
+						"if (typeof(FrameExports) !=='undefined') {return FrameExports.getPageFrameExports().userStylesheetContent();}");
+				if (userCssContent == null)
+				{
+					Thread.Sleep(50);
+					Application.DoEvents();
+				}
+			}
 			_browser1.ReadEditableAreasNow(bodyHtml, userCssContent);
 		}
 
