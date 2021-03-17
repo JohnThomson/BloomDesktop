@@ -6,6 +6,7 @@ using System.Windows.Forms;
 using Bloom.Api;
 using Bloom.Book;
 using Bloom.web;
+using Bloom.web.controllers;
 using Fleck;
 using L10NSharp;
 using SIL.Reporting;
@@ -20,13 +21,15 @@ namespace Bloom.Edit
 		private IPage _pageWeThinkShouldBeSelected;
 
 		public PageListView(PageSelection pageSelection, RelocatePageEvent relocatePageEvent, EditingModel model,
-			HtmlThumbNailer thumbnailProvider, NavigationIsolator isolator, ControlKeyEvent controlKeyEvent, PageListApi pageListApi, BloomWebSocketServer webSocketServer)
+			HtmlThumbNailer thumbnailProvider, NavigationIsolator isolator, ControlKeyEvent controlKeyEvent, PageListApi pageListApi, BloomWebSocketServer webSocketServer,
+			EditingViewApi editingViewApi)
 		{
 			_pageSelection = pageSelection;
 			_model = model;
 			this.Font= SystemFonts.MessageBoxFont;
 			InitializeComponent();
 			_thumbNailList.PageListApi = pageListApi;
+			editingViewApi.EditPagePainted += (sender, api) =>_thumbNailList.PagePainted();
 			_thumbNailList.WebSocketServer = webSocketServer;
 			this.BackColor = Palette.SidePanelBackgroundColor;
 

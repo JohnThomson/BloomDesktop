@@ -126,6 +126,12 @@ namespace Bloom.Edit
 			(base.DesignMode || GetService(typeof(IDesignerHost)) != null) ||
 			(LicenseManager.UsageMode == LicenseUsageMode.Designtime);
 
+		private Action _doWhenPagePainted;
+		public void PagePainted()
+		{
+			_doWhenPagePainted?.Invoke();
+		}
+
 		private void InvokePageSelectedChanged(IPage page)
 		{
 			EventHandler handler = PageSelectedChanged;
@@ -139,13 +145,13 @@ namespace Bloom.Edit
 			if (handler != null && /*REVIEW */ page != null)
 			{
 				var stopwatch = Stopwatch.StartNew();
-				Browser.RequestJsNotification("editPagePainted", () =>
+				_doWhenPagePainted = () =>
 				{
 					var paintTime = stopwatch.ElapsedMilliseconds;
 					if (reportsSent++ >= 2)
 						stopwatch.Stop();
 					TroubleShooterDialog.Report($"page change to paint complete took {paintTime} milliseconds");
-				});
+				};
 				handler(page, null);
 				var time = stopwatch.ElapsedMilliseconds;
 				if (reportsSent++ >= 2)

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Windows.Forms;
 using Bloom.Api;
@@ -23,11 +24,11 @@ namespace Bloom.web.controllers
 			apiHandler.RegisterEndpointHandler("editView/editPagePainted", HandleEditPagePainted, true);
 		}
 
-		public Action NotifyEditPagePainted;
+		public event EventHandler EditPagePainted;
 
 		private void HandleEditPagePainted(ApiRequest request)
 		{
-			NotifyEditPagePainted?.Invoke();
+			EditPagePainted?.Invoke(this, new EventArgs());
 			request.PostSucceeded();
 		}
 
