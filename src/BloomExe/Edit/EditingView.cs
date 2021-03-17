@@ -529,7 +529,7 @@ namespace Bloom.Edit
 				// navigation; otherwise, we might miss the event and never enable saving for this page.
 				//Browser.RequestJsNotification("editPagePainted", () => _model.NavigatingSoSuspendSaving = false);
 				_model.NavigatingSoSuspendSaving = true;
-				if (_model.AreToolboxAndOuterFrameCurrent())
+				if (_model.AreToolboxAndOuterFrameCurrent() && !SystemIsShortOfMemory())
 				{
 					_browser1.SetEditDom(domForCurrentPage);
 					if (ReloadCurrentPage())
@@ -582,6 +582,23 @@ namespace Bloom.Edit
 			// Check memory for the benefit of developers.
 			SIL.Windows.Forms.Reporting.MemoryManagement.CheckMemory(false, "EditingView - UpdateSingleDisplayedPage() finished", false);
 #endif
+		}
+
+		private bool SystemIsShortOfMemory()
+		{
+
+			return GetPrivateBytes() > 750000;
+		}
+
+		// Significance: This counter indicates the current number of bytes allocated to this process that cannot be shared with
+		// other processes.This counter is used for identifying memory leaks.
+		private long GetPrivateBytes()
+		{
+			using (var perfCounter = new PerformanceCounter("Process", "Private Bytes",
+				Process.GetCurrentProcess().ProcessName))
+			{
+				return perfCounter.RawValue / 1024;
+			}
 		}
 
 		private bool ReloadCurrentPage()
