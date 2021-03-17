@@ -1363,7 +1363,7 @@ namespace Bloom.Edit
 			while (bodyHtml == null)
 			{
 				bodyHtml = RunJavaScript(
-					"if (typeof(FrameExports) !=='undefined') {return FrameExports.getPageFrameExports().prepareToSavePage();}");
+					"if (typeof(FrameExports) !=='undefined' && typeof(FrameExports.getPageFrameExports()) !=='undefined') {return FrameExports.getPageFrameExports().prepareToSavePage();}");
 				if (bodyHtml == null)
 				{
 					Thread.Sleep(50);
@@ -1375,7 +1375,7 @@ namespace Bloom.Edit
 			while (userCssContent == null) {
 				userCssContent =
 					RunJavaScript(
-						"if (typeof(FrameExports) !=='undefined') {return FrameExports.getPageFrameExports().userStylesheetContent();}");
+						"if (typeof(FrameExports) !=='undefined' && typeof(FrameExports.getPageFrameExports()) !=='undefined') {return FrameExports.getPageFrameExports().userStylesheetContent();}");
 				if (userCssContent == null)
 				{
 					Thread.Sleep(50);
