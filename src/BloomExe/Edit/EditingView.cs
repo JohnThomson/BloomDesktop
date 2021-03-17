@@ -77,7 +77,7 @@ namespace Bloom.Edit
 			_webSocketServer = model.EditModelSocketServer;
 			_pageListApi = pageListApi;
 			InitializeComponent();
-			editingViewApi.NotifyEditPagePainted = () => Invoke((Action)(() => {
+			editingViewApi.EditPagePainted += (sender, args) => Invoke((Action)(() => {
 				model.NavigatingSoSuspendSaving = false;
 			}));
 
