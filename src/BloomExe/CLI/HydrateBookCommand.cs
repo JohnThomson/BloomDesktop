@@ -5,6 +5,7 @@ using System.IO;
 using System.Xml;
 using Bloom.Book;
 using Bloom.Collection;
+using Bloom.TeamCollection;
 using CommandLine;
 using SIL.IO;
 using SIL.Progress;
@@ -43,6 +44,13 @@ namespace Bloom.CLI
 			{
 				SizeAndOrientation = SizeAndOrientation.FromString(options.SizeAndOrientation)
 			};
+
+			if (File.Exists(TeamCollectionManager.GetTcLinkPathFromLcPath(Path.GetDirectoryName(options.Path))))
+			{
+				throw new ApplicationException("Hydrate command cannot currently be used in Team Collections");
+				// To make this possible, we'd need to spin up a TeamCollectionManager and TeamCollection and pass the latter
+				// to the Book as its SaveContext and still changes would be forbidden unless the book was checked out.
+			}
 
 			var collectionSettings = new CollectionSettings
 			{

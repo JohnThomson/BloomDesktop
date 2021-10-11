@@ -50,7 +50,7 @@ namespace Bloom
 
 		private Book.Book CreateTemplateBookByFolderPath(string folderPath)
 		{
-			return _bookFactory(new BookInfo(folderPath, false), _storageFactory(folderPath));
+			return _bookFactory(new BookInfo(folderPath, false), _storageFactory(folderPath), NoEditSaveContext.TheOneInstance);
 		}
 
 		public Book.Book FindAndCreateTemplateBook(Func<string, bool> predicate)

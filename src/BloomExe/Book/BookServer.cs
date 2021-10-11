@@ -2,6 +2,7 @@
 using System.IO;
 using System.Windows.Forms;
 using Bloom.Edit;
+using Bloom.TeamCollection;
 using SIL.Reporting;
 
 namespace Bloom.Book
@@ -12,14 +13,17 @@ namespace Bloom.Book
 		private readonly BookStorage.Factory _storageFactory;
 		private readonly BookStarter.Factory _bookStarterFactory;
 		private readonly Configurator.Factory _configuratorFactory;
+		private TeamCollectionManager _tcManager;
 
 		public BookServer(Book.Factory bookFactory, BookStorage.Factory storageFactory,
-						  BookStarter.Factory bookStarterFactory, Configurator.Factory configuratorFactory)
+						  BookStarter.Factory bookStarterFactory, Configurator.Factory configuratorFactory,
+						  TeamCollectionManager tcManager)
 		{
 			_bookFactory = bookFactory;
 			_storageFactory = storageFactory;
 			_bookStarterFactory = bookStarterFactory;
 			_configuratorFactory = configuratorFactory;
+			_tcManager = tcManager;
 		}
 
 		public virtual Book GetBookFromBookInfo(BookInfo bookInfo, bool fullyUpdateBookFiles = false)
@@ -29,7 +33,13 @@ namespace Bloom.Book
 			{
 				return new ErrorBook(((ErrorBookInfo)bookInfo).Exception, bookInfo.FolderPath, true );
 			}
-			var book = _bookFactory(bookInfo, _storageFactory(bookInfo.FolderPath, fullyUpdateBookFiles));
+
+			ISaveContext sc = NoEditSaveContext.TheOneInstance;
+			if (bookInfo.IsEditable)
+			{
+				sc = _tcManager.CurrentCollectionEvenIfDisconnected ?? AlwaysEditSaveContext.TheOneInstance;
+			}
+			var book = _bookFactory(bookInfo, _storageFactory(bookInfo.FolderPath, fullyUpdateBookFiles), sc);
 			return book;
 		}
 

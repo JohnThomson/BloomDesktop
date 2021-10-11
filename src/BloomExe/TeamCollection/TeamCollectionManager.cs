@@ -24,8 +24,6 @@ namespace Bloom.TeamCollection
 
 		bool OkToEditCollectionSettings { get; }
 
-		bool CanEditBook();
-
 		bool UserMayChangeEmail { get; }
 
 		// ENHANCE: Add other properties and methods as needed
@@ -161,17 +159,6 @@ namespace Bloom.TeamCollection
 			}
 		}
 
-		public bool CanEditBook()
-		{
-			if (BookSelection.CurrentSelection == null || !BookSelection.CurrentSelection.IsEditable)
-			{
-				return false; // no book, or the book's own logic says it's not editable
-			}
-
-			// We can edit it unless TC says we need a checkout to do it.
-			return !NeedCheckoutToEdit(BookSelection.CurrentSelection.FolderPath);
-		}
-
 		/// <summary>
 		/// This is an additional check on delete AFTER we make sure the book is checked out.
 		/// Even if it is, we can't delete it while disconnected because we don't have a way
@@ -210,18 +197,10 @@ namespace Bloom.TeamCollection
 			}
 		}
 
-		/// <summary>
-		/// Use this as a last resort. Objects created by AutoFac should just add a TCM to their argument
-		/// list if they need it. But there are objects like Book where this is not a logical member variable,
-		/// but for a very few special cases they need to be able to get it.
-		/// </summary>
-		public static TeamCollectionManager TheOneInstance { get; private set; }
-
 		public TeamCollectionManager(string localCollectionPath, BloomWebSocketServer webSocketServer,
 			BookRenamedEvent bookRenamedEvent, BookStatusChangeEvent bookStatusChangeEvent,
 			BookSelection bookSelection, LibraryClosing libraryClosingEvent)
 		{
-			TheOneInstance = this;
 			_webSocketServer = webSocketServer;
 			_bookStatusChangeEvent = bookStatusChangeEvent;
 			_localCollectionFolder = Path.GetDirectoryName(localCollectionPath);

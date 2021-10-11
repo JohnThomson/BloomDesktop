@@ -7,6 +7,7 @@ using System.Windows.Forms;
 using Bloom.Book;
 using Bloom.Collection;
 using Bloom.Properties;
+using Bloom.TeamCollection;
 using Bloom.ToPalaso;
 using CommandLine;
 using L10NSharp;
@@ -68,8 +69,17 @@ namespace Bloom.CLI
 				MessageBox.Show("Could not find collection file " + collectionPath);
 				return;
 			}
-			var problems = new StringBuilder();
 			var collectionFolder = Path.GetDirectoryName(collectionPath);
+
+			if (File.Exists(TeamCollectionManager.GetTcLinkPathFromLcPath(collectionFolder)))
+			{
+				MessageBox.Show("Change Layout command cannot currently be used in Team Collections");
+				return;
+				// To make this possible, we'd need to spin up a TeamCollectionManager and TeamCollection and pass the latter
+				// to the Book as its SaveContext and still changes would be forbidden unless every book was checked out.
+			}
+
+			var problems = new StringBuilder();
 			var collection = new BookCollection(collectionFolder, BookCollection.CollectionType.TheOneEditableCollection, new BookSelection());
 			var collectionSettings = new CollectionSettings(collectionPath);
 			XMatterPackFinder xmatterFinder = new XMatterPackFinder(new[] { BloomFileLocator.GetInstalledXMatterDirectory() });
@@ -78,7 +88,7 @@ namespace Bloom.CLI
 
 			var templateBookInfo  = new BookInfo(Path.GetDirectoryName(bookPath), true);
 			var templateBook = new Book.Book(templateBookInfo, new BookStorage(templateBookInfo.FolderPath, locator, new BookRenamedEvent(), collectionSettings),
-				null, collectionSettings, null, null, new BookRefreshEvent(), new BookSavedEvent());
+				null, collectionSettings, null, null, new BookRefreshEvent(), new BookSavedEvent(), NoEditSaveContext.TheOneInstance);
 
 			var pageDictionary = templateBook.GetTemplatePagesIdDictionary();
 			IPage page = null;

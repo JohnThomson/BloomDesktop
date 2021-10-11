@@ -146,7 +146,7 @@ namespace Bloom.web.controllers
 			// We don't have an image, or we want to make a fresh one
 			var templatesDirectoryInTemplateBook = Path.GetDirectoryName(expectedPathOfThumbnailImage);
 			var bookPath = Path.GetDirectoryName(templatesDirectoryInTemplateBook);
-			var templateBook = _bookFactory(new BookInfo(bookPath,false), _storageFactory(bookPath));
+			var templateBook = _bookFactory(new BookInfo(bookPath,false), _storageFactory(bookPath), NoEditSaveContext.TheOneInstance);
 
 			//note: the caption is used here as a key to find the template page.
 			var caption = Path.GetFileNameWithoutExtension(expectedPathOfThumbnailImage).Trim();
