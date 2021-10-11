@@ -5,6 +5,7 @@ using System.IO;
 using System.Xml;
 using Bloom.Book;
 using Bloom.Collection;
+using Bloom.TeamCollection;
 using CommandLine;
 using SIL.IO;
 using SIL.Progress;
@@ -44,6 +45,13 @@ namespace Bloom.CLI
 				SizeAndOrientation = SizeAndOrientation.FromString(options.SizeAndOrientation)
 			};
 
+			if (File.Exists(TeamCollectionManager.GetTcLinkPathFromLcPath(Path.GetDirectoryName(options.Path))))
+			{
+				throw new ApplicationException("Hydrate command cannot currently be used in Team Collections");
+				// To make this possible, we'd need to spin up a TeamCollectionManager and TeamCollection and pass the latter
+				// to the Book as its SaveContext and still changes would be forbidden unless the book was checked out.
+			}
+
 			var collectionSettings = new CollectionSettings
 			{
 				XMatterPackName = options.XMatter,
@@ -56,6 +64,7 @@ namespace Bloom.CLI
 			var locator = new BloomFileLocator(collectionSettings, xmatterFinder, ProjectContext.GetFactoryFileLocations(),
 				ProjectContext.GetFoundFileLocations(), ProjectContext.GetAfterXMatterFileLocations());
 
+			// default alwaysSaveable is fine here, as we already checked it's not a TC.
 			var bookInfo = new BookInfo(options.Path, true);
 			var book = new Book.Book(bookInfo, new BookStorage(options.Path, locator, new BookRenamedEvent(), collectionSettings),
 				null, collectionSettings, null, null, new BookRefreshEvent(), new BookSavedEvent());

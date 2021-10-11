@@ -51,6 +51,7 @@ namespace Bloom.Book
 		private readonly BookRefreshEvent _bookRefreshEvent;
 		private readonly BookSavedEvent _bookSavedEvent;
 		private List<IPage> _pagesCache;
+		private ISaveContext _saveContext;
 		internal const string kIdOfBasicBook = "056B6F11-4A6C-4942-B2BC-8861E62B03B3";
 
 		public event EventHandler ContentsChanged;
@@ -63,14 +64,17 @@ namespace Bloom.Book
 		public Book()
 		{
 			Guard.Against(!Program.RunningUnitTests, "Only use this ctor for tests!");
+			_saveContext = new AlwaysEditSaveContext();
 		}
 
-		public Book(BookInfo info = null, IBookStorage storage = null):
+		public Book(BookInfo info = null, IBookStorage storage = null, ISaveContext context = null):
 			this()
 		{
 			BookInfo = info;
 			Storage = storage;
 			CollectionSettings = storage?.CollectionSettings;
+			// This constructor is used only for testing and should assume savability
+			_saveContext = context ?? new AlwaysEditSaveContext();
 		}
 
 		public Book(BookInfo info, IBookStorage storage, ITemplateFinder templateFinder,
@@ -78,9 +82,11 @@ namespace Bloom.Book
 			PageSelection pageSelection,
 			PageListChangedEvent pageListChangedEvent,
 			BookRefreshEvent bookRefreshEvent,
-			BookSavedEvent bookSavedEvent=null)
+			BookSavedEvent bookSavedEvent=null, ISaveContext context = null)
 		{
 			BookInfo = info;
+			// This constructor is used often for testing and should assume savability in such cases
+			_saveContext = context ?? new AlwaysEditSaveContext();
 			if (bookSavedEvent == null) // unit testing
 			{
 				bookSavedEvent = new BookSavedEvent();
@@ -648,6 +654,12 @@ namespace Bloom.Book
 				return !HasFatalError;
 			}
 		}
+
+		/// <summary>
+		/// True if changes to the book may currently be saved. This includes the book being checked out
+		/// if it is in a team collection, and by intent should include any future requirements.
+		/// </summary>
+		public bool IsSaveable => IsEditable && BookInfo.IsSaveable;
 
 
 		/// <summary>
@@ -3530,11 +3542,7 @@ namespace Bloom.Book
 			{
 				if (LockDownTheFileAndFolderName || BookInfo.NameLocked)
 					return false;
-				// I really wish Book didn't need to know about TeamCollection. But Save is used
-				// in BringBookUpToDate, and it is disastrous to change the folder name of a book
-				// that is not checked out.
-				var tcm = TeamCollectionManager.TheOneInstance;
-				if (tcm != null && tcm.NeedCheckoutToEdit(FolderPath))
+				if (!IsSaveable)
 					return false;
 				return true;
 			}

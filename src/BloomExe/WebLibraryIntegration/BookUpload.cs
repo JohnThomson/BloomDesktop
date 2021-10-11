@@ -424,6 +424,7 @@ namespace Bloom.WebLibraryIntegration
 			{
 				if (!IsBookOnServer(bookFolder))
 					return false;
+				// This instance of BookInfo is temporary, default Savability is fine.
 				var bkInfo = new BookInfo(bookFolder, true);
 				var s3id = S3BookId(bkInfo.MetaData);
 				var key = s3id + BloomS3Client.kDirectoryDelimeterForS3 + Path.GetFileName(bookFolder) + BloomS3Client.kDirectoryDelimeterForS3 + UploadHashesFilename;
@@ -471,6 +472,7 @@ namespace Bloom.WebLibraryIntegration
 
 			Directory.CreateDirectory(tempFolderPath);
 			BookStorage.CopyDirectory(book.FolderPath, tempFolderPath);
+			// In the temp folder it's safe to assume we can save changes.
 			var bookInfo = new BookInfo(tempFolderPath, true);
 			var copiedBook = bookServer.GetBookFromBookInfo(bookInfo);
 			copiedBook.BringBookUpToDate(new NullProgress(), true);

@@ -2758,7 +2758,8 @@ namespace Bloom.Book
 					RobustFile.WriteAllText(metaPath, meta.ToString());
 				}
 
-				BookInfo backupBook = new BookInfo(newFolderPath, true);
+				// This bookInfo is not going to hang around, so it's harmless to say it can always save.
+				BookInfo backupBook = new BookInfo(newFolderPath, true, new AlwaysEditSaveContext());
 				backupBook.NameLocked = true;
 				backupBook.Save();
 			}
