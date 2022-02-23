@@ -4,6 +4,7 @@ using System.Drawing;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Windows;
 using Bloom.Api;
 using Bloom.Book;
 using Bloom.Collection;
@@ -121,6 +122,20 @@ namespace Bloom.Publish.Android
 					request.PostSucceeded();
 				}
 			}, true);
+
+			apiHandler.RegisterEndpointHandler(kApiUrlPart + "recordVideo", request =>
+			{
+				_recordVideoWindow = new RecordVideoWindow();
+				_recordVideoWindow.Show(PreviewUrl);
+				request.PostSucceeded();
+			}, true, false);
+
+			apiHandler.RegisterEndpointHandler(kApiUrlPart + "soundLog", request =>
+			{
+				var soundLog = request.RequiredPostJson();
+				_recordVideoWindow.StopRecording(soundLog);
+				request.PostSucceeded();
+			}, true, false);
 
 			apiHandler.RegisterEndpointHandler(kApiUrlPart + "backColor", request =>
 			{
@@ -588,6 +603,7 @@ namespace Bloom.Publish.Android
 		}
 
 		private static TemporaryFolder _stagingFolder;
+		private RecordVideoWindow _recordVideoWindow;
 
 		/// <summary>
 		/// Generates a .bloomd file (bloompub) from the book

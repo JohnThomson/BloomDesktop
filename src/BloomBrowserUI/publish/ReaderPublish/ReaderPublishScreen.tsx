@@ -40,6 +40,7 @@ import {
     BulkBloomPubDialog,
     showBulkBloomPubDialog
 } from "./BulkBloomPub/BulkBloomPubDialog";
+import BloomButton from "../../react_components/bloomButton";
 
 export const ReaderPublishScreen = () => {
     // When the user changes some features, included languages, etc., we
@@ -161,6 +162,13 @@ const ReaderPublishScreenInternal: React.FunctionComponent<{
                     <PublishLanguagesGroup
                         onChange={() => setHighlightRefresh(true)}
                     />
+                    <BloomButton
+                        enabled={true}
+                        l10nKey="dummy"
+                        clickApiEndpoint="publish/android/recordVideo"
+                    >
+                        Make recording
+                    </BloomButton>
                     {/* push everything to the bottom */}
                     <div
                         css={css`

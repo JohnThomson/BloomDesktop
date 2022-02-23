@@ -368,6 +368,12 @@
     <Compile Include="Book\SaveContext.cs" />
     <Compile Include="Collection\BookCollectionHolder.cs" />
     <Compile Include="MiscUI\BloomMessageBox.cs" />
+    <Compile Include="Publish\Android\RecordVideoWindow.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Publish\Android\RecordVideoWindow.Designer.cs">
+      <DependentUpon>RecordVideoWindow.cs</DependentUpon>
+    </Compile>
     <Compile Include="Spreadsheet\Header.cs" />
     <Compile Include="FontProcessing\FontFileFinder.cs" />
     <Compile Include="FontProcessing\FontGroup.cs" />
