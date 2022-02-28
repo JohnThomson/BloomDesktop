@@ -41,15 +41,17 @@ import {
     showBulkBloomPubDialog
 } from "./BulkBloomPub/BulkBloomPubDialog";
 import BloomButton from "../../react_components/bloomButton";
+import { Step, StepContent, StepLabel, Stepper } from "@material-ui/core";
+import { kBloomRed } from "../../utils/colorUtils";
 
-export const ReaderPublishScreen = () => {
+export const RecordVideoWindow = () => {
     // When the user changes some features, included languages, etc., we
     // need to rebuild the book and re-run all of our Bloom API queries.
     // This requires a hard-reset of the whole screen, which we do by
     // incrementing a `key` prop on the core of this screen.
     const [keyForReset, setKeyForReset] = useState(0);
     return (
-        <ReaderPublishScreenInternal
+        <RecordVideoWindowInternal
             key={keyForReset}
             onReset={() => {
                 setKeyForReset(keyForReset + 1);
@@ -58,7 +60,7 @@ export const ReaderPublishScreen = () => {
     );
 };
 
-const ReaderPublishScreenInternal: React.FunctionComponent<{
+const RecordVideoWindowInternal: React.FunctionComponent<{
     onReset: () => void;
 }> = props => {
     const inStorybookMode = useContext(StorybookContext);
@@ -68,6 +70,20 @@ const ReaderPublishScreenInternal: React.FunctionComponent<{
     const [closePending, setClosePending] = useState(false);
     const [highlightRefresh, setHighlightRefresh] = useState(false);
     const [progressState, setProgressState] = useState(ProgressState.Working);
+    const [activeStep, setActiveStep] = useState(0);
+    const gotRecording = BloomApi.useWatchBooleanEvent(
+        false,
+        "recordVideo",
+        "ready"
+    );
+    React.useEffect(() => {
+        if (activeStep < 2 && gotRecording) {
+            setActiveStep(2);
+        }
+        if (activeStep >= 2 && !gotRecording) {
+            setActiveStep(1);
+        }
+    }, [gotRecording]);
 
     // bookUrl is expected to be a normal, well-formed URL.
     // (that is, one that you can directly copy/paste into your browser and it would work fine)
@@ -131,27 +147,80 @@ const ReaderPublishScreenInternal: React.FunctionComponent<{
         <React.Fragment>
             <BulkBloomPubDialog />
             <RequiresBloomEnterpriseDialog />
-            <BasePublishScreen className="ReaderPublishScreen">
-                <PreviewPanel>
-                    <ThemeProvider theme={darkTheme}>
-                        <DeviceAndControls
-                            defaultLandscape={defaultLandscape}
-                            canRotate={canRotate}
-                            url={
-                                pathToOutputBrowser +
-                                "bloom-player/dist/bloomplayer.htm?centerVertically=true&url=" +
-                                encodeURIComponent(bookUrl) + // Need to apply encoding to the bookUrl again as data to use it as a parameter of another URL
-                                "&independent=false&host=bloomdesktop"
-                            }
-                            showRefresh={true}
-                            highlightRefreshIcon={highlightRefresh}
-                            onRefresh={() => props.onReset()}
-                        />
-                    </ThemeProvider>
-                </PreviewPanel>
+            <BasePublishScreen
+                className="ReaderPublishScreen"
+                // Be careful! only specified children (PreviewPanel, PublishPanel, SettingsPanel, HelpGroup)
+                // will be shown!
+            >
                 <PublishPanel>
-                    <MethodChooser />
+                    <Stepper activeStep={activeStep} orientation="vertical">
+                        <Step expanded={true}>
+                            <StepLabel>Configure &amp; Preview</StepLabel>
+                            <StepContent>
+                                <ThemeProvider theme={darkTheme}>
+                                    <DeviceAndControls
+                                        defaultLandscape={defaultLandscape}
+                                        canRotate={canRotate}
+                                        url={
+                                            pathToOutputBrowser +
+                                            "bloom-player/dist/bloomplayer.htm?centerVertically=true&url=" +
+                                            encodeURIComponent(bookUrl) + // Need to apply encoding to the bookUrl again as data to use it as a parameter of another URL
+                                            "&independent=false&host=bloomdesktop"
+                                        }
+                                        showRefresh={true}
+                                        highlightRefreshIcon={highlightRefresh}
+                                        onRefresh={() => props.onReset()}
+                                    />
+                                </ThemeProvider>
+                            </StepContent>
+                        </Step>
+                        <Step expanded={true}>
+                            <StepLabel onClick={() => setActiveStep(1)}>
+                                Make Recording
+                            </StepLabel>
+                            <StepContent
+                                css={css`
+                                    .MuiButtonBase-root {
+                                        background-color: ${kBloomRed} !important;
+                                    }
+                                `}
+                            >
+                                <BloomButton
+                                    enabled={true}
+                                    l10nKey="PublishTab.RecordVideo.Record"
+                                    clickApiEndpoint="publish/android/recordVideo"
+                                >
+                                    Record
+                                </BloomButton>
+                            </StepContent>
+                        </Step>
+                        <Step expanded={true}>
+                            <StepLabel>Check Recording</StepLabel>
+                            <StepContent>
+                                <BloomButton
+                                    enabled={gotRecording}
+                                    l10nKey="PublishTab.RecordVideo.Play"
+                                    clickApiEndpoint="publish/android/playVideo"
+                                >
+                                    Play Video
+                                </BloomButton>
+                            </StepContent>
+                        </Step>
+                        <Step expanded={true} onClick={() => setActiveStep(3)}>
+                            <StepLabel>Save</StepLabel>
+                            <StepContent>
+                                <BloomButton
+                                    enabled={gotRecording}
+                                    l10nKey="PublishTab.Save"
+                                    clickApiEndpoint="publish/android/saveVideo"
+                                >
+                                    Save...
+                                </BloomButton>
+                            </StepContent>
+                        </Step>
+                    </Stepper>
                 </PublishPanel>
+
                 <SettingsPanel>
                     <PublishFeaturesGroup
                         onChange={() => {
@@ -168,18 +237,6 @@ const ReaderPublishScreenInternal: React.FunctionComponent<{
                             margin-top: auto;
                         `}
                     />
-                    <CommandsGroup>
-                        <RequiresBloomEnterpriseAdjacentIconWrapper>
-                            <LinkWithDisabledStyles
-                                l10nKey="PublishTab.BulkBloomPub.MakeAllBloomPubs"
-                                onClick={() => {
-                                    showBulkBloomPubDialog();
-                                }}
-                            >
-                                Make All BloomPUBs from Collection
-                            </LinkWithDisabledStyles>
-                        </RequiresBloomEnterpriseAdjacentIconWrapper>
-                    </CommandsGroup>
                     <HelpGroup>
                         <HelpLink
                             l10nKey="PublishTab.Android.AboutBookFeatures"
@@ -187,34 +244,6 @@ const ReaderPublishScreenInternal: React.FunctionComponent<{
                         >
                             About Book Features
                         </HelpLink>
-                        <HtmlHelpLink
-                            l10nKey="PublishTab.Android.Troubleshooting"
-                            fileid="Publish-Android-Troubleshooting"
-                        >
-                            Troubleshooting Tips
-                        </HtmlHelpLink>
-                        <HelpLink
-                            l10nKey="PublishTab.Android.AboutBloomReader"
-                            helpId="Concepts/Bloom_Reader_App.htm"
-                        >
-                            About Bloom Reader
-                        </HelpLink>
-                        <div className="icon-link-row get-bloom-reader">
-                            <a href="https://play.google.com/store/search?q=%22sil%20international%22%2B%22bloom%20reader%22&amp;c=apps">
-                                <img
-                                    className="playIcon"
-                                    src="Google_Play_symbol_2016.svg"
-                                />
-                            </a>
-                            <Link
-                                id="getBloomReaderLink"
-                                href="https://play.google.com/store/search?q=%22sil%20international%22%2B%22bloom%20reader%22&amp;c=apps"
-                                l10nKey="PublishTab.Android.GetBloomReader"
-                                l10nComment="Link to find Bloom Reader on Google Play Store"
-                            >
-                                Get Bloom Reader App
-                            </Link>
-                        </div>
                     </HelpGroup>
                 </SettingsPanel>
             </BasePublishScreen>
@@ -242,11 +271,13 @@ const ReaderPublishScreenInternal: React.FunctionComponent<{
 // a bit goofy... currently the html loads everything in publishUIBundlejs. So all the publish screens
 // get any not-in-a-class code called, including ours. But it only makes sense to get wired up
 // if that html has the root page we need.
-if (document.getElementById("BloomReaderPublishScreen")) {
+// WE could now switch to doing this with ReactControl. But it's easier if all the publish HTML
+// panels work the same way.
+if (document.getElementById("RecordVideoScreen")) {
     ReactDOM.render(
         <ThemeProvider theme={lightTheme}>
-            <ReaderPublishScreen />
+            <RecordVideoWindow />
         </ThemeProvider>,
-        document.getElementById("BloomReaderPublishScreen")
+        document.getElementById("RecordVideoScreen")
     );
 }

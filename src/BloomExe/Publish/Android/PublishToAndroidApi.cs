@@ -93,6 +93,16 @@ namespace Bloom.Publish.Android
 			return AndroidPublishSettings.FromBookInfo(_bookForLanguagesToPublish.BookInfo);
 		}
 
+		public void AbortMakingVideo()
+		{
+			if (_recordVideoWindow != null)
+			{
+				_recordVideoWindow.Close();
+				_recordVideoWindow.Cleanup();
+				_recordVideoWindow = null;
+			}
+		}
+
 
 		public void RegisterWithApiHandler(BloomApiHandler apiHandler)
 		{
@@ -125,8 +135,7 @@ namespace Bloom.Publish.Android
 
 			apiHandler.RegisterEndpointHandler(kApiUrlPart + "recordVideo", request =>
 			{
-				_recordVideoWindow = new RecordVideoWindow();
-				_recordVideoWindow.Show(PreviewUrl);
+				StartRecordingVideo(request);
 				request.PostSucceeded();
 			}, true, false);
 
@@ -134,6 +143,24 @@ namespace Bloom.Publish.Android
 			{
 				var soundLog = request.RequiredPostJson();
 				_recordVideoWindow.StopRecording(soundLog);
+				request.PostSucceeded();
+			}, true, false);
+			apiHandler.RegisterEndpointHandler(kApiUrlPart + "playVideo", request =>
+			{
+				_recordVideoWindow.PlayVideo();
+				request.PostSucceeded();
+			}, true, false);
+
+			apiHandler.RegisterEndpointHandler(kApiUrlPart + "saveVideo", request =>
+			{
+				if (_recordVideoWindow == null)
+				{
+					// Rather than messing with disabling the button, we'll just go ahead and make
+					// the recording if they press this first.
+					StartRecordingVideo(request);
+				}
+				// Recording may still be in progress, but when it's done we'll Save.
+				_recordVideoWindow.SaveVideo();
 				request.PostSucceeded();
 			}, true, false);
 
@@ -398,6 +425,20 @@ namespace Bloom.Publish.Android
 				//	request.ReplyWithText(_languagesToPublish.Contains(langCode) ? "true" : "false");
 				//}
 			}, false);
+		}
+
+		private void StartRecordingVideo(ApiRequest request)
+		{
+			_recordVideoWindow = new RecordVideoWindow(_webSocketServer);
+			_recordVideoWindow.Closed += (sender, args) =>
+			{
+				if (!_recordVideoWindow.GotFullRecording)
+				{
+					_recordVideoWindow.Cleanup();
+					_recordVideoWindow = null;
+				}
+			};
+			_recordVideoWindow.Show(PreviewUrl, request.CurrentBook.FolderPath);
 		}
 
 		private AndroidPublishSettings _lastSettings;

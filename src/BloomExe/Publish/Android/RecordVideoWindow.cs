@@ -23,18 +23,26 @@ namespace Bloom.Publish.Android
 		private string _bookFolder;
 		private string _videoOnlyPath;
 		private string _ffmpegPath;
+		private TempFile _initialVideo;
+		private TempFile _finalVideo;
+		private bool _recording = true;
+		private bool _saveReceived = false;
+		private string _pathToRealBook;
+		private BloomWebSocketServer _webSocketServer;
 
-		public RecordVideoWindow()
+		public RecordVideoWindow(BloomWebSocketServer webSocketServer)
 		{
 			InitializeComponent();
+			_webSocketServer = webSocketServer;
 			_content = new Browser();
 			_content.Dock = DockStyle.Fill;
 			Controls.Add(_content);
 		}
 
-		public void Show(string bookUrl)
+		public void Show(string bookUrl, string pathToRealBook)
 		{
 			_bookFolder = Path.GetDirectoryName(bookUrl.FromLocalhost());
+			_pathToRealBook = pathToRealBook;
 			var url = BloomServer.ServerUrlWithBloomPrefixEndingInSlash
 			+ "bloom-player/dist/bloomplayer.htm?centerVertically=true&reportSoundLog=true&initiallyShowAppBar=false&forceAutoPlay=true&hideNavButtons=true&url=" + bookUrl
 				+ "&independent=false&host=bloomdesktop";
@@ -52,8 +60,10 @@ namespace Bloom.Publish.Android
 		protected override void OnLoad(EventArgs e)
 		{
 			base.OnLoad(e);
+			_webSocketServer.SendString("recordVideo", "ready", "false");
 			var timer = new Timer();
-			_videoOnlyPath = @"d:\temp\output.mp4"; // Todo
+			_initialVideo = TempFile.WithExtension(".mp4");
+			_videoOnlyPath = _initialVideo.Path;
 			RobustFile.Delete(_videoOnlyPath);
 			//return;
 			timer.Tick += (sender, eventArgs) =>
@@ -154,7 +164,8 @@ namespace Bloom.Publish.Android
 				soundLog[i] = sound;
 			}
 
-			var finalOutputPath = @"d:\temp\output2.mp4"; // todo
+			_finalVideo = TempFile.WithExtension(".mp4");
+			var finalOutputPath = _finalVideo.Path;
 			RobustFile.Delete(finalOutputPath);
 			if (soundLog.Length == 0)
 			{
@@ -224,6 +235,66 @@ namespace Bloom.Publish.Android
 			_ffmpegProcess.WaitForExit();
 			Debug.WriteLine("merge errors:");
 			Debug.WriteLine( _errorData.ToString());
+			_recording = false;
+			GotFullRecording = true;
+			_webSocketServer.SendString("recordVideo","ready", "true");
+			if (_saveReceived)
+				SaveVideo(); // now we really can.
+			Close();
+		}
+		public bool GotFullRecording { get; private set; }
+
+		protected override void OnClosed(EventArgs e)
+		{
+			_saveReceived = false;
+			base.OnClosed(e);
+			if (_recording && _ffmpegProcess != null)
+			{
+				_ffmpegProcess.StandardInput.WriteLine("q"); // stop it asap
+			}
+
+			_initialVideo?.Dispose();
+			_initialVideo = null;
+		}
+
+		// When the window is closed we will automatically be Disposed. But we might still be asked to
+		// Save the final recording. So we can't get rid of that in Dispose. This will be called
+		// when we're sure we need it no more.
+		public void Cleanup()
+		{
+			_finalVideo?.Dispose();
+			_finalVideo = null;
+		}
+
+		public void PlayVideo()
+		{
+			if (!GotFullRecording)
+				return;
+			Process.Start(_finalVideo.Path);
+		}
+
+		// Note: this method is very likely to be called after the window is closed and therefore disposed.
+		public void SaveVideo()
+		{
+			_saveReceived = true;
+			if (!GotFullRecording)
+				return; // we'll be called again when done, unless the window was closed prematurely
+			using (var dlg = new DialogAdapters.SaveFileDialogAdapter())
+			{
+				string suggestedName = string.Format($"{Path.GetFileName(_pathToRealBook)}.mp4");
+				dlg.FileName = suggestedName;
+				var pdfFileLabel = L10NSharp.LocalizationManager.GetString(@"PublishTab.VideoFile",
+					"Video File",
+					@"displayed as file type for Save File dialog.");
+
+				pdfFileLabel = pdfFileLabel.Replace("|", "");
+				dlg.Filter = String.Format("{0}|*.mp4", pdfFileLabel);
+				dlg.OverwritePrompt = true;
+				if (DialogResult.OK == dlg.ShowDialog())
+				{
+					RobustFile.Copy(_finalVideo.Path, dlg.FileName);
+				}
+			}
 		}
 	}
 

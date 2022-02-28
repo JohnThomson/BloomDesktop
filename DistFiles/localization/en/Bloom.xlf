@@ -3939,6 +3939,14 @@
         <source xml:lang="en">Publish</source>
         <note>ID: PublishTab.Publish</note>
       </trans-unit>
+      <trans-unit id="PublishTab.RecordVideo.Play">
+        <source xml:lang="en">Play Video</source>
+        <note>ID: ublishTab.RecordVideo.Play</note>
+      </trans-unit>
+      <trans-unit id="PublishTab.RecordVideo.Record">
+        <source xml:lang="en">Record</source>
+        <note>ID: PublishTab.RecordVideo.Record</note>
+      </trans-unit>
       <trans-unit id="PublishTab.PublishRequiresEnterprise.FirstOverlayPage">
         <source xml:lang="en">Page {0} is the first page that uses Overlay elements.</source>
         <note>ID: PublishTab.PublishRequiresEnterprise.FirstOverlayPage</note>
@@ -4298,6 +4306,10 @@ Do you want to go ahead?</note>
         <source xml:lang="en">Is this an update of your existing book?</source>
         <note>ID: PublishTab.UploadCollisionDialog.SameBook</note>
         <note>This is the dialog title</note>
+      </trans-unit>
+      <trans-unit id="PublishTab.VideoFile">
+        <source xml:lang="en">Video file</source>
+        <note>ID: PublishTab.VideoFile</note>
       </trans-unit>
       <trans-unit id="Quiz.CheckYourUnderstanding" sil:dynamic="true">
         <source xml:lang="en">Check Your Understanding</source>
