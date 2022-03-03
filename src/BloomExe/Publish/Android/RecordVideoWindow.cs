@@ -6,10 +6,12 @@ using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using Bloom.Api;
+using Bloom.Utils;
 using SIL.IO;
 
 namespace Bloom.Publish.Android
@@ -29,6 +31,11 @@ namespace Bloom.Publish.Android
 		private bool _saveReceived = false;
 		private string _pathToRealBook;
 		private BloomWebSocketServer _webSocketServer;
+		private int _videoHeight = 720; // default, facebook
+		private int _videoWidth = 1280;
+		private string codec = "h.264";
+		private string _pageReadTime = "3.0"; // default for pages without narration
+		private string _videoSettingsFromPreview;
 
 		public RecordVideoWindow(BloomWebSocketServer webSocketServer)
 		{
@@ -44,16 +51,20 @@ namespace Bloom.Publish.Android
 			_bookFolder = Path.GetDirectoryName(bookUrl.FromLocalhost());
 			_pathToRealBook = pathToRealBook;
 			var url = BloomServer.ServerUrlWithBloomPrefixEndingInSlash
-			+ "bloom-player/dist/bloomplayer.htm?centerVertically=true&reportSoundLog=true&initiallyShowAppBar=false&forceAutoPlay=true&hideNavButtons=true&url=" + bookUrl
-				+ "&independent=false&host=bloomdesktop";
+			          + "bloom-player/dist/bloomplayer.htm?centerVertically=true&reportSoundLog=true&initiallyShowAppBar=false&autoplay=yes&hideNavButtons=true&url="
+			          + bookUrl
+			          + $"&independent=false&host=bloomdesktop&defaultDuration={_pageReadTime}&skipActivities=true";
+			if (_videoSettingsFromPreview != null)
+			{
+				url += $"&videoSettings={_videoSettingsFromPreview}";
+			}
+
 			_content.Navigate(url, false);
-			// want this size
-			var videoHeight = 720;
-			var videoWidth = 1280;
 			var deltaV = this.Height - _content.Height;
 			var deltaH = this.Width - _content.Width;
-			Height = videoHeight + deltaV;
-			Width = videoWidth + deltaH;
+			MaximumSize = new Size(3000, 3000);
+			Height = _videoHeight + deltaV;
+			Width = _videoWidth + deltaH;
 			Show();
 		}
 
@@ -61,65 +72,63 @@ namespace Bloom.Publish.Android
 		{
 			base.OnLoad(e);
 			_webSocketServer.SendString("recordVideo", "ready", "false");
-			var timer = new Timer();
 			_initialVideo = TempFile.WithExtension(".mp4");
 			_videoOnlyPath = _initialVideo.Path;
 			RobustFile.Delete(_videoOnlyPath);
-			//return;
-			timer.Tick += (sender, eventArgs) =>
-			{
-				timer.Stop();
-				_ffmpegPath = @"d:\ffmpeg\bin\ffmpeg.exe";
+		}
 
-				var args =
-							//"-t 10 " // duration limit"
-							"-f gdigrab " // basic command for using a windows window as a video input stream
-						   + "-framerate 30 " // frames per second to capture (30fps is standard for SD video)
-				           + $"-i title={Text} " // identifies the window for gdigrab
-							// lbx164 is the standard encoder for H.264, which Wickipedia says is the most used (91%)
-							// video compression format. ffmpeg will use H.264 by default, but I think we have to
-							// specify the encoder in order to give it parameters. H.264 has a variety of 'profiles',
-							// and the one used by default, which I think may be High 4:4:4, is not widely supported.
-							// For example, it won't open on Windows with Media Player, Movies and TV, Photos, or
-							// Windows Media Player, nor in Firefox, nor in either of the apps suggested for mp4 files
-							// on my Android 11 device. The 'main' profile specified here seems to be
-							// much better, and opened in everything I tried. However, by default 'main' tries to use
-							// 4:4:4 and gives an error message. Some pix_fmt seems to be needed, and this one works
-							// in all the above places, though I'm not clear exactly what it does.
-							// To sum up, this substring, which needs to come after the inputs and before the output,
-							// tells it to make an H.264 compressed video of a type (profile) that most software can work with.
-							+ "-c:v libx264 -profile:v main -pix_fmt yuv420p "
-						   + _videoOnlyPath;
-				_ffmpegProcess = new Process
+		public void StartFfmpeg()
+		{
+			_ffmpegPath = MiscUtils.FindFfmpegProgram();
+			// Enhance: what on earth should we do if it's not found??
+
+			var args =
+				//"-t 10 " // duration limit"
+				"-f gdigrab " // basic command for using a windows window as a video input stream
+				+ "-framerate 30 " // frames per second to capture (30fps is standard for SD video)
+				+ "-draw_mouse 0 " // don't capture any mouse movement over the window
+				+ $"-i title={Text} " // identifies the window for gdigrab
+				// lbx164 is the standard encoder for H.264, which Wickipedia says is the most used (91%)
+				// video compression format. ffmpeg will use H.264 by default, but I think we have to
+				// specify the encoder in order to give it parameters. H.264 has a variety of 'profiles',
+				// and the one used by default, which I think may be High 4:4:4, is not widely supported.
+				// For example, it won't open on Windows with Media Player, Movies and TV, Photos, or
+				// Windows Media Player, nor in Firefox, nor in either of the apps suggested for mp4 files
+				// on my Android 11 device. The 'main' profile specified here seems to be
+				// much better, and opened in everything I tried. However, by default 'main' tries to use
+				// 4:4:4 and gives an error message. Some pix_fmt seems to be needed, and this one works
+				// in all the above places, though I'm not clear exactly what it does.
+				// To sum up, this substring, which needs to come after the inputs and before the output,
+				// tells it to make an H.264 compressed video of a type (profile) that most software can work with.
+				+ "-c:v libx264 -profile:v main -pix_fmt yuv420p "
+				+ _videoOnlyPath;
+			_ffmpegProcess = new Process
+			{
+				StartInfo =
 				{
-					StartInfo =
-					{
-						FileName = _ffmpegPath,
-						Arguments = args,
-						UseShellExecute = false, // enables CreateNoWindow
-						CreateNoWindow = true, // don't need a DOS box
-						RedirectStandardOutput = true,
-						RedirectStandardError = true,
-						RedirectStandardInput = true,
-					}
-				};
-				Debug.WriteLine("args: " + args);
-				_errorData = new StringBuilder();
-				_ffmpegProcess.ErrorDataReceived += (o, receivedEventArgs) =>
-				{
-					_errorData.AppendLine(receivedEventArgs.Data);
-				};
-				_ffmpegProcess.Start();
-				_startTime = DateTime.Now;
-				// Nothing seems to come over the output stream, but it seems to be important to
-				// have something running that will accept input on these streams, otherwise the 'q'
-				// that we send on standard input is not received. A comment I saw elsewhere indicated
-				// that a deadlock in ffmpeg might be involved.
-				_ffmpegProcess.BeginOutputReadLine();
-				_ffmpegProcess.BeginErrorReadLine();
+					FileName = _ffmpegPath,
+					Arguments = args,
+					UseShellExecute = false, // enables CreateNoWindow
+					CreateNoWindow = true, // don't need a DOS box
+					RedirectStandardOutput = true,
+					RedirectStandardError = true,
+					RedirectStandardInput = true,
+				}
 			};
-			timer.Interval = 1000;
-			timer.Start();
+			Debug.WriteLine("args: " + args);
+			_errorData = new StringBuilder();
+			_ffmpegProcess.ErrorDataReceived += (o, receivedEventArgs) =>
+			{
+				_errorData.AppendLine(receivedEventArgs.Data);
+			};
+			_ffmpegProcess.Start();
+			_startTime = DateTime.Now;
+			// Nothing seems to come over the output stream, but it seems to be important to
+			// have something running that will accept input on these streams, otherwise the 'q'
+			// that we send on standard input is not received. A comment I saw elsewhere indicated
+			// that a deadlock in ffmpeg might be involved.
+			_ffmpegProcess.BeginOutputReadLine();
+			_ffmpegProcess.BeginErrorReadLine();
 		}
 
 		string UrlToFile(string input)
@@ -188,7 +197,10 @@ namespace Bloom.Publish.Android
 
 				var delay = item.startTime - _startTime;
 				// all=1: in case the input is stereo, all channels of it will be delayed.
-				result += $"adelay={delay.TotalMilliseconds}:all=1";
+				// We shouldn't get negative delays, since startTime
+				// is recorded during a method that completes before we return
+				Debug.Assert(delay.TotalMilliseconds >= 0);
+				result += $"adelay={Math.Max(delay.TotalMilliseconds, 0)}:all=1";
 
 				if (item.volume != 1.0)
 				{
@@ -208,9 +220,18 @@ namespace Bloom.Publish.Android
 					   + mixArgs // specifies the inputs to the mixer
 					   // mix those inputs to a single stream called out
 					   + mixInputs + $"amix=inputs={soundLog.Length}:normalize=0[out]\" "
-					   + "-map 0:v -c:v copy " // copy the video channel (of input 0) unchanged
+					   + "-map 0:v -c:v copy " // copy the video channel (of input 0) unchanged.
+					   // Shouldwe wpecify MP3 for the SoundHandler instead of the default AAC?
+			           // https://www.movavi.com/learning-portal/aac-vs-mp3.html says more things
+					   // understand mp3, but it's talking about audio files.
+					   // https://stackoverflow.com/questions/9168954/should-i-use-the-mp3-or-aac-codec-for-a-mp4-file/25718378)
+					   // has ambiguous answers. It would let us build a slightly smaller ffmpeg. It would tend to make
+					   // slightly larger mp4s.
+					   // Current thinking is that it's desirable if we're generating audio-only.
+					   // + "-c:a libmp3lame " 
 					   + "-map [out] " // send the output of the mix to the output
 			           + finalOutputPath;
+			Debug.WriteLine("args: " + args);
 			_ffmpegProcess = new Process
 			{
 				StartInfo =
@@ -266,6 +287,13 @@ namespace Bloom.Publish.Android
 			_finalVideo = null;
 		}
 
+		protected override void OnHandleCreated(EventArgs e)
+		{
+			base.OnHandleCreated(e);
+			// BL-552, BL-779: a bug in Mono requires us to wait to set Icon until handle created.
+			Icon = Properties.Resources.BloomIcon;
+		}
+
 		public void PlayVideo()
 		{
 			if (!GotFullRecording)
@@ -295,6 +323,54 @@ namespace Bloom.Publish.Android
 					RobustFile.Copy(_finalVideo.Path, dlg.FileName);
 				}
 			}
+		}
+
+		[DllImport("user32.dll", EntryPoint = "MoveWindow")]
+		private static extern bool MoveWindow(IntPtr hWnd, int x, int y, int w, int h, bool repaint);
+
+		protected override void SetBoundsCore(int x, int y, int width, int height, BoundsSpecified specified)
+		{
+			base.SetBoundsCore(x, y, width, height, specified);
+			MoveWindow(Handle, x, y, width, height, true);
+		}
+
+		public void SetFormat(string format, bool landscape)
+		{
+			switch (format)
+			{
+				case "facebook":
+					_videoHeight = landscape ? 720 : 1280;
+					_videoWidth = landscape ? 1280 : 720;
+					codec = "h.264";
+					break;
+				case "feature":
+					// review: are these right?
+					_videoHeight = 320;
+					_videoWidth = 240;
+					codec = "h.263"; // todo: implement
+					break;
+				case "youtube":
+					_videoHeight = landscape ?1080 : 1920;
+					_videoWidth = landscape ? 1920:1080;
+					codec = "h.264";
+					break;
+				case "mp3":
+					// review: what size video do we want to play?
+					_videoHeight = landscape ? 720: 1280;
+					_videoWidth = landscape ? 1280 : 720;
+					codec = "mp3"; // todo: implement
+					break;
+			}
+		}
+
+		public void SetPageReadTime(string pageReadTime)
+		{
+			_pageReadTime = pageReadTime;
+		}
+
+		public void SetVideoSettingsFromPreview(string videoSettings)
+		{
+			_videoSettingsFromPreview = videoSettings;
 		}
 	}
 

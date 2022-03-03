@@ -55,6 +55,10 @@ namespace Bloom.Publish.Android
 		// This constant must match the ID that is used for the listener set up in the React component AndroidPublishUI
 		private const string kWebsocketEventId_Preview = "androidPreview";
 		public const string StagingFolder = "PlaceForStagingBook";
+		private string _videoFormat = "facebook";
+		string _pageReadTime = "3.0";
+		private string _settingsFromPreview;
+
 
 		public static string PreviewUrl { get; set; }
 		
@@ -133,30 +137,62 @@ namespace Bloom.Publish.Android
 				}
 			}, true);
 
-			apiHandler.RegisterEndpointHandler(kApiUrlPart + "recordVideo", request =>
+			apiHandler.RegisterEndpointHandler ("publish/video/recordVideo", request =>
 			{
 				StartRecordingVideo(request);
 				request.PostSucceeded();
 			}, true, false);
 
-			apiHandler.RegisterEndpointHandler(kApiUrlPart + "soundLog", request =>
+			apiHandler.RegisterEndpointHandler("publish/video/soundLog", request =>
 			{
 				var soundLog = request.RequiredPostJson();
 				_recordVideoWindow.StopRecording(soundLog);
 				request.PostSucceeded();
 			}, true, false);
-			apiHandler.RegisterEndpointHandler(kApiUrlPart + "playVideo", request =>
+			apiHandler.RegisterEndpointHandler("publish/video/playVideo", request =>
 			{
 				_recordVideoWindow.PlayVideo();
 				request.PostSucceeded();
 			}, true, false);
+			apiHandler.RegisterEndpointHandler("publish/video/pageReadTime", request =>
+			{
+				_pageReadTime = request.RequiredPostString();
+				_recordVideoWindow?.SetPageReadTime(_pageReadTime);
+				request.PostSucceeded();
+			}, true, false);
+			apiHandler.RegisterEndpointHandler("publish/video/videoSettings", request =>
+			{
+				_settingsFromPreview = request.RequiredPostString();
+				request.PostSucceeded();
+			}, true, false);
 
-			apiHandler.RegisterEndpointHandler(kApiUrlPart + "saveVideo", request =>
+			apiHandler.RegisterBooleanEndpointHandlerExact("publish/video/hasActivities",
+				request =>
+				{
+					return request.CurrentBook.HasActivities;
+				},
+				null, // no write action
+				false,
+				true); // we don't really know, just safe default
+
+			apiHandler.RegisterEndpointHandler("publish/video/format", request =>
+			{
+				_videoFormat = request.RequiredPostString();
+				_recordVideoWindow?.SetFormat(_videoFormat, request.CurrentBook.GetLayout().SizeAndOrientation.IsLandScape);
+				request.PostSucceeded();
+			}, true, false);
+
+			apiHandler.RegisterEndpointHandler("publish/video/startRecording", request =>
+			{
+				_recordVideoWindow?.StartFfmpeg();
+				request.PostSucceeded();
+			}, true, false);
+
+			apiHandler.RegisterEndpointHandler("publish/video/saveVideo", request =>
 			{
 				if (_recordVideoWindow == null)
 				{
-					// Rather than messing with disabling the button, we'll just go ahead and make
-					// the recording if they press this first.
+					// This shouldn't be possible, but just in case, we'll kick off the recording now.
 					StartRecordingVideo(request);
 				}
 				// Recording may still be in progress, but when it's done we'll Save.
@@ -204,32 +240,14 @@ namespace Bloom.Publish.Android
 				}
 			, true);
 
-			apiHandler.RegisterEndpointHandler(kApiUrlPart + "updatePreview", request =>
+			apiHandler.RegisterEndpointHandlerExact(kApiUrlPart + "updatePreview", request =>
 			{
-				if (request.HttpMethod == HttpMethods.Post)
-				{
-					// This is already running on a server thread, so there doesn't seem to be any need to kick off
-					// another background one and return before the preview is ready. But in case something in C#
-					// might one day kick of a new preview, or we find we do need a background thread,
-					// I've made it a websocket broadcast when it is ready.
-					// If we've already left the publish tab...we can get a few of these requests queued up when
-					// a tester rapidly toggles between views...abandon the attempt
-					if (!PublishHelper.InPublishTab)
-					{
-						request.Failed("aborted, no longer in publish tab");
-						return;
-					}
-					try
-					{
-						UpdatePreview(request);
-						request.PostSucceeded();
-					}
-					catch (Exception e)
-					{
-						request.Failed("Error while updating preview. Message: " + e.Message);
-						NonFatalProblem.Report(ModalIf.Alpha, PassiveIf.All, "Error while updating preview.", null, e, true);
-					}
-				}
+				MakeBloompubPreview(request, false);
+			}, false);
+
+			apiHandler.RegisterEndpointHandlerExact( "publish/video/updatePreview", request =>
+			{
+				MakeBloompubPreview(request, true);
 			}, false);
 
 
@@ -427,9 +445,41 @@ namespace Bloom.Publish.Android
 			}, false);
 		}
 
+		private void MakeBloompubPreview(ApiRequest request, bool allLanguages)
+		{
+			if (request.HttpMethod == HttpMethods.Post)
+			{
+				// This is already running on a server thread, so there doesn't seem to be any need to kick off
+				// another background one and return before the preview is ready. But in case something in C#
+				// might one day kick of a new preview, or we find we do need a background thread,
+				// I've made it a websocket broadcast when it is ready.
+				// If we've already left the publish tab...we can get a few of these requests queued up when
+				// a tester rapidly toggles between views...abandon the attempt
+				if (!PublishHelper.InPublishTab)
+				{
+					request.Failed("aborted, no longer in publish tab");
+					return;
+				}
+
+				try
+				{
+					UpdatePreview(request, allLanguages);
+					request.PostSucceeded();
+				}
+				catch (Exception e)
+				{
+					request.Failed("Error while updating preview. Message: " + e.Message);
+					NonFatalProblem.Report(ModalIf.Alpha, PassiveIf.All, "Error while updating preview.", null, e, true);
+				}
+			}
+		}
+
 		private void StartRecordingVideo(ApiRequest request)
 		{
 			_recordVideoWindow = new RecordVideoWindow(_webSocketServer);
+			_recordVideoWindow.SetFormat(_videoFormat, request.CurrentBook.GetLayout().SizeAndOrientation.IsLandScape);
+			_recordVideoWindow.SetPageReadTime(_pageReadTime);
+			_recordVideoWindow.SetVideoSettingsFromPreview(_settingsFromPreview);
 			_recordVideoWindow.Closed += (sender, args) =>
 			{
 				if (!_recordVideoWindow.GotFullRecording)
@@ -540,11 +590,15 @@ namespace Bloom.Publish.Android
 		/// If the caller wants to insert this URL as a query parameter to another URL (e.g. like what is often done with Bloom Player),
 		/// it's the caller's responsibility to apply another layer of URL encoding to make the URL suitable to be passed as data inside another URL.
 		/// </summary>
-		private void UpdatePreview(ApiRequest request)
+		private void UpdatePreview(ApiRequest request, bool allLanguages)
 		{
 			InitializeLanguagesInBook(request);
 			_lastSettings = GetSettings();
 			_lastThumbnailBackgroundColor = _thumbnailBackgroundColor;
+			if (allLanguages)
+			{
+				_lastSettings = _lastSettings.WithAllLanguages(_allLanguages.Keys);
+			}
 			PreviewUrl = MakeBloomPubForPreview(request.CurrentBook, _bookServer, _progress, _thumbnailBackgroundColor, _lastSettings);
 			_webSocketServer.SendString(kWebSocketContext, kWebsocketEventId_Preview, PreviewUrl);
 		}
@@ -556,7 +610,7 @@ namespace Bloom.Publish.Android
 			{
 				return;
 			}
-			UpdatePreview(request);
+			UpdatePreview(request, false);
 		}
 
 		public void Stop()

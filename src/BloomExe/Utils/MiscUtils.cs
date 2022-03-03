@@ -219,5 +219,13 @@ namespace Bloom.Utils
 			// thanks to http://stackoverflow.com/questions/982028/convert-net-color-objects-to-hex-codes-and-back
 			return string.Format("#{0:X2}{1:X2}{2:X2}", color.R, color.G, color.B);
 		}
+
+		public static string FindFfmpegProgram()
+		{
+			var ffmpeg = "/usr/bin/ffmpeg";     // standard Linux location
+			if (SIL.PlatformUtilities.Platform.IsWindows)
+				ffmpeg = Path.Combine(BloomFileLocator.GetCodeBaseFolder(), "ffmpeg.exe");
+			return RobustFile.Exists(ffmpeg) ? ffmpeg : string.Empty;
+		}
 	}
 }

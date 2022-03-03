@@ -1023,6 +1023,10 @@
         <note>ID: Common.Report</note>
         <note>Used for a link that signifies "Bring up a dialog for sending a report of a problem. We usually want all-caps, unless inappropriate in a particular language"</note>
       </trans-unit>
+      <trans-unit id="Common.Seconds">
+        <source xml:lang="en">%0 seconds</source>
+        <note>ID: Common.Seconds</note>
+      </trans-unit>
       <trans-unit id="Common.SeeWebPage">
         <source xml:lang="en">See {0}.</source>
         <note>ID: Common.SeeWebPage</note>
@@ -3939,6 +3943,30 @@
         <source xml:lang="en">Publish</source>
         <note>ID: PublishTab.Publish</note>
       </trans-unit>
+      <trans-unit id="PublishTab.RecordVideo.ActivitiesSkipped">
+        <source xml:lang="en">Activities will be skipped</source>
+        <note>ID: ublishTab.RecordVideo.ActivitiesSkipped</note>
+      </trans-unit>
+      <trans-unit id="PublishTab.RecordVideo.Facebook">
+        <source xml:lang="en">Facebook</source>
+        <note>ID: ublishTab.RecordVideo.Facebook</note>
+      </trans-unit>
+      <trans-unit id="PublishTab.RecordVideo.FeaturePhone">
+        <source xml:lang="en">Feature Phone</source>
+        <note>ID: ublishTab.RecordVideo.FeaturePhone</note>
+      </trans-unit>
+      <trans-unit id="PublishTab.RecordVideo.Format">
+        <source xml:lang="en">Format</source>
+        <note>ID: ublishTab.RecordVideo.Format</note>
+      </trans-unit>
+      <trans-unit id="PublishTab.RecordVideo.Instructions">
+        <source xml:lang="en">Use the red buttons above the book player to select the language and other settings.</source>
+        <note>ID: ublishTab.RecordVideo.Instructions</note>
+      </trans-unit>
+      <trans-unit id="PublishTab.RecordVideo.Mp3">
+        <source xml:lang="en">Mp3 Audio</source>
+        <note>ID: ublishTab.RecordVideo.Mp3</note>
+      </trans-unit>
       <trans-unit id="PublishTab.RecordVideo.Play">
         <source xml:lang="en">Play Video</source>
         <note>ID: ublishTab.RecordVideo.Play</note>
@@ -3946,6 +3974,30 @@
       <trans-unit id="PublishTab.RecordVideo.Record">
         <source xml:lang="en">Record</source>
         <note>ID: PublishTab.RecordVideo.Record</note>
+      </trans-unit>
+      <trans-unit id="PublishTab.RecordVideo.TurnPageAfter">
+        <source xml:lang="en">Turn pages without narration after:</source>
+        <note>ID: PublishTab.RecordVideo.TurnPageAfter</note>
+      </trans-unit>
+      <trans-unit id="PublishTab.RecordVideo.WillOpenProgram">
+        <source xml:lang="en">
+          This will open the program on your computer
+          that is associated wtih this file type.
+        </source>
+        <note>ID: ublishTab.RecordVideo.WillOpenProgram</note>
+      </trans-unit>
+      <trans-unit id="PublishTab.RecordVideo.WillOpenRecordingWindow">
+        <source xml:lang="en">
+          This will open a window and play the whole
+          book. Bloom will record it to match the
+          “Format” option in the upper right of this
+          screen.
+        </source>
+        <note>ID: ublishTab.RecordVideo.WillOpenRecordingWindow</note>
+      </trans-unit>
+      <trans-unit id="PublishTab.RecordVideo.YouTube">
+        <source xml:lang="en">YouTube (full HD)</source>
+        <note>ID: ublishTab.RecordVideo.YouTube</note>
       </trans-unit>
       <trans-unit id="PublishTab.PublishRequiresEnterprise.FirstOverlayPage">
         <source xml:lang="en">Page {0} is the first page that uses Overlay elements.</source>

@@ -2,6 +2,11 @@
 import { jsx, css } from "@emotion/core";
 import * as React from "react";
 import { useState, useContext } from "react";
+import PlayIcon from "@material-ui/icons/PlayCircleFilledWhite";
+import PauseIcon from "@material-ui/icons/PauseCircleFilled";
+import SkipPreviousIcon from "@material-ui/icons/SkipPrevious";
+import SaveIcon from "@material-ui/icons/Save";
+import RecordIcon from "@material-ui/icons/RadioButtonChecked";
 
 import {
     BasePublishScreen,
@@ -15,10 +20,9 @@ import { MethodChooser } from "./MethodChooser";
 import { PublishFeaturesGroup } from "./PublishFeaturesGroup";
 import { ThumbnailGroup } from "./ThumbnailGroup";
 import "./ReaderPublish.less";
-import { DeviceAndControls } from "../commonPublish/DeviceAndControls";
 import ReactDOM = require("react-dom");
 import { ThemeProvider } from "@material-ui/styles";
-import { darkTheme, lightTheme } from "../../bloomMaterialUITheme";
+import { darkTheme, kBloomBlue, lightTheme } from "../../bloomMaterialUITheme";
 import { StorybookContext } from "../../.storybook/StoryBookContext";
 import {
     useSubscribeToWebSocketForStringMessage,
@@ -41,8 +45,19 @@ import {
     showBulkBloomPubDialog
 } from "./BulkBloomPub/BulkBloomPubDialog";
 import BloomButton from "../../react_components/bloomButton";
-import { Step, StepContent, StepLabel, Stepper } from "@material-ui/core";
+import {
+    Button,
+    FormGroup,
+    Step,
+    StepContent,
+    StepLabel,
+    Stepper
+} from "@material-ui/core";
 import { kBloomRed } from "../../utils/colorUtils";
+import { SimplePreview } from "./simplePreview";
+import { VideoOptionsGroup } from "./VideoOptionsGroup";
+import { Div } from "../../react_components/l10nComponents";
+import { ApiCheckbox } from "../../react_components/ApiCheckbox";
 
 export const RecordVideoWindow = () => {
     // When the user changes some features, included languages, etc., we
@@ -60,6 +75,16 @@ export const RecordVideoWindow = () => {
     );
 };
 
+const landscapeWidth = 600;
+
+/// What BloomPlayer reportBookProperties sends.
+interface IBookProps {
+    landscape: boolean;
+    canRotate: boolean;
+    hasActivities: boolean;
+    hasAnimation: boolean;
+}
+
 const RecordVideoWindowInternal: React.FunctionComponent<{
     onReset: () => void;
 }> = props => {
@@ -68,6 +93,7 @@ const RecordVideoWindowInternal: React.FunctionComponent<{
         useL10n("Creating Digital Book", "PublishTab.Android.Creating")
     );
     const [closePending, setClosePending] = useState(false);
+    const [pageReadTime, setPageReadTime] = useState(3);
     const [highlightRefresh, setHighlightRefresh] = useState(false);
     const [progressState, setProgressState] = useState(ProgressState.Working);
     const [activeStep, setActiveStep] = useState(0);
@@ -75,6 +101,18 @@ const RecordVideoWindowInternal: React.FunctionComponent<{
         false,
         "recordVideo",
         "ready"
+    );
+    const [canModifyCurrentBook] = BloomApi.useApiBoolean(
+        "common/canModifyCurrentBook",
+        false
+    );
+    const [motionEnabled] = BloomApi.useApiBoolean(
+        "publish/android/canHaveMotionMode",
+        false
+    );
+    const [hasActivities] = BloomApi.useApiBoolean(
+        "publish/video/hasActivities",
+        false
     );
     React.useEffect(() => {
         if (activeStep < 2 && gotRecording) {
@@ -84,6 +122,23 @@ const RecordVideoWindowInternal: React.FunctionComponent<{
             setActiveStep(1);
         }
     }, [gotRecording]);
+    // React.useEffect(() => {
+    //     window.addEventListener("message", data => {
+    //         // ignore messages without the interesting sort of data
+    //         if (!data || !data.data || data.data.length === 0) {
+    //             //console.log("returning early");
+    //             return;
+    //         }
+    //         const messageData = JSON.parse(data.data);
+    //         if (messageData.messageType !== "reportBookProperties") {
+    //             return;
+    //         }
+    //         const bookProps = messageData.params as IBookProps;
+    //         if (bookProps.hasActivities && !hasActivities) {
+    //             setHasActivities(true);
+    //         }
+    //     });
+    // }, []);
 
     // bookUrl is expected to be a normal, well-formed URL.
     // (that is, one that you can directly copy/paste into your browser and it would work fine)
@@ -143,6 +198,28 @@ const RecordVideoWindowInternal: React.FunctionComponent<{
             }
         }
     );
+    const sendMessageToPlayer = (msg: any) => {
+        var preview = document.getElementById(
+            "simple-preview"
+        ) as HTMLIFrameElement;
+        msg.messageType = "control";
+        preview.contentWindow?.postMessage(JSON.stringify(msg), "*");
+    };
+    const play = () => {
+        sendMessageToPlayer({ play: true, autoplay: "yes" });
+    };
+    const pause = () => {
+        sendMessageToPlayer({ pause: true });
+    };
+    const reset = () => {
+        sendMessageToPlayer({ reset: true });
+    };
+    const circleHeight = "0.88rem";
+    const blurbClasses = `
+    font-size: smaller;
+    max-width: ${landscapeWidth}px;
+    margin-bottom:5px;
+    color: grey;`;
     return (
         <React.Fragment>
             <BulkBloomPubDialog />
@@ -153,28 +230,96 @@ const RecordVideoWindowInternal: React.FunctionComponent<{
                 // will be shown!
             >
                 <PublishPanel>
-                    <Stepper activeStep={activeStep} orientation="vertical">
+                    <Stepper
+                        activeStep={activeStep}
+                        orientation="vertical"
+                        // defeat Material-UI's attempt to make the step numbers and text look disabled.
+                        css={css`
+                            .MuiStepLabel-label {
+                                color: black !important;
+                                font-size: larger;
+                            }
+                            .MuiStepIcon-root {
+                                color: ${kBloomBlue} !important;
+                            }
+                        `}
+                    >
                         <Step expanded={true}>
                             <StepLabel>Configure &amp; Preview</StepLabel>
                             <StepContent>
                                 <ThemeProvider theme={darkTheme}>
-                                    <DeviceAndControls
-                                        defaultLandscape={defaultLandscape}
-                                        canRotate={canRotate}
+                                    <Div
+                                        css={css`
+                                            ${blurbClasses}
+                                        `}
+                                        l10nKey="PublishTab.RecordVideo.Instructions"
+                                    >
+                                        Use the red buttons above the book
+                                        player to select the language and other
+                                        settings.
+                                    </Div>
+                                    <SimplePreview
+                                        landscape={defaultLandscape}
+                                        landscapeWidth={landscapeWidth}
                                         url={
                                             pathToOutputBrowser +
-                                            "bloom-player/dist/bloomplayer.htm?centerVertically=true&url=" +
+                                            "bloom-player/dist/bloomplayer.htm?centerVertically=true&videoPreviewMode=true&autoplay=no&defaultDuration=" +
+                                            pageReadTime +
+                                            "&url=" +
                                             encodeURIComponent(bookUrl) + // Need to apply encoding to the bookUrl again as data to use it as a parameter of another URL
-                                            "&independent=false&host=bloomdesktop"
+                                            "&independent=false&host=bloomdesktop&skipActivities=true&hideNavButtons=true"
                                         }
-                                        showRefresh={true}
-                                        highlightRefreshIcon={highlightRefresh}
-                                        onRefresh={() => props.onReset()}
                                     />
+                                    <div
+                                        css={css`
+                                            display: flex;
+                                            width: ${landscapeWidth}px;
+                                            justify-content: center;
+                                        `}
+                                    >
+                                        <Button onClick={reset}>
+                                            <SkipPreviousIcon
+                                                // unfortunately this icon doesn't come in a variant with a built-in circle.
+                                                // To make it match the other two we have to shrink it, make it white,
+                                                // and carefully position an independent circle behind it.
+                                                css={css`
+                                                    color: white;
+                                                    font-size: 1.5rem;
+                                                    z-index: 1;
+                                                `}
+                                            />
+                                            <div
+                                                css={css`
+                                                    border: ${circleHeight}
+                                                        solid ${kBloomBlue};
+                                                    border-radius: ${circleHeight};
+                                                    position: absolute;
+                                                    top: 0.5rem;
+                                                    left: 1.1rem;
+                                                `}
+                                            ></div>
+                                        </Button>
+                                        <Button onClick={play}>
+                                            <PlayIcon
+                                                css={css`
+                                                    color: ${kBloomBlue};
+                                                    font-size: 2rem;
+                                                `}
+                                            />
+                                        </Button>
+                                        <Button onClick={pause}>
+                                            <PauseIcon
+                                                css={css`
+                                                    color: ${kBloomBlue};
+                                                    font-size: 2rem;
+                                                `}
+                                            />
+                                        </Button>
+                                    </div>
                                 </ThemeProvider>
                             </StepContent>
                         </Step>
-                        <Step expanded={true}>
+                        <Step expanded={true} disabled={false}>
                             <StepLabel onClick={() => setActiveStep(1)}>
                                 Make Recording
                             </StepLabel>
@@ -185,34 +330,79 @@ const RecordVideoWindowInternal: React.FunctionComponent<{
                                     }
                                 `}
                             >
+                                <Div
+                                    css={css`
+                                        ${blurbClasses}
+                                    `}
+                                    l10nKey="PublishTab.RecordVideo.WillOpenRecordingWindow"
+                                >
+                                    This will open a window and play the whole
+                                    book. Bloom will record it to match the
+                                    “Format” option in the upper right of this
+                                    screen.
+                                </Div>
                                 <BloomButton
                                     enabled={true}
                                     l10nKey="PublishTab.RecordVideo.Record"
-                                    clickApiEndpoint="publish/android/recordVideo"
+                                    clickApiEndpoint="publish/video/recordVideo"
+                                    iconBeforeText={
+                                        <RecordIcon
+                                            css={css`
+                                                color: white;
+                                            `}
+                                        />
+                                    }
                                 >
                                     Record
                                 </BloomButton>
                             </StepContent>
                         </Step>
-                        <Step expanded={true}>
+                        <Step expanded={true} disabled={false}>
                             <StepLabel>Check Recording</StepLabel>
                             <StepContent>
+                                <Div
+                                    css={css`
+                                        ${blurbClasses}
+                                    `}
+                                    l10nKey="PublishTab.RecordVideo.WillOpenProgram"
+                                >
+                                    This will open the program on your computer
+                                    that is associated wtih this file type.
+                                </Div>
                                 <BloomButton
                                     enabled={gotRecording}
                                     l10nKey="PublishTab.RecordVideo.Play"
-                                    clickApiEndpoint="publish/android/playVideo"
+                                    clickApiEndpoint="publish/video/playVideo"
+                                    iconBeforeText={
+                                        <PlayIcon
+                                            css={css`
+                                                color: white;
+                                            `}
+                                        />
+                                    }
                                 >
                                     Play Video
                                 </BloomButton>
                             </StepContent>
                         </Step>
-                        <Step expanded={true} onClick={() => setActiveStep(3)}>
+                        <Step
+                            expanded={true}
+                            disabled={false}
+                            onClick={() => setActiveStep(3)}
+                        >
                             <StepLabel>Save</StepLabel>
                             <StepContent>
                                 <BloomButton
                                     enabled={gotRecording}
                                     l10nKey="PublishTab.Save"
-                                    clickApiEndpoint="publish/android/saveVideo"
+                                    clickApiEndpoint="publish/video/saveVideo"
+                                    iconBeforeText={
+                                        <SaveIcon
+                                            css={css`
+                                                color: white;
+                                            `}
+                                        />
+                                    }
                                 >
                                     Save...
                                 </BloomButton>
@@ -222,21 +412,51 @@ const RecordVideoWindowInternal: React.FunctionComponent<{
                 </PublishPanel>
 
                 <SettingsPanel>
-                    <PublishFeaturesGroup
-                        onChange={() => {
-                            props.onReset();
+                    <VideoOptionsGroup
+                        pageDuration={pageReadTime}
+                        onSetPageDuration={time => {
+                            setPageReadTime(time);
+                            BloomApi.postString(
+                                "publish/video/pageReadTime",
+                                time.toString()
+                            );
                         }}
-                    />
-                    <ThumbnailGroup onChange={() => props.onReset()} />
-                    <PublishLanguagesGroup
-                        onChange={() => setHighlightRefresh(true)}
-                    />
+                    ></VideoOptionsGroup>
+                    {motionEnabled && (
+                        <FormGroup
+                            css={css`
+                                margin-top: 20px;
+                            `}
+                        >
+                            <ApiCheckbox
+                                english="Motion Book"
+                                l10nKey="PublishTab.Android.MotionBookMode"
+                                // tslint:disable-next-line:max-line-length
+                                l10nComment="Motion Books are Talking Books in which the picture fills the screen, then pans and zooms while you hear the voice recording. This happens only if you turn the book sideways."
+                                apiEndpoint="publish/android/motionBookMode"
+                                disabled={!canModifyCurrentBook}
+                            />
+                        </FormGroup>
+                    )}
+
                     {/* push everything to the bottom */}
                     <div
                         css={css`
                             margin-top: auto;
                         `}
                     />
+                    {hasActivities && (
+                        <Div
+                            l10nKey="PublishTab.RecordVideo.ActivitiesSkipped"
+                            css={css`
+                                margin-top: 20px;
+                                font-weight: bold;
+                                font-size: smaller;
+                            `}
+                        >
+                            Activities will be skipped
+                        </Div>
+                    )}
                     <HelpGroup>
                         <HelpLink
                             l10nKey="PublishTab.Android.AboutBookFeatures"
@@ -251,15 +471,13 @@ const RecordVideoWindowInternal: React.FunctionComponent<{
             {inStorybookMode || (
                 <PublishProgressDialog
                     heading={heading}
-                    startApiEndpoint="publish/android/updatePreview"
+                    startApiEndpoint="publish/video/updatePreview"
                     webSocketClientContext="publish-android"
                     progressState={progressState}
                     setProgressState={setProgressState}
                     closePending={closePending}
                     setClosePending={setClosePending}
                     onUserStopped={() => {
-                        BloomApi.postData("publish/android/usb/stop", {});
-                        BloomApi.postData("publish/android/wifi/stop", {});
                         setClosePending(true);
                     }}
                 />
