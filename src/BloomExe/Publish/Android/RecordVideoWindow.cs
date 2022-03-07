@@ -12,6 +12,7 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using Bloom.Api;
 using Bloom.Utils;
+using L10NSharp;
 using SIL.IO;
 
 namespace Bloom.Publish.Android
@@ -50,10 +51,11 @@ namespace Bloom.Publish.Android
 		{
 			_bookFolder = Path.GetDirectoryName(bookUrl.FromLocalhost());
 			_pathToRealBook = pathToRealBook;
+			var readTime = (codec == "mp3" ? "0" : _pageReadTime);
 			var url = BloomServer.ServerUrlWithBloomPrefixEndingInSlash
 			          + "bloom-player/dist/bloomplayer.htm?centerVertically=true&reportSoundLog=true&initiallyShowAppBar=false&autoplay=yes&hideNavButtons=true&url="
 			          + bookUrl
-			          + $"&independent=false&host=bloomdesktop&defaultDuration={_pageReadTime}&skipActivities=true";
+			          + $"&independent=false&host=bloomdesktop&defaultDuration={readTime}&skipActivities=true";
 			if (_videoSettingsFromPreview != null)
 			{
 				url += $"&videoSettings={_videoSettingsFromPreview}";
@@ -62,10 +64,19 @@ namespace Bloom.Publish.Android
 			_content.Navigate(url, false);
 			var deltaV = this.Height - _content.Height;
 			var deltaH = this.Width - _content.Width;
+			// We may need to make it bigger than the screen
 			MaximumSize = new Size(3000, 3000);
 			Height = _videoHeight + deltaV;
 			Width = _videoWidth + deltaH;
-			Show();
+			var mainWindow = Application.OpenForms.Cast<Form>().FirstOrDefault(f => f is Shell);
+			if (mainWindow != null)
+			{
+				StartPosition = FormStartPosition.Manual;
+				var bounds = Screen.FromControl(mainWindow).Bounds;
+				Location = bounds.Location;
+			}
+
+			Show(mainWindow);
 		}
 
 		protected override void OnLoad(EventArgs e)
@@ -79,8 +90,17 @@ namespace Bloom.Publish.Android
 
 		public void StartFfmpeg()
 		{
+			// We do these steps unconditionally because they are used later when we run
+			// ffmpeg (for the second time, if recording video).
+			_errorData = new StringBuilder();
 			_ffmpegPath = MiscUtils.FindFfmpegProgram();
 			// Enhance: what on earth should we do if it's not found??
+			if (codec == "mp3")
+			{
+				_startTime = DateTime.Now;
+				return; // no need to actually make a video.
+			}
+			
 
 			var args =
 				//"-t 10 " // duration limit"
@@ -116,7 +136,6 @@ namespace Bloom.Publish.Android
 				}
 			};
 			Debug.WriteLine("args: " + args);
-			_errorData = new StringBuilder();
 			_ffmpegProcess.ErrorDataReceived += (o, receivedEventArgs) =>
 			{
 				_errorData.AppendLine(receivedEventArgs.Data);
@@ -143,10 +162,15 @@ namespace Bloom.Publish.Android
 
 		public void StopRecording(string soundLogJson)
 		{
-			Debug.WriteLine("Telling ffmpeg to quit");
-			_ffmpegProcess.StandardInput.WriteLine("q");
-			_ffmpegProcess.WaitForExit();
-			Debug.WriteLine("full error log: " + _errorData.ToString());
+			var haveVideo = codec != "mp3";
+			if (haveVideo)
+			{
+				Debug.WriteLine("Telling ffmpeg to quit");
+				_ffmpegProcess.StandardInput.WriteLine("q");
+				_ffmpegProcess.WaitForExit();
+				Debug.WriteLine("full error log: " + _errorData.ToString());
+			}
+
 			Debug.WriteLine(soundLogJson);
 			var soundLogObj = DynamicJson.Parse(soundLogJson);
 
@@ -173,11 +197,13 @@ namespace Bloom.Publish.Android
 				soundLog[i] = sound;
 			}
 
-			_finalVideo = TempFile.WithExtension(".mp4");
+			_finalVideo = TempFile.WithExtension(haveVideo ? ".mp4" : ".mp3");
 			var finalOutputPath = _finalVideo.Path;
 			RobustFile.Delete(finalOutputPath);
 			if (soundLog.Length == 0)
 			{
+				if (!haveVideo)
+					return; // can't do anything useful!
 				RobustFile.Copy(_videoOnlyPath, finalOutputPath);
 				return;
 			}
@@ -186,7 +212,7 @@ namespace Bloom.Publish.Android
 
 			var mixArgs = string.Join(" ", soundLog.Select((item, index) =>
 			{
-				var result = $"[{index + 1}:a]";
+				var result = $"[{index}:a]";
 				if (item.endTime != default(DateTime))
 				{
 					var duration = (item.endTime - item.startTime);
@@ -207,29 +233,30 @@ namespace Bloom.Publish.Android
 					result += $",volume={item.volume}";
 				}
 
-				result += $"[a{index + 1}]; ";
+				result += $"[a{index}]; ";
 				return result;
 			}));
 
-			var mixInputs = string.Join("", soundLog.Select((item, index) => $"[a{index + 1}]"));
+			var mixInputs = string.Join("", soundLog.Select((item, index) => $"[a{index}]"));
+			var videoIndex = soundLog.Length;
 
 			var args = ""
-					   + $"-i \"{_videoOnlyPath}\" " // first input 0 is the original video
-					   + inputs // the audio files are inputs, which may be referred to as [1:a], [2:a], etc.
-					   + "-filter_complex \"" // the next bit specifies a filter with multiple inputs
-					   + mixArgs // specifies the inputs to the mixer
-					   // mix those inputs to a single stream called out
-					   + mixInputs + $"amix=inputs={soundLog.Length}:normalize=0[out]\" "
-					   + "-map 0:v -c:v copy " // copy the video channel (of input 0) unchanged.
-					   // Shouldwe wpecify MP3 for the SoundHandler instead of the default AAC?
+			           + inputs // the audio files are inputs, which may be referred to as [1:a], [2:a], etc.
+			           + (haveVideo ? $"-i \"{_videoOnlyPath}\" " : "") // last input (videoIndex) is the original video (if any)
+			           + "-filter_complex \""// the next bit specifies a filter with multiple inputs
+			           + mixArgs // specifies the inputs to the mixer
+			           // mix those inputs to a single stream called out
+			           + mixInputs + $"amix=inputs={soundLog.Length}:normalize=0[out]\" "
+			           + (haveVideo ? $"-map {videoIndex}:v -c:v copy " : "") // copy the video channel (of input videoIndex) unchanged (if we have video).
+			           // Shouldwe wpecify MP3 for the SoundHandler instead of the default AAC?
 			           // https://www.movavi.com/learning-portal/aac-vs-mp3.html says more things
-					   // understand mp3, but it's talking about audio files.
-					   // https://stackoverflow.com/questions/9168954/should-i-use-the-mp3-or-aac-codec-for-a-mp4-file/25718378)
-					   // has ambiguous answers. It would let us build a slightly smaller ffmpeg. It would tend to make
-					   // slightly larger mp4s.
-					   // Current thinking is that it's desirable if we're generating audio-only.
-					   // + "-c:a libmp3lame " 
-					   + "-map [out] " // send the output of the mix to the output
+			           // understand mp3, but it's talking about audio files.
+			           // https://stackoverflow.com/questions/9168954/should-i-use-the-mp3-or-aac-codec-for-a-mp4-file/25718378)
+			           // has ambiguous answers. It would let us build a slightly smaller ffmpeg. It would tend to make
+			           // slightly larger mp4s.
+			           // Current thinking is that it's desirable if we're generating audio-only.
+			           + (haveVideo ? "" : "-c:a libmp3lame ")
+			           + "-map [out] " // send the output of the mix to the output
 			           + finalOutputPath;
 			Debug.WriteLine("args: " + args);
 			_ffmpegProcess = new Process
@@ -309,14 +336,21 @@ namespace Bloom.Publish.Android
 				return; // we'll be called again when done, unless the window was closed prematurely
 			using (var dlg = new DialogAdapters.SaveFileDialogAdapter())
 			{
-				string suggestedName = string.Format($"{Path.GetFileName(_pathToRealBook)}.mp4");
+				var extension = codec == "mp3" ? ".mp3" : ".mp4";
+				string suggestedName = string.Format($"{Path.GetFileName(_pathToRealBook)}{extension}");
 				dlg.FileName = suggestedName;
 				var pdfFileLabel = L10NSharp.LocalizationManager.GetString(@"PublishTab.VideoFile",
 					"Video File",
 					@"displayed as file type for Save File dialog.");
+				if (codec == "mp3")
+				{
+					pdfFileLabel = L10NSharp.LocalizationManager.GetString(@"PublishTab.AudioFile",
+						"Audio File",
+						@"displayed as file type for Save File dialog.");
+				}
 
 				pdfFileLabel = pdfFileLabel.Replace("|", "");
-				dlg.Filter = String.Format("{0}|*.mp4", pdfFileLabel);
+				dlg.Filter = String.Format("{0}|*{1}", pdfFileLabel, extension);
 				dlg.OverwritePrompt = true;
 				if (DialogResult.OK == dlg.ShowDialog())
 				{
@@ -334,33 +368,79 @@ namespace Bloom.Publish.Android
 			MoveWindow(Handle, x, y, width, height, true);
 		}
 
-		public void SetFormat(string format, bool landscape)
+		public static string GetDataForFormat(string format, bool landscape, 
+			out int actualWidth, out int actualHeight, out string codec)
 		{
+			bool tooBigForScreen = false;
+			int desiredWidth;
+			int desiredHeight;
 			switch (format)
 			{
+				default:
 				case "facebook":
-					_videoHeight = landscape ? 720 : 1280;
-					_videoWidth = landscape ? 1280 : 720;
+					desiredHeight = landscape ? 720 : 1280;
+					desiredWidth = landscape ? 1280 : 720;
 					codec = "h.264";
 					break;
 				case "feature":
 					// review: are these right?
-					_videoHeight = 320;
-					_videoWidth = 240;
+					desiredHeight = 320;
+					desiredWidth = 240;
 					codec = "h.263"; // todo: implement
 					break;
 				case "youtube":
-					_videoHeight = landscape ?1080 : 1920;
-					_videoWidth = landscape ? 1920:1080;
+					desiredHeight = landscape ? 1080 : 1920;
+					desiredWidth = landscape ? 1920 : 1080;
 					codec = "h.264";
 					break;
 				case "mp3":
 					// review: what size video do we want to play?
-					_videoHeight = landscape ? 720: 1280;
-					_videoWidth = landscape ? 1280 : 720;
+					desiredHeight = landscape ? 720 : 1280;
+					desiredWidth = landscape ? 1280 : 720;
 					codec = "mp3"; // todo: implement
 					break;
 			}
+
+			actualWidth = desiredWidth;
+			actualHeight = desiredHeight;
+
+			var mainWindow = Application.OpenForms.Cast<Form>().FirstOrDefault(f => f is Shell);
+			if (mainWindow != null)
+			{
+				var bounds = Screen.FromControl(mainWindow).Bounds;
+				var proto = new RecordVideoWindow(null);
+				var deltaV = proto.Height - proto._content.Height;
+				var deltaH = proto.Width - proto._content.Width;
+				var maxHeight = bounds.Height - deltaV;
+				var maxWidth = bounds.Width - deltaH;
+				if (actualHeight > maxHeight)
+				{
+					tooBigForScreen = true;
+					actualHeight = (maxHeight / 2) * 2; // round down to even, ffmpeg dies on odd sizes
+					actualWidth = (actualHeight * desiredWidth / desiredHeight / 2) * 2;
+				}
+
+				if (actualWidth > maxWidth)
+				{
+					tooBigForScreen = true;
+					actualWidth = (maxWidth / 2) * 2;
+					actualHeight = (actualWidth * desiredHeight / desiredWidth / 2) * 2;
+				}
+			}
+
+			if (tooBigForScreen)
+			{
+				var frame = LocalizationManager.GetString("Publish.RecordVideo.ScreenTooBig",
+					"Ideally, this video target should be {0}. However that is larger than your screen, so Bloom will produce a video that is {1}.");
+				return string.Format(frame, $"{desiredWidth} x {desiredHeight}", $"{actualWidth} x {actualHeight}");
+			}
+
+			return "";
+		}
+
+		public void SetFormat(string format, bool landscape)
+		{
+			GetDataForFormat(format, landscape, out _videoWidth, out _videoHeight, out codec);
 		}
 
 		public void SetPageReadTime(string pageReadTime)

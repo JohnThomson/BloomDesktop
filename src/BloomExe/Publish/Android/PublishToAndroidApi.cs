@@ -188,6 +188,15 @@ namespace Bloom.Publish.Android
 				request.PostSucceeded();
 			}, true, false);
 
+			apiHandler.RegisterEndpointHandlerExact("publish/video/tooBigForScreenMsg",
+				request =>
+				{
+					request.ReplyWithText(RecordVideoWindow.GetDataForFormat(_videoFormat, request.CurrentBook.GetLayout().SizeAndOrientation.IsLandScape,
+						out _, out _, out _));
+				},
+				 true, // has to be on UI thread because it uses Bloom's main window to find the right screen
+				false);
+
 			apiHandler.RegisterEndpointHandler("publish/video/saveVideo", request =>
 			{
 				if (_recordVideoWindow == null)

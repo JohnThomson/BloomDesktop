@@ -13,8 +13,9 @@ import Slider from "rc-slider";
 import "../../bookEdit/css/rc-slider-bloom.less";
 import { kBloomBlue } from "../../bloomMaterialUITheme";
 import AudioIcon from "@material-ui/icons/VolumeUp";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { format } from "path";
+import { InfoBox } from "../../react_components/infoBox";
 
 interface IFormatItem {
     format: string; // to pass to BloomApi
@@ -31,6 +32,12 @@ export const VideoOptionsGroup: React.FunctionComponent<{
     onSetPageDuration: (arg: number) => void;
 }> = props => {
     const [format, setFormat] = useState("facebook");
+    const [tooBigMsg, setTooBigMsg] = useState("");
+    useEffect(() => {
+        BloomApi.get("publish/video/tooBigForScreenMsg", c => {
+            setTooBigMsg(c.data);
+        });
+    }, [format]);
 
     const formatItems: IFormatItem[] = [
         {
@@ -138,6 +145,7 @@ export const VideoOptionsGroup: React.FunctionComponent<{
                             </Select>
                         </div>
                     </div>
+                    {tooBigMsg && <InfoBox text={tooBigMsg} />}
                     <div
                         css={css`
                             padding-right: 30px;

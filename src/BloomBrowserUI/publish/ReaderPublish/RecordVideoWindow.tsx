@@ -58,6 +58,7 @@ import { SimplePreview } from "./simplePreview";
 import { VideoOptionsGroup } from "./VideoOptionsGroup";
 import { Div } from "../../react_components/l10nComponents";
 import { ApiCheckbox } from "../../react_components/ApiCheckbox";
+import { InfoBox } from "../../react_components/infoBox";
 
 export const RecordVideoWindow = () => {
     // When the user changes some features, included languages, etc., we
@@ -106,6 +107,7 @@ const RecordVideoWindowInternal: React.FunctionComponent<{
         "common/canModifyCurrentBook",
         false
     );
+
     const [motionEnabled] = BloomApi.useApiBoolean(
         "publish/android/canHaveMotionMode",
         false
@@ -214,6 +216,10 @@ const RecordVideoWindowInternal: React.FunctionComponent<{
     const reset = () => {
         sendMessageToPlayer({ reset: true });
     };
+    const activitiesSkipped = useL10n(
+        "Activities will be skipped",
+        "PublishTab.RecordVideo.ActivitiesSkipped"
+    );
     const circleHeight = "0.88rem";
     const blurbClasses = `
     font-size: smaller;
@@ -381,7 +387,7 @@ const RecordVideoWindowInternal: React.FunctionComponent<{
                                         />
                                     }
                                 >
-                                    Play Video
+                                    Play Recording
                                 </BloomButton>
                             </StepContent>
                         </Step>
@@ -445,18 +451,7 @@ const RecordVideoWindowInternal: React.FunctionComponent<{
                             margin-top: auto;
                         `}
                     />
-                    {hasActivities && (
-                        <Div
-                            l10nKey="PublishTab.RecordVideo.ActivitiesSkipped"
-                            css={css`
-                                margin-top: 20px;
-                                font-weight: bold;
-                                font-size: smaller;
-                            `}
-                        >
-                            Activities will be skipped
-                        </Div>
-                    )}
+                    {hasActivities && <InfoBox text={activitiesSkipped} />}
                     <HelpGroup>
                         <HelpLink
                             l10nKey="PublishTab.Android.AboutBookFeatures"

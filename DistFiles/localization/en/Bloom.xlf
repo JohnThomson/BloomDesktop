@@ -3968,7 +3968,7 @@
         <note>ID: ublishTab.RecordVideo.Mp3</note>
       </trans-unit>
       <trans-unit id="PublishTab.RecordVideo.Play">
-        <source xml:lang="en">Play Video</source>
+        <source xml:lang="en">Play Recording</source>
         <note>ID: ublishTab.RecordVideo.Play</note>
       </trans-unit>
       <trans-unit id="PublishTab.RecordVideo.Record">
