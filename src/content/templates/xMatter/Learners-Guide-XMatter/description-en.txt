@@ -1,0 +1,4 @@
+[V3]Designed for Roger VanOtterloo's Learner's Guide books, this currently hard-codes a particular cover picture.
+That supports a trick for wrapping text around a curve within it.
+Not sure how/if this will generalize to several such books with different pictures.
+For now this is just an experiment.
