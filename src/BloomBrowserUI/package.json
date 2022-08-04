@@ -97,6 +97,7 @@
         "react-firebaseui": "^4.1.0",
         "react-grid-layout": "https://github.com/JohnThomson/react-grid-layout.git#includeTypes",
         "react-lazyload": "^3.2.0",
+        "react-pdf": "^5.7.2",
         "react-select": "^2.4.3",
         "react-slick": "^0.24.0",
         "react-table": "^6.10.0",
@@ -113,6 +114,7 @@
         "toastr": "^2.1.4",
         "underscore": "^1.9.1",
         "use-debounce": "^5.2.0",
+        "web-streams-polyfill": "^3.2.1",
         "xregexp": "^4.2.4"
     },
     "devDependencies": {

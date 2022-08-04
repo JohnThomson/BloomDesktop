@@ -18,6 +18,8 @@ import { StorybookContext } from "../../.storybook/StoryBookContext";
 import HelpLink from "../../react_components/helpLink";
 import { useL10n } from "../../react_components/l10nHooks";
 import { Button, Typography } from "@material-ui/core";
+import { Document, Page } from "react-pdf/dist/esm/entry.webpack";
+import { ReadableStream } from "web-streams-polyfill/ponyfill";
 
 export const PDFPrintPublishScreen = () => {
     // When the user changes booklet mode, printshop features, etc., we
@@ -38,6 +40,7 @@ export const PDFPrintPublishScreen = () => {
 const PDFPrintPublishScreenInternal: React.FunctionComponent<{
     onReset: () => void;
 }> = props => {
+    const readable = new ReadableStream();
     const inStorybookMode = useContext(StorybookContext);
     // I left some commented code in here that may be useful in previewing; from Publish -> Android
     // const [heading, setHeading] = useState(
@@ -62,6 +65,14 @@ const PDFPrintPublishScreenInternal: React.FunctionComponent<{
 
     //const pathToOutputBrowser = inStorybookMode ? "./" : "../../";
 
+    const [path, setPath] = useState("");
+    const [numPages, setNumPages] = useState(null);
+    const [pageNumber, setPageNumber] = useState(1);
+
+    function onDocumentLoadSuccess({ numPages }) {
+        setNumPages(numPages);
+    }
+
     const mainPanel = (
         <React.Fragment>
             <PreviewPanel>
@@ -72,7 +83,21 @@ const PDFPrintPublishScreenInternal: React.FunctionComponent<{
                             align-self: center;
                         `}
                     >
-                        Temporary placeholder for eventual Preview
+                        {path ? (
+                            <div>
+                                <Document
+                                    file={path}
+                                    onLoadSuccess={onDocumentLoadSuccess}
+                                >
+                                    <Page pageNumber={pageNumber} />
+                                </Document>
+                                <p>
+                                    Page {pageNumber} of {numPages} in {path}
+                                </p>
+                            </div>
+                        ) : (
+                            "Click a button on the right to start creating PDF"
+                        )}
                     </Typography>
                 </ThemeProvider>
             </PreviewPanel>
@@ -91,6 +116,7 @@ const PDFPrintPublishScreenInternal: React.FunctionComponent<{
                 onChange={() => {
                     props.onReset();
                 }}
+                onGotPdf={path => setPath(path)}
             />
             {/* push everything to the bottom */}
             <div

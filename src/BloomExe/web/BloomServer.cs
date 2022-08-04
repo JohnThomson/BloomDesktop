@@ -503,8 +503,8 @@ namespace Bloom.Api
 			}
 			//Firefox debugger, looking for a source map, was prefixing in this unexpected
 			//way.
-			if(localPath.EndsWith("map"))
-				localPath = localPath.Replace("output/browser/", "");
+			//if(localPath.EndsWith("map"))
+			//	localPath = localPath.Replace("output/browser/", "");
 
 			if (localPath == "")
 			{
