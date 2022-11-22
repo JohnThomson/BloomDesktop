@@ -53,6 +53,13 @@ namespace Bloom.web.controllers
 					_spreadsheetApi.ShowExportToSpreadsheetUI(GetBookObjectFromPost(request));
 					request.PostSucceeded();
 				}, true, false);
+			// As above, must not require sync
+			apiHandler.RegisterEndpointHandler("bookCommand/settings",
+				(request) =>
+				{
+					ShowSettingsDialog(GetBookObjectFromPost(request));
+					request.PostSucceeded();
+				}, true, false);
 			apiHandler.RegisterEndpointHandler("bookCommand/enhanceLabel", (request) =>
 			{
 				// We want this to be fast...many things are competing for api handling threads while
@@ -72,6 +79,33 @@ namespace Bloom.web.controllers
 				(request, b) => { _collectionModel.SetIsBookLeveled(b); },
 				true);
 			apiHandler.RegisterEndpointLegacy("bookCommand/", HandleBookCommand, true);
+		}
+
+		private void ShowSettingsDialog(Book.Book getBookObjectFromPost)
+		{// Todo: these values need to come from current state somewhere.
+			dynamic messageBundle = DynamicJson.Parse(@"{""initialValues"": {
+	  ""appearance"": {
+	    ""cover"": {
+	      ""coverColor"": ""#ffcc00""
+	    },
+	    ""margins"": {
+	      ""marginTop"": ""44mm"",
+	      ""marginBottom"": ""44mm"",
+	      ""marginOuter"": ""44mm"",
+	      ""marginInner"": ""44mm""
+	    },
+	    ""maxImageSize"": {
+	     ""width"": 600,
+	      ""height"": 600
+	    },
+	    ""other"": {
+	      ""showPageNumber"": true,
+	      ""theme"": ""default""
+	    }
+	  }
+	}
+}");
+			_webSocketServer.LaunchDialog("BookSettingsDialog", messageBundle);
 		}
 
 		public void RequestButtonLabelUpdate(string collectionPath, string id)

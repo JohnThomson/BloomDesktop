@@ -14,6 +14,7 @@ import { BookSelectionManager, useIsSelected } from "./bookSelectionManager";
 import { IBookInfo, ICollection } from "./BooksOfCollection";
 import { makeMenuItems, MenuItemSpec } from "./CollectionsTabPane";
 import DeleteIcon from "@material-ui/icons/Delete";
+import { CollectionsTabBookPane } from "./collectionsTabBookPane/CollectionsTabBookPane";
 
 export const bookButtonHeight = 120;
 export const bookButtonWidth = 90;
@@ -224,6 +225,13 @@ export const BookButton: React.FunctionComponent<{
                     (props.collection.isEditableCollection &&
                         (props.manager.getSelectedBookInfo()?.saveable ??
                             false))
+            },
+            {
+                label: "Settings",
+                l10nId: "CollectionTab.BookMenu.Settings",
+                command: "bookCommand/settings",
+                requiresSavePermission: true,
+                addEllipsis: true
             },
             { label: "-" },
             {
