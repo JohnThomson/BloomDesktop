@@ -384,6 +384,53 @@ const OverlayToolControls: React.FunctionComponent = () => {
         }
     };
 
+    const startShaping = () => {
+        const bubbleManager = OverlayTool.bubbleManager();
+
+        if (!bubbleManager) {
+            return;
+        }
+        const parentElement = bubbleManager.getActiveElement();
+
+        if (!parentElement) {
+            // No parent to attach to
+            toastr.info("No element is currently active.");
+            return;
+        }
+        const shapers = parentElement.getElementsByClassName("bloom-shaper");
+        if (shapers.length > 0) {
+            // turn shaping off
+            Array.from(shapers).forEach(s => s.parentElement?.removeChild(s));
+            Array.from(
+                parentElement.getElementsByClassName("bloom-ui-polygonHandle")
+            ).forEach(old => old.parentElement?.removeChild(old));
+            return;
+        }
+        const tg = parentElement.getElementsByClassName(
+            "bloom-translationGroup"
+        )[0];
+        if (!tg) {
+            return;
+        }
+        const shaper = tg.ownerDocument.createElement("div");
+        shaper.classList.add("bloom-shaper");
+        const height = tg.clientHeight; // todo: scale?
+        // don't use 100% for height of moveable point, because it would get sorted as if it
+        // were 100px, which might give the wrong position.
+        shaper.style.shapeOutside = `polygon(0 0, 0 0, 0 ${height}px, 0 100%)`;
+        tg.parentElement?.insertBefore(shaper, tg);
+        const shaper2 = tg.ownerDocument.createElement("div");
+        shaper2.classList.add("bloom-shaper");
+        shaper2.style.shapeOutside = `polygon(100% 0, 100% 0, 100% ${height}px, 100% 100%)`;
+        tg.parentElement?.insertBefore(shaper2, tg);
+        // if (tg.nextSibling) {
+        //     tg.parentElement?.insertBefore(shaper2, tg.nextSibling);
+        // } else {
+        //     tg.parentElement?.appendChild(shaper2);
+        // }
+        bubbleManager.setupShapeEditing();
+    };
+
     const ondragstart = (ev: React.DragEvent<HTMLElement>, style: string) => {
         // Here "text/x-bloombubble" is a unique, private data type recognised
         // by ondragover and ondragdrop methods that BubbleManager
@@ -753,6 +800,11 @@ const OverlayToolControls: React.FunctionComponent = () => {
                         >
                             <Div l10nKey="EditTab.Toolbox.ComicTool.Options.AddChildBubble">
                                 Add Child Bubble
+                            </Div>
+                        </Button>
+                        <Button onClick={event => startShaping()}>
+                            <Div l10nKey="EditTab.Toolbox.ComicTool.Options.ShapeText">
+                                Shape Text
                             </Div>
                         </Button>
                     </form>

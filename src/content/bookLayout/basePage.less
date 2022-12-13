@@ -821,6 +821,18 @@ books may contain divs with box-header-off, so we need a rule to hide them.*/
     display: flex;
     flex-direction: column;
 }
+.bloom-shaper ~ .bloom-translationGroup {
+    display: block;
+}
+.bloom-shaper {
+    height:100%;
+    width: 49.9%;
+    shape-margin: 14px;
+    float:left;
+}
+.bloom-shaper ~ .bloom-shaper {
+    float:right;
+}
 // And now we can control the order using Flexbox "order" attribute:
 //sadly, as of Dec 2016, browsers do not implement the full attr() spec, so this rule is rejected
 // [data-language-order]{

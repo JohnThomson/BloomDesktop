@@ -502,6 +502,91 @@ export class BubbleManager {
                 );
             }
         );
+
+        this.setupShapeEditing();
+    }
+    public setupShapeEditing() {
+        Array.from(
+            document.getElementsByClassName("bloom-ui-polygonHandle")
+        ).forEach(old => old.parentElement?.removeChild(old));
+        Array.from(document.getElementsByClassName("bloom-shaper")).forEach(
+            (shaper: HTMLElement) => {
+                const shape = shaper.style.shapeOutside;
+                // A fairly typical example would be polygon(0 0, 20% 0, 1% 100%, 0% 100%)
+                // For now, I'm assuming everything is percentages. This keeps things proportional
+                // as the overall box changes size, and makes it easy to prevent things extending
+                // outside it. It might have some disadvantage if the user is trying to match
+                // a shape carefully and the overall box grows.
+                const polygonLeadin = "polygon(";
+                const leadinLength = polygonLeadin.length;
+                if (shape.startsWith(polygonLeadin) && shape.endsWith(")")) {
+                    const points = shape
+                        .substring(leadinLength, shape.length - 1)
+                        .split(",");
+                    // The first and last points are always the corners we don't want to move.
+                    const pointsToShow = points.slice(1, points.length - 1);
+                    pointsToShow.forEach((p, index) => {
+                        const parts = p.trim().split(" ");
+                        if (parts.length === 2) {
+                            const handle = document.createElement("div");
+                            handle.classList.add("bloom-ui-polygonHandle");
+                            handle.style.left = parts[0];
+                            handle.style.top = parts[1];
+                            handle.style.zIndex = "20000";
+                            shaper.appendChild(handle);
+                            const limits = shaper.getBoundingClientRect();
+
+                            $(handle).draggable({
+                                // Adjust containment by scaling
+                                containment: [
+                                    // arguably we could add this.minBubbleVisible ti the first two, but in practice,
+                                    // since the handle is in the top left, it can't be used to drag it even that close.
+                                    limits.left,
+                                    limits.top,
+                                    limits.right,
+                                    limits.bottom
+                                ],
+                                drag: (event, ui) => {
+                                    console.log("drag " + JSON.stringify(ui));
+                                },
+                                stop: (event, ui) => {
+                                    console.log("stop " + JSON.stringify(ui));
+                                    // ui.position.{top,left} is a position in pixels relative to the shaper
+                                    // enhance: convert to percent??
+                                    const newPoint = `${ui.position.left}px ${ui.position.top}px`;
+                                    pointsToShow.splice(
+                                        index,
+                                        this.lastMouseDownHadCtrl ? 0 : 1,
+                                        newPoint
+                                    );
+                                    pointsToShow.sort((a, b) => {
+                                        const aY = parseFloat(
+                                            a.trim().split(" ")[1]
+                                        );
+                                        const bY = parseFloat(
+                                            b.trim().split(" ")[1]
+                                        );
+                                        return aY - bY;
+                                    });
+                                    const newshape =
+                                        polygonLeadin +
+                                        points[0] +
+                                        "," +
+                                        pointsToShow.join(",") +
+                                        "," +
+                                        points[points.length - 1] +
+                                        ")";
+                                    shaper.style.shapeOutside = newshape;
+                                    if (this.lastMouseDownHadCtrl) {
+                                        this.setupShapeEditing();
+                                    }
+                                }
+                            });
+                        }
+                    });
+                }
+            }
+        );
     }
 
     // "container" refers to a .bloom-textOverPicture div, which holds one (and only one) of the
@@ -1034,9 +1119,12 @@ export class BubbleManager {
         }
     }
 
+    private lastMouseDownHadCtrl = false;
+
     // MUST be defined this way, rather than as a member function, so that it can
     // be passed directly to addEventListener and still get the correct 'this'.
     private onMouseDown = (event: MouseEvent) => {
+        this.lastMouseDownHadCtrl = event.ctrlKey;
         const container = event.currentTarget as HTMLElement;
         // Let standard clicks on the bloom editable or other UI elements only be processed by that element
         if (this.isMouseEventAlreadyHandled(event)) {
@@ -1497,6 +1585,10 @@ export class BubbleManager {
         }
         if (targetElement.classList.contains("ui-resizable-handle")) {
             // Ignore clicks on the JQuery resize handles.
+            return true;
+        }
+        if (targetElement.classList.contains("bloom-ui-polygonHandle")) {
+            // We'll let jquery handle dragging these.
             return true;
         }
         if (ev.ctrlKey || ev.altKey) {
