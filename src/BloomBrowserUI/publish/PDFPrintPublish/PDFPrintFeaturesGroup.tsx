@@ -2,10 +2,24 @@ import * as React from "react";
 import FormGroup from "@mui/material/FormGroup";
 import { SettingsGroup } from "../commonPublish/PublishScreenBaseComponents";
 import { useL10n } from "../../react_components/l10nHooks";
+import { useSubscribeToWebSocketForObject } from "../../utils/WebSocketManager";
+import { post } from "../../utils/bloomApi";
+
+interface PdfReadyMessage {
+    path: string;
+}
 
 export const PDFPrintFeaturesGroup: React.FunctionComponent<{
     onChange?: () => void;
+    onGotPdf: (path: string) => void;
 }> = props => {
+    useSubscribeToWebSocketForObject(
+        "publish",
+        "pdfReady",
+        (message: PdfReadyMessage) => {
+            props.onGotPdf(message.path);
+        }
+    );
     return (
         <div>
             <SettingsGroup
@@ -19,6 +33,9 @@ export const PDFPrintFeaturesGroup: React.FunctionComponent<{
                     Eventually this FormGroup will hold large buttons for Simple, Booklet Cover and
                     Booklet Insides PDF options.
                     */}
+                    <button onClick={() => post("publish/pdf/simple")}>
+                        Simple
+                    </button>
                 </FormGroup>
             </SettingsGroup>
             <SettingsGroup

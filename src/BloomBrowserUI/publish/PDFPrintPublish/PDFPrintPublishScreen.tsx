@@ -16,7 +16,9 @@ import { ThemeProvider, StyledEngineProvider } from "@mui/material/styles";
 import { darkTheme, lightTheme } from "../../bloomMaterialUITheme";
 import { StorybookContext } from "../../.storybook/StoryBookContext";
 import { useL10n } from "../../react_components/l10nHooks";
-import { Button, Typography } from "@mui/material";
+import Typography from "@mui/material/Typography";
+import Button from "@mui/material/Button";
+import { Document, Page, Outline } from "react-pdf/dist/esm/entry.webpack";
 
 export const PDFPrintPublishScreen = () => {
     // When the user changes booklet mode, printshop features, etc., we
@@ -37,6 +39,7 @@ export const PDFPrintPublishScreen = () => {
 const PDFPrintPublishScreenInternal: React.FunctionComponent<{
     onReset: () => void;
 }> = props => {
+    const readable = new ReadableStream();
     const inStorybookMode = useContext(StorybookContext);
     // I left some commented code in here that may be useful in previewing; from Publish -> Android
     // const [heading, setHeading] = useState(
@@ -61,6 +64,18 @@ const PDFPrintPublishScreenInternal: React.FunctionComponent<{
 
     //const pathToOutputBrowser = inStorybookMode ? "./" : "../../";
 
+    const [path, setPath] = useState("");
+    const [numPages, setNumPages] = useState(null);
+    const [pageNumber, setPageNumber] = useState(1);
+
+    function onDocumentLoadSuccess({ numPages }) {
+        setNumPages(numPages);
+    }
+
+    function onItemClick({ pageNumber: itemPageNumber }) {
+        setPageNumber(itemPageNumber);
+    }
+
     const mainPanel = (
         <React.Fragment>
             <PreviewPanel>
@@ -72,7 +87,67 @@ const PDFPrintPublishScreenInternal: React.FunctionComponent<{
                                 align-self: center;
                             `}
                         >
-                            Temporary placeholder for eventual Preview
+                            {path ? (
+                                <div>
+                                    <Document
+                                        css={css`
+                                            display: flex;
+                                        `}
+                                        file={path}
+                                        onLoadSuccess={onDocumentLoadSuccess}
+                                    >
+                                        {/* <Outline
+                                            onItemClick={({
+                                                dest,
+                                                pageIndex,
+                                                pageNumber
+                                            }) => setPageNumber(pageIndex)}
+                                        /> */}
+                                        <div
+                                            css={css`
+                                                margin-right: 15px;
+                                                height: 435px;
+                                                overflow-y: scroll;
+                                                padding-right: 10px;
+                                            `}
+                                        >
+                                            {Array.from(
+                                                new Array(numPages),
+                                                (el, index) => (
+                                                    <Page
+                                                        css={css`
+                                                            ${index + 1 ===
+                                                            pageNumber
+                                                                ? "border: solid grey 5px;"
+                                                                : "margin: 5px;margin-bottom: 10px;"}
+                                                            border-radius: 2px;
+                                                        `}
+                                                        key={`page_${index +
+                                                            1}`}
+                                                        pageNumber={index + 1}
+                                                        height={100}
+                                                        onClick={() =>
+                                                            setPageNumber(
+                                                                index + 1
+                                                            )
+                                                        }
+                                                    />
+                                                )
+                                            )}
+                                        </div>
+                                        <Page
+                                            pageNumber={pageNumber}
+                                            height={400}
+                                        />
+                                    </Document>
+                                    {/* <p>
+                                        Page {pageNumber} of {numPages} in{" "}
+                                        {path}
+                                    </p> */}
+                                </div>
+                            ) : (
+                                "Click a button on the right to start creating PDF"
+                            )}
                         </Typography>
                     </ThemeProvider>
                 </StyledEngineProvider>
@@ -92,6 +167,7 @@ const PDFPrintPublishScreenInternal: React.FunctionComponent<{
                 onChange={() => {
                     props.onReset();
                 }}
+                onGotPdf={path => setPath(path)}
             />
             {/* push everything to the bottom */}
             <div
@@ -176,7 +252,7 @@ const PDFPrintPublishScreenInternal: React.FunctionComponent<{
     );
 };
 
-// a bit goofy... currently the html loads everything in publishUIBundlejs. So all the publish screens
+// a bit goofy... currently the html loads everything in pdf. So all the publish screens
 // get any not-in-a-class code called, including ours. But it only makes sense to get wired up
 // if that html has the root page we need.
 if (document.getElementById("PdfPrintPublishScreen")) {
