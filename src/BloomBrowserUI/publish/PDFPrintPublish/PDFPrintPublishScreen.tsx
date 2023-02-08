@@ -1,7 +1,7 @@
 /** @jsx jsx **/
 import { jsx, css } from "@emotion/react";
 import * as React from "react";
-import { useState, useContext } from "react";
+import { useState, useContext, useEffect } from "react";
 
 import {
     PreviewPanel,
@@ -19,6 +19,8 @@ import { useL10n } from "../../react_components/l10nHooks";
 import Typography from "@mui/material/Typography";
 import Button from "@mui/material/Button";
 import { Document, Page, Outline } from "react-pdf/dist/esm/entry.webpack";
+import { CircularProgress, Dialog } from "@mui/material";
+import { useWatchString } from "../../utils/bloomApi";
 
 export const PDFPrintPublishScreen = () => {
     // When the user changes booklet mode, printshop features, etc., we
@@ -67,8 +69,32 @@ const PDFPrintPublishScreenInternal: React.FunctionComponent<{
     const [path, setPath] = useState("");
     const [numPages, setNumPages] = useState(null);
     const [pageNumber, setPageNumber] = useState(1);
+    const [progressOpen, setProgressOpen] = useState(false);
+    const progress = useWatchString("Making PDF", "publish", "progress");
+    const [progressTask, setProgressTask] = useState("MakingPdf");
+    const [progressContent, setProgressContent] = useState<string[]>([]);
+    const [percent, setPercent] = useState(0);
+    useEffect(() => {
+        console.log("progress is " + progress);
+        const parts = progress.split("|");
+        if (parts.length > 1) {
+            console.log("opening progress dialog");
+            setProgressOpen(true);
+            if (progressTask !== parts[0]) {
+                setProgressTask(parts[0]);
+                setProgressContent([...progressContent, parts[0]]);
+            }
+            if (parts[1].startsWith("Percent: ")) {
+                setPercent(
+                    parseInt(parts[1].substring("Percent: ".length), 10)
+                );
+            }
+        }
+    }, [progress]);
+    const progressHeader = useL10n("Progress", "Common.Progress");
 
     function onDocumentLoadSuccess({ numPages }) {
+        setProgressOpen(false);
         setNumPages(numPages);
     }
 
@@ -231,6 +257,51 @@ const PDFPrintPublishScreenInternal: React.FunctionComponent<{
             >
                 {mainPanel}
             </PublishScreenTemplate>
+            <Dialog open={progressOpen}>
+                <div
+                    css={css`
+                        height: 200px;
+                        width: 300px;
+                        position: relative;
+                        padding: 10px;
+                    `}
+                >
+                    <div
+                        css={css`
+                            position: absolute;
+                            top: 0px;
+                            right: 0px;
+                        `}
+                    >
+                        <CircularProgress
+                            variant="determinate"
+                            value={percent}
+                            size={40}
+                            thickness={5}
+                        />
+                    </div>
+                    <div>
+                        <div
+                            css={css`
+                                font-weight: bold;
+                                margin-bottom: 15px;
+                            `}
+                        >
+                            {progressHeader}
+                        </div>
+                        {progressContent.map(s => (
+                            <p
+                                key={s}
+                                css={css`
+                                    margin: 0;
+                                `}
+                            >
+                                {s}
+                            </p>
+                        ))}
+                    </div>
+                </div>
+            </Dialog>
             {/* In storybook, there's no bloom backend to run the progress dialog */}
             {/* {inStorybookMode || (
                 <PublishProgressDialog

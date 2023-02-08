@@ -3,9 +3,13 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Text;
+using Bloom.Api;
+using Cairo;
+using L10NSharp;
 using SIL.CommandLineProcessing;
 using SIL.IO;
 using SIL.Progress;
+using Path = System.IO.Path;
 using TempFile = SIL.IO.TempFile;
 
 namespace Bloom.Publish.PDF
@@ -294,6 +298,7 @@ namespace Bloom.Publish.PDF
 		const string kThroughWithSpaces = " through ";
 		const string kPage = "Page ";
 
+		public const int kPdfCompressionShare = 75;
 		/// <summary>
 		/// Use the stdout progress reporting to move the GUI progress report along.  This does assume that
 		/// ghostscript doesn't have any localization since it's parsing English strings to extract information.
@@ -330,6 +335,10 @@ namespace Bloom.Publish.PDF
 					{
 						var percentage = (int)(100.0F * (float)(pageNumber - _firstPage) / (float)_numPages);
 						_worker.ReportProgress(percentage);
+						var compressing = LocalizationManager.GetString("PublishTab.PdfMaker.Compress", "Compressing PDF");
+						dynamic messageBundle = new DynamicJson();
+						messageBundle.message = $"{compressing}|Percent: {percentage * kPdfCompressionShare / 100 + (100 - kPdfCompressionShare)}";
+						BloomWebSocketServer.Instance.SendBundle("publish", "progress", messageBundle);
 					}
 					catch (ObjectDisposedException e)
 					{
