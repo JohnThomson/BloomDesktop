@@ -199,14 +199,16 @@ export const ProgressDialog: React.FunctionComponent<IProgressDialogProps> = pro
     return (
         <BloomDialog
             {...propsToPassToBloomDialog}
-            onClose={(evt, reason) => {
-                // Progress dialogs imply some operation is procediing. It may
-                // or may not be possible to cancel it, but we shouldn't just lose
-                // the dialog because the user clicked outside it or even pressed Escape.
-                if (reason !== "escapeKeyDown" && reason !== "backdropClick") {
-                    onClose();
+            // eslint-disable-next-line @typescript-eslint/no-empty-function
+            onClose={() => {}}
+            onCancel={() => {
+                if (props.onCancel) {
+                    props.onCancel();
+                } else {
+                    post("progress/cancel");
                 }
             }}
+            ignoreEscapeAndBackdropClick={true}
         >
             {props.determinate && (
                 <div
@@ -315,15 +317,7 @@ export const ProgressDialog: React.FunctionComponent<IProgressDialogProps> = pro
                     </React.Fragment>
                 ) : // if we're not done, show the cancel button if that was called for...
                 props.showCancelButton ? (
-                    <DialogCancelButton
-                        onClick_DEPRECATED={() => {
-                            if (props.onCancel) {
-                                props.onCancel();
-                            } else {
-                                post("progress/cancel");
-                            }
-                        }}
-                    />
+                    <DialogCancelButton />
                 ) : (
                     // ...otherwise show a placeholder to leave room for buttons when the progress is over
                     <Button

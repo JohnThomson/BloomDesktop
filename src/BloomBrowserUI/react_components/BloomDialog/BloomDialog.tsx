@@ -40,11 +40,12 @@ export interface IBloomDialogProps extends DialogProps {
     dialogFrameProvidedExternally?: boolean;
     // If it is desired to have a close button in the top right corner of the dialog, see DialogTitle.
     // The available reasons come from MUI's DialogProps.
-    onClose: (evt?: object, reason?: "escapeKeyDown" | "backdropClick") => void;
+    onClose: () => void;
 
     // If you define this, then ways of leaving the dialog other than the OK/accept button (escape, clicking out, the cancel button)
     // will call it.
     onCancel?: () => void;
+    ignoreEscapeAndBackdropClick?: boolean;
 
     // we know of at least one scenario (CopyrightAndLicenseDialog) which needs to do
     // this because enabling it causes a react render loop. Our theory is that there is
@@ -165,8 +166,10 @@ export const BloomDialog: FunctionComponent<IBloomDialogProps> = forwardRef(
                                 ) => {
                                     // MUI.Dialog onClose() is only called if you click outside the dialog or escape, so that's
                                     // the same as canceling for dialogs that have a notion of canceling.
-                                    if (props.onCancel) props.onCancel();
-                                    else props.onClose(event, reason);
+                                    if (!props.ignoreEscapeAndBackdropClick) {
+                                        if (props.onCancel) props.onCancel();
+                                        else props.onClose();
+                                    }
                                 }}
                                 // maxWidth={false} Instead, if you want more than the default (600px?) then add maxWidth={false} in the props.
                                 PaperComponent={getPaperComponent()}
