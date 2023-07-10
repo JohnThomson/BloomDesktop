@@ -1035,10 +1035,36 @@ export class ReaderToolsModel {
         if (this.currentMarkupType === MarkupType.None) return;
 
         let oldSelectionPosition = -1;
-        if (this.activeElement)
+        if (this.activeElement) {
             oldSelectionPosition = EditableDivUtils.getElementSelectionIndex(
                 this.activeElement
             );
+            console.log("oldSelectionPosition: " + oldSelectionPosition);
+            if (oldSelectionPosition >= 0) {
+                // Removing the selection altogether is a drastic step to try to avoid problems with ZWSPs
+                // inserted by CkEditor. Using getData should suffice, but at one point it seemed not to. Possibly
+                // I didn' refresh sufficiently.
+                // Note that during typing, doMarkup() is wrapped in another layer which removes the selection
+                // before this code sees it, and restores it after this is done. So this code is just to
+                // help when doMarkup() is called for other reasons, such as focus change.
+                window.getSelection()!.removeAllRanges();
+            }
+            const ckeditorOfThisBox = (<any>this.activeElement).bloomCkEditor;
+            if (ckeditorOfThisBox) {
+                console.log(
+                    "ckeditorOfThisBox.getData(): " +
+                        ckeditorOfThisBox.getData()
+                );
+                if (
+                    ckeditorOfThisBox.getData() !== this.activeElement.innerHTML
+                ) {
+                    console.log(
+                        "innerHTML was " + this.activeElement.innerHTML
+                    );
+                    this.activeElement.innerHTML = ckeditorOfThisBox.getData();
+                }
+            }
+        }
 
         const editableElements = this.getElementsToCheck();
 
@@ -1131,6 +1157,15 @@ export class ReaderToolsModel {
                 offset: oldSelectionPosition
             });
             this.redoStack = []; // ok because only referred to by this variable.
+        }
+
+        if (oldSelectionPosition >= 0) {
+            EditableDivUtils.makeSelectionIn(
+                this.activeElement!,
+                oldSelectionPosition,
+                -1,
+                true
+            );
         }
 
         // the contentWindow is not available during unit testing
