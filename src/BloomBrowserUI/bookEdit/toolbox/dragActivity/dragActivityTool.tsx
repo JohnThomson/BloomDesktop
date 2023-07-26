@@ -87,6 +87,105 @@ export const setupDraggingTargets = (startingPoint: HTMLElement) => {
     });
 };
 
+export const makeArrow = (start: HTMLElement, end: HTMLElement) => {
+    //const scale = page.getBoundingClientRect().width / page.offsetWidth;
+    // These values make a line from the center of the start to the center of the end.
+    const startX = start.offsetLeft + start.offsetWidth / 2;
+    const startY = start.offsetTop + start.offsetHeight / 2;
+    const endXCenter = end.offsetLeft + end.offsetWidth / 2;
+    const endYCenter = end.offsetTop + end.offsetHeight / 2;
+    let endX = endXCenter;
+    let endY = endYCenter;
+    if (end.offsetLeft > startX) {
+        endX = end.offsetLeft;
+    } else if (end.offsetLeft + end.offsetWidth < startX) {
+        endX = end.offsetLeft + end.offsetWidth;
+    }
+    if (end.offsetTop > startY) {
+        endY = end.offsetTop;
+    } else if (end.offsetTop + end.offsetHeight < startY) {
+        endY = end.offsetTop + end.offsetHeight;
+    }
+
+    let arrow = (start.ownerDocument.getElementById(
+        "target-arrow"
+    ) as unknown) as SVGSVGElement;
+    if (endX === endXCenter && endY === endYCenter) {
+        // The boxes are overlapping. Can't draw an arrow between them.
+        if (arrow) {
+            arrow.remove();
+        }
+        return;
+    }
+    if (!arrow) {
+        arrow = start.ownerDocument.createElementNS(
+            "http://www.w3.org/2000/svg",
+            "svg"
+        );
+        arrow.setAttribute("id", "target-arrow");
+        start.parentElement!.appendChild(arrow);
+    }
+
+    // But we actually want border to border
+    // If the line runs through the top or bottom border:
+    const yMultiplier = startY < endY ? 1 : -1;
+    const deltaYTB = (start.offsetHeight / 2) * yMultiplier;
+    const startYTB = startY + deltaYTB;
+    // If it's a horizontal arrow, we won't be using this, but we need to avoid dividing by zero and get a really big number
+    const deltaXTB =
+        endY === startY
+            ? 10000000
+            : ((startYTB - startY) * (endX - startX)) / (endY - startY);
+    const startXTB = startX + deltaXTB;
+
+    // If the line runs through the left or right border:
+    const xMultiplier = startX < endX ? 1 : -1;
+    const deltaXLR = (start.offsetWidth / 2) * xMultiplier;
+    const startXLR = startX + deltaXLR;
+    // If it's a vertical arrow, we won't be using this, but we need to avoid dividing by zero and get a really big number
+    const deltaYLR =
+        endX === startX
+            ? 10000000
+            : ((startXLR - startX) * (endY - startY)) / (endX - startX);
+    const startYLR = startY + deltaYLR;
+
+    // We need to use the point that is closest to the center. (The real delta would require sqrt, but we don't need it.)
+    const deltaTB = deltaXTB * deltaXTB + deltaYTB * deltaYTB;
+    const deltaLR = deltaXLR * deltaXLR + deltaYLR * deltaYLR;
+
+    const finalStartX = deltaTB < deltaLR ? startXTB : startXLR;
+    const finalStartY = deltaTB < deltaLR ? startYTB : startYLR;
+
+    // The end point is offset in exactly the opposite way (this works because the boxes are always the same size)
+    const finalEndX = endX;
+    const finalEndY = endY;
+
+    const deltaX = finalEndX - finalStartX;
+    const deltaY = finalEndY - finalStartY;
+
+    arrow.setAttribute("width", Math.max(Math.abs(deltaX), 2).toString());
+    arrow.setAttribute("height", Math.max(Math.abs(deltaY), 2).toString());
+    let line = arrow.firstChild as SVGLineElement;
+    if (!line) {
+        line = start.ownerDocument.createElementNS(
+            "http://www.w3.org/2000/svg",
+            "line"
+        );
+        arrow.appendChild(line);
+    }
+    line.setAttribute("x1", (deltaX < 0 ? -deltaX : 0).toString());
+    line.setAttribute("y1", (deltaY < 0 ? -deltaY : 0).toString());
+    line.setAttribute("x2", (deltaX > 0 ? deltaX : 0).toString());
+    line.setAttribute("y2", (deltaY > 0 ? deltaY : 0).toString());
+    line.setAttribute("stroke", "red");
+    arrow.style.zIndex = "1003";
+    arrow.style.position = "absolute";
+    arrow.style.left = finalStartX + Math.min(deltaX, 0) + "px";
+    arrow.style.top = finalStartY + Math.min(deltaY, 0) + "px";
+    //arrow.setAttribute("xmlns", "http://www.w3.org/2000/svg");
+    //arrow.setAttribute("viewBox", `0 0 ${deltaX} ${deltaY}`);
+};
+
 let dragStartX = 0;
 let dragStartY = 0;
 let dragTarget: HTMLElement;
@@ -136,6 +235,13 @@ const elementDrag = (e: MouseEvent) => {
     // }
     dragTarget.style.top = y + "px";
     dragTarget.style.left = x + "px";
+    const targetId = dragTarget.getAttribute("data-target-of");
+    if (targetId) {
+        const target = page.querySelector(`[data-bubble-id="${targetId}"]`);
+        if (target) {
+            makeArrow(target as HTMLElement, dragTarget);
+        }
+    }
 };
 const stopDrag = (e: MouseEvent) => {
     const page = dragTarget.closest(".bloom-page") as HTMLElement;

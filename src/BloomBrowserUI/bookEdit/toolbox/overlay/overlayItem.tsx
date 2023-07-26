@@ -5,7 +5,10 @@ import * as React from "react";
 import { OverlayTool } from "./overlayTool";
 import { Div, Span } from "../../../react_components/l10nComponents";
 import { kBloomGray } from "../../../utils/colorUtils";
-import { setupDraggingTargets } from "../dragActivity/dragActivityTool";
+import {
+    makeArrow,
+    setupDraggingTargets
+} from "../dragActivity/dragActivityTool";
 import { BubbleManager } from "../../js/bubbleManager";
 
 const ondragstart = (ev: React.DragEvent<HTMLElement>, style: string) => {
@@ -71,6 +74,7 @@ const ondragend = (
             target.style.height = `${height}px`;
             bubble.parentElement!.appendChild(target);
             setupDraggingTargets(target);
+            makeArrow(bubble, target);
             // }, 1000);
         }
     }
