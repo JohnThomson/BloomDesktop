@@ -5,6 +5,52 @@
       <note>We are in the process of moving strings from Bloom.xlf to BloomMediumPriority.xlf and BloomLowPriority.xlf while trying very hard to preserve translations and approval status.</note>
     </header>
     <body>
+      <!-- Drag Activity Tool -->
+      <trans-unit id="EditTab.Toolbox.DragActivity.CorrectInstructions">
+        <source xml:lang="en">Add items that will show when the learner gets the correct answer. For example, you might add a text that says “Correct!” with a GIF of a dancing chicken.</source>
+        <note>ID: EditTab.Toolbox.DragActivity.CorrectInstructions</note>
+      </trans-unit>
+      <trans-unit id="EditTab.Toolbox.DragActivity.Draggable">
+        <source xml:lang="en">Draggable</source>
+        <note>ID: EditTab.Toolbox.DragActivity.Draggable</note>
+      </trans-unit>
+      <trans-unit id="EditTab.Toolbox.DragActivity.DraggableInstructions">
+        <source xml:lang="en">Place the items anywhere on the scene, in a mixed up order.</source>
+        <note>ID: EditTab.Toolbox.DragActivity.DraggableInstructions</note>
+      </trans-unit>
+      <trans-unit id="EditTab.Toolbox.DragActivity.DraggableTarget">
+        <source xml:lang="en">Draggable Target</source>
+        <note>ID: EditTab.Toolbox.DragActivity.DraggableTarget</note>
+      </trans-unit>
+      <trans-unit id="EditTab.Toolbox.DragActivity.DraggableTargetInstructions">
+        <source xml:lang="en">Place the targets in the places needed for the correct answer.</source>
+        <note>ID: EditTab.Toolbox.DragActivity.DraggableTargetInstructions</note>
+      </trans-unit>
+      <trans-unit id="EditTab.Toolbox.DragActivity.Instructions">
+        <source xml:lang="en">Instructions</source>
+        <note>ID: EditTab.Toolbox.DragActivity.Instructions</note>
+      </trans-unit>
+      <trans-unit id="EditTab.Toolbox.DragActivity.SceneInstructions">
+        <source xml:lang="en">Properties of the Scene</source>
+        <note>ID: EditTab.Toolbox.DragActivity.SceneInstructions</note>
+      </trans-unit>
+      <trans-unit id="EditTab.Toolbox.DragActivity.OrderCircle">
+        <source xml:lang="en">Order Circle</source>
+        <note>ID: EditTab.Toolbox.DragActivity.OrderCircle</note>
+      </trans-unit>
+      <trans-unit id="EditTab.Toolbox.DragActivity.OrderCircleInstructions">
+        <source xml:lang="en">Put the Order Circles in the correct order. Bloom will shuffle them when it is time to play.</source>
+        <note>ID: EditTab.Toolbox.DragActivity.OrderCircleInstructions</note>
+      </trans-unit>
+      <trans-unit id="EditTab.Toolbox.DragActivity.TestInstructions">
+        <source xml:lang="en">Try it out!</source>
+        <note>ID: EditTab.Toolbox.DragActivity.TestInstructions</note>
+      </trans-unit>
+      <trans-unit id="EditTab.Toolbox.DragActivity.WrongInstructions">
+        <source xml:lang="en">
+          Add items that will show when the learner gets the wrong answer. For example, you might add a text that says “Try Again!”.\nIt is OK to have no correct or wrong answers. Just give the same positive reinforcement, like “Looks Nice!”.</source>
+        <note>ID: EditTab.Toolbox.DragActivity.WrongInstructions</note>
+      </trans-unit>
       <!-- Talking Book Advanced -->
       <trans-unit id="EditTab.Toolbox.TalkingBookTool.ESpeakPreview.Error">
         <source xml:lang="en">eSpeak failed.</source>

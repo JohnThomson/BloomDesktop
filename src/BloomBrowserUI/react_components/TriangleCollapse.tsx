@@ -4,9 +4,11 @@ import React = require("react");
 import { Span } from "./l10nComponents";
 
 // Shows a triangle that can be clicked to expand a section
-// Currently hardwired to "Advanced" because that's all we envision using it for
+// Defaults to "Advanced" as the label.
 export const TriangleCollapse: React.FC<{
     initiallyOpen: boolean;
+    labelL10nKey?: string;
+    indented?: boolean;
     children: React.ReactNode;
 }> = props => {
     const [open, setOpen] = React.useState(props.initiallyOpen);
@@ -29,6 +31,7 @@ export const TriangleCollapse: React.FC<{
                     justify-content: start;
                     text-transform: none;
                     padding-left: 0;
+                    ${props.indented ? "padding-bottom: 0;" : ""}
                 `}
             >
                 <svg
@@ -45,7 +48,7 @@ export const TriangleCollapse: React.FC<{
                     css={css`
                         margin-left: 5px;
                     `}
-                    l10nKey="Common.Advanced"
+                    l10nKey={props.labelL10nKey ?? "Common.Advanced"}
                 ></Span>
             </Button>
             <Collapse
@@ -54,7 +57,8 @@ export const TriangleCollapse: React.FC<{
                     .MuiCollapse-wrapperInner {
                         display: flex;
                         flex-direction: column;
-                        gap: 5px;
+                        gap: ${props.indented ? "0" : "5px"};
+                        ${props.indented ? "padding-left: 14px;" : ""}
                     }
                 `}
             >

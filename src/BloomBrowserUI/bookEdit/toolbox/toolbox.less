@@ -7,6 +7,12 @@
 @helpLinkTopMargin: 45px;
 @bloomEnterpriseBadgeSize: 24px;
 
+// The drag activity tool wants a white bar at the very top, so defeat the usual padding
+.ui-accordion .ui-accordion-content[data-toolid="dragActivityTool"] {
+    padding-top: 0;
+    padding-left: 1px !important;
+}
+
 div.toolboxRoot {
     display: inline-block;
     background-color: @toolboxBackgroundColor;

@@ -2314,10 +2314,10 @@ export class BubbleManager {
         screenX: number,
         screenY: number,
         style: string
-    ) {
+    ): HTMLElement | undefined {
         const clientX = screenX - window.screenX;
         const clientY = screenY - window.screenY;
-        this.addOverPictureElement(clientX, clientY, style);
+        return this.addOverPictureElement(clientX, clientY, style);
     }
 
     private addOverPictureElementFromOriginal(

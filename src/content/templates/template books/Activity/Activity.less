@@ -2,3 +2,56 @@
 // But I'm keeping this 'Activity.less' in case we add other pages in this category someday.
 @import "./simpleComprehensionQuiz.less";
 @import "./simple-dom-choice-activities.less";
+
+// this is a copilot-generated default that needs a lot of tweaking, but at least it lists the things
+// we're most likely to want to provide some value for.
+.check-button {
+    background-color: #f2f2f2;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+    color: #333;
+    cursor: pointer;
+    display: inline-block;
+    font-size: 14px;
+    font-weight: bold;
+    margin: 0 5px 5px 0;
+    padding: 5px 10px;
+    text-decoration: none;
+    text-transform: uppercase;
+    transition: background-color 0.2s ease-in-out;
+    &:hover {
+        background-color: #e6e6e6;
+    }
+    &:active {
+        background-color: #ccc;
+    }
+}
+
+[data-target-of] {
+    position: absolute;
+    // above overlay canvas so we can drag it when the canvas is active
+    z-index: @bubbleCanvasZIndex + 1;
+}
+
+@tan: #f2e9d9;
+
+// This is the beginning of Drag Activity Theme.
+// The class activityBlueOnTan is applied to the activity page.
+// Eventually, a different class would be applied when a different theme is chosen.
+// The same nested classes should have different colors for each theme.
+.activityBlueOnTan {
+    background-color: @tan;
+    .bloom-textOverPicture {
+        background-color: @bloom-blue;
+        color: white;
+    }
+    // todo: same for try-again-button, show-correct-button
+    [data-book="check-button"] {
+        background-color: @bloom-blue;
+        color: white;
+        // Todo: shadow etc.
+    }
+    [data-target-of] {
+        border: dashed 2px @bloom-blue;
+    }
+}
