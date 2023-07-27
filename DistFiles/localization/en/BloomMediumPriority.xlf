@@ -30,6 +30,11 @@
         <source xml:lang="en">Instructions</source>
         <note>ID: EditTab.Toolbox.DragActivity.Instructions</note>
       </trans-unit>
+      <trans-unit id="EditTab.Toolbox.DragActivity.Letter">
+        <source xml:lang="en">M</source>
+        <note>ID: EditTab.Toolbox.DragActivity.Letter</note>
+        <note>This is the label of an item that can be dragged onto the canvas to hold text, typically a single letter. It works best if it is one of the widest letters (including digraphs) in your alphabet</note>
+      </trans-unit>
       <trans-unit id="EditTab.Toolbox.DragActivity.SceneInstructions">
         <source xml:lang="en">Properties of the Scene</source>
         <note>ID: EditTab.Toolbox.DragActivity.SceneInstructions</note>
@@ -45,6 +50,11 @@
       <trans-unit id="EditTab.Toolbox.DragActivity.TestInstructions">
         <source xml:lang="en">Try it out!</source>
         <note>ID: EditTab.Toolbox.DragActivity.TestInstructions</note>
+      </trans-unit>
+      <trans-unit id="EditTab.Toolbox.DragActivity.Word">
+        <source xml:lang="en">Word</source>
+        <note>ID: EditTab.Toolbox.DragActivity.Word</note>
+        <note>This is the label of an item that can be dragged onto the canvas to hold text, typically about the length of a word.</note>
       </trans-unit>
       <trans-unit id="EditTab.Toolbox.DragActivity.WrongInstructions">
         <source xml:lang="en">

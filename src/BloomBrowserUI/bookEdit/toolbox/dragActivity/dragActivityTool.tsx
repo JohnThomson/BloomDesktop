@@ -87,7 +87,16 @@ export const setupDraggingTargets = (startingPoint: HTMLElement) => {
     });
 };
 
-export const makeArrow = (start: HTMLElement, end: HTMLElement) => {
+export const makeArrow = (start: HTMLElement, end: HTMLElement | undefined) => {
+    let arrow = (start.ownerDocument.getElementById(
+        "target-arrow"
+    ) as unknown) as SVGSVGElement;
+    if (!end) {
+        if (arrow) {
+            arrow.remove();
+        }
+        return;
+    }
     //const scale = page.getBoundingClientRect().width / page.offsetWidth;
     // These values make a line from the center of the start to the center of the end.
     const startX = start.offsetLeft + start.offsetWidth / 2;
@@ -107,9 +116,6 @@ export const makeArrow = (start: HTMLElement, end: HTMLElement) => {
         endY = end.offsetTop + end.offsetHeight;
     }
 
-    let arrow = (start.ownerDocument.getElementById(
-        "target-arrow"
-    ) as unknown) as SVGSVGElement;
     if (endX === endXCenter && endY === endYCenter) {
         // The boxes are overlapping. Can't draw an arrow between them.
         if (arrow) {
@@ -153,6 +159,7 @@ export const makeArrow = (start: HTMLElement, end: HTMLElement) => {
     const deltaTB = deltaXTB * deltaXTB + deltaYTB * deltaYTB;
     const deltaLR = deltaXLR * deltaXLR + deltaYLR * deltaYLR;
 
+    // The point where we actually want the starting point of the arrow.
     const finalStartX = deltaTB < deltaLR ? startXTB : startXLR;
     const finalStartY = deltaTB < deltaLR ? startYTB : startYLR;
 
@@ -163,25 +170,85 @@ export const makeArrow = (start: HTMLElement, end: HTMLElement) => {
     const deltaX = finalEndX - finalStartX;
     const deltaY = finalEndY - finalStartY;
 
-    arrow.setAttribute("width", Math.max(Math.abs(deltaX), 2).toString());
-    arrow.setAttribute("height", Math.max(Math.abs(deltaY), 2).toString());
     let line = arrow.firstChild as SVGLineElement;
+    let line2 = line?.nextSibling as SVGLineElement;
+    let line3 = line2?.nextSibling as SVGLineElement;
     if (!line) {
         line = start.ownerDocument.createElementNS(
             "http://www.w3.org/2000/svg",
             "line"
         );
         arrow.appendChild(line);
+        line2 = start.ownerDocument.createElementNS(
+            "http://www.w3.org/2000/svg",
+            "line"
+        );
+        arrow.appendChild(line2);
+        line3 = start.ownerDocument.createElementNS(
+            "http://www.w3.org/2000/svg",
+            "line"
+        );
+        arrow.appendChild(line3);
     }
-    line.setAttribute("x1", (deltaX < 0 ? -deltaX : 0).toString());
-    line.setAttribute("y1", (deltaY < 0 ? -deltaY : 0).toString());
-    line.setAttribute("x2", (deltaX > 0 ? deltaX : 0).toString());
-    line.setAttribute("y2", (deltaY > 0 ? deltaY : 0).toString());
-    line.setAttribute("stroke", "red");
+
+    const arrowheadLength = 14;
+    const angle =
+        deltaY === 0 ? Math.sign(deltaX) * Math.PI : Math.atan(deltaX / deltaY);
+    const baseX = 0;
+    const baseY = 0;
+    const tipX = deltaX;
+    const tipY = deltaY;
+
+    const leftAngle = angle + Math.PI / 4;
+    const rightAngle = angle - Math.PI / 4;
+    const leftArrowX =
+        tipX + Math.sin(leftAngle) * -arrowheadLength * Math.sign(deltaY);
+    const leftArrowY =
+        tipY + Math.cos(leftAngle) * -arrowheadLength * Math.sign(deltaY);
+    const rightArrowX =
+        tipX + Math.sin(rightAngle) * -arrowheadLength * Math.sign(deltaY);
+    const rightArrowY =
+        tipY + Math.cos(rightAngle) * -arrowheadLength * Math.sign(deltaY);
+
+    line.setAttribute("x1", baseX.toString());
+    line.setAttribute("y1", baseY.toString());
+    line.setAttribute("x2", tipX.toString());
+    line.setAttribute("y2", tipY.toString());
+    line2.setAttribute("x2", tipX.toString());
+    line2.setAttribute("y2", tipY.toString());
+    line3.setAttribute("x2", tipX.toString());
+    line3.setAttribute("y2", tipY.toString());
+    line2.setAttribute("x1", leftArrowX.toString());
+    line2.setAttribute("y1", leftArrowY.toString());
+    line3.setAttribute("x1", rightArrowX.toString());
+    line3.setAttribute("y1", rightArrowY.toString());
+
+    // Now figure out how big the arrow is and where to put it.
+    const minX = Math.min(baseX, tipX, leftArrowX, rightArrowX);
+    const maxX = Math.max(baseX, tipX, leftArrowX, rightArrowX);
+    const minY = Math.min(baseY, tipY, leftArrowY, rightArrowY);
+    const maxY = Math.max(baseY, tipY, leftArrowY, rightArrowY);
+    // Big enough to hold all the points that make up the arrow
+    arrow.setAttribute("width", (maxX - minX).toString());
+    arrow.setAttribute("height", (maxY - minY).toString());
+    // This viewBox avoids the need to translate all the points in the lines
+    arrow.setAttribute(
+        "viewBox",
+        `${minX} ${minY} ${maxX - minX} ${maxY - minY}`
+    );
+    arrow.style.left = finalStartX + minX + "px";
+    arrow.style.top = finalStartY + minY + "px";
+
+    const color = "red";
+    const strokeWidth = "3";
+    const lines = [line, line2, line3];
+    lines.forEach(l => {
+        l.setAttribute("stroke", color);
+        l.setAttribute("stroke-width", strokeWidth);
+    });
     arrow.style.zIndex = "1003";
     arrow.style.position = "absolute";
-    arrow.style.left = finalStartX + Math.min(deltaX, 0) + "px";
-    arrow.style.top = finalStartY + Math.min(deltaY, 0) + "px";
+
     //arrow.setAttribute("xmlns", "http://www.w3.org/2000/svg");
     //arrow.setAttribute("viewBox", `0 0 ${deltaX} ${deltaY}`);
 };
@@ -237,9 +304,9 @@ const elementDrag = (e: MouseEvent) => {
     dragTarget.style.left = x + "px";
     const targetId = dragTarget.getAttribute("data-target-of");
     if (targetId) {
-        const target = page.querySelector(`[data-bubble-id="${targetId}"]`);
-        if (target) {
-            makeArrow(target as HTMLElement, dragTarget);
+        const draggable = page.querySelector(`[data-bubble-id="${targetId}"]`);
+        if (draggable) {
+            makeArrow(draggable as HTMLElement, dragTarget);
         }
     }
 };
@@ -307,23 +374,31 @@ const DragActivityControls: React.FunctionComponent = () => {
                     <OverlayItemRegion>
                         <OverlayItemRow>
                             <OverlayTextItem
-                                // todo: we want something smaller with an eng.
-                                // todo: we want labels
                                 css={css`
                                     margin-left: 5px;
                                     text-align: center; // Center the text horizontally
-
-                                    padding-top: 1em;
+                                    padding: 2px 0.5em;
                                     vertical-align: middle;
-                                    padding-bottom: 1em;
-
                                     color: white;
                                     border: 1px dotted white;
                                 `}
-                                l10nKey="EditTab.Toolbox.ComicTool.TextBlock"
+                                l10nKey="EditTab.Toolbox.DragActivity.Letter"
                                 style="none"
                                 draggable={true}
                             />
+                            <OverlayTextItem
+                                css={css`
+                                    margin-left: 5px;
+                                    text-align: center; // Center the text horizontally
+                                    padding: 2px 0.5em;
+                                    vertical-align: middle;
+                                    color: white;
+                                    border: 1px dotted white;
+                                `}
+                                l10nKey="EditTab.Toolbox.DragActivity.Word"
+                                style="none"
+                                draggable={true}
+                            />{" "}
                             <OverlayImageItem
                                 src="/bloom/bookEdit/toolbox/overlay/image-overlay.svg"
                                 style="image"

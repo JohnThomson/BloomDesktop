@@ -23,6 +23,7 @@ const ondragstart = (ev: React.DragEvent<HTMLElement>, style: string) => {
     // valid (unregistered) mime types, which technically this argument is supposed
     // to be.
     ev.dataTransfer.setData("text/x-bloombubble", style);
+    ev.dataTransfer.setData("text/x-bloomdraggable", "true");
 };
 
 function getDimension(dist: string): number {
@@ -58,6 +59,7 @@ const ondragend = (
                     .substring(2, 9);
             }
             bubble.setAttribute("data-bubble-id", id);
+            bubble.style.width = ev.currentTarget.clientWidth + "px";
             // don't simplify to 'document.createElement'; may be in a different iframe
             const target = bubble.ownerDocument.createElement("div");
             target.setAttribute("data-target-of", id);
@@ -72,6 +74,9 @@ const ondragend = (
             target.style.top = `${newTop}px`;
             target.style.width = `${width}px`;
             target.style.height = `${height}px`;
+            // This allows it to get focus, which allows it to get the shadow effect we want when
+            // clicked. But is that really right? We can't actually type there.
+            target.setAttribute("tabindex", "0");
             bubble.parentElement!.appendChild(target);
             setupDraggingTargets(target);
             makeArrow(bubble, target);

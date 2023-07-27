@@ -27,6 +27,7 @@ import {
     EnableAllImageEditing,
     tryRemoveImageEditingButtons
 } from "./bloomImages";
+import { makeArrow as makeOrRemoveArrow } from "../toolbox/dragActivity/dragActivityTool";
 
 export interface ITextColorInfo {
     color: string;
@@ -792,6 +793,7 @@ export class BubbleManager {
             this.notifyBubbleChange(this.getSelectedFamilySpec());
         }
         Comical.activateElement(this.activeElement);
+        this.adjustTargetArrow(this.activeElement);
     }
 
     // Set the color of the text in all of the active bubble family's TextOverPicture boxes.
@@ -970,7 +972,8 @@ export class BubbleManager {
             // nor add bubbles when something else is dragged
             if (
                 ev.dataTransfer &&
-                ev.dataTransfer.getData("text/x-bloombubble")
+                ev.dataTransfer.getData("text/x-bloombubble") &&
+                !ev.dataTransfer.getData("text/x-bloomdraggable") // items that create a draggable use another approach
             ) {
                 ev.preventDefault();
                 const style = ev.dataTransfer
@@ -2594,6 +2597,7 @@ export class BubbleManager {
 
     // This method is used both for creating new elements and in dragging/resizing.
     // positionInViewport: is the position to place the top-left corner of the wrapperBox
+    // (But, note that it is not called continuously during dragging.)
     private placeElementAtPosition(
         wrapperBox: JQuery,
         container: Element,
@@ -2614,6 +2618,23 @@ export class BubbleManager {
         wrapperBox.css("top", yOffset); // assumes numbers are in pixels
 
         BubbleManager.setTextboxPosition(wrapperBox, xOffset, yOffset);
+
+        this.adjustTargetArrow(wrapperBox.get(0));
+    }
+
+    private adjustTargetArrow(draggable: HTMLElement | undefined) {
+        if (!draggable) {
+            makeOrRemoveArrow(
+                document.firstElementChild as HTMLElement,
+                undefined
+            );
+            return;
+        }
+        const targetId = draggable.getAttribute("data-bubble-id");
+        const target = targetId
+            ? document.querySelector(`[data-target-of="${targetId}"]`)
+            : undefined;
+        makeOrRemoveArrow(draggable, target as HTMLElement);
     }
 
     // This used to be called from a right-click context menu, but now it only gets called
@@ -2992,6 +3013,7 @@ export class BubbleManager {
                     Array.from(handles).forEach(element => {
                         (element as HTMLElement).classList.add("grabbing");
                     });
+                    this.adjustTargetArrow(thisOverPictureElement);
                 },
                 stop: event => {
                     const target = event.target as Element;
