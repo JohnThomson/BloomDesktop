@@ -256,7 +256,8 @@ export const makeArrow = (start: HTMLElement, end: HTMLElement | undefined) => {
 let dragStartX = 0;
 let dragStartY = 0;
 let dragTarget: HTMLElement;
-let snapped = false;
+//let snapped = false;
+let slots: { x: number; y: number }[] = [];
 
 const startDrag = (e: MouseEvent) => {
     // get the mouse cursor position at startup:
@@ -265,6 +266,15 @@ const startDrag = (e: MouseEvent) => {
     const page = target.closest(".bloom-page") as HTMLElement;
     // scaled / unscaled
     const scale = page.getBoundingClientRect().width / page.offsetWidth;
+    slots = [];
+    page.querySelectorAll("[data-target-of]").forEach((elt: HTMLElement) => {
+        const x = elt.offsetLeft;
+        const y = elt.offsetTop;
+        slots.push({ x, y });
+    });
+    slots.sort((a, b) => {
+        return a.y - b.y;
+    });
     // if (!dragTarget.getAttribute("data-originalLeft")) {
     //     dragTarget.setAttribute(
     //         "data-originalLeft",
@@ -278,28 +288,60 @@ const startDrag = (e: MouseEvent) => {
     // call a function whenever the cursor moves:
     page.addEventListener("mousemove", elementDrag);
 };
+const snapDelta = 50; // review: how close do we want?
 const elementDrag = (e: MouseEvent) => {
     const page = dragTarget.closest(".bloom-page") as HTMLElement;
     const scale = page.getBoundingClientRect().width / page.offsetWidth;
     e.preventDefault();
     let x = e.clientX / scale - dragStartX;
     let y = e.clientY / scale - dragStartY;
-    //let deltaMin = Number.MAX_VALUE;
-    // snapped = false;
-    // for (const slot of slots) {
-    //     let deltaX = slot.x - x;
-    //     let deltaY = slot.y - y;
-    //     let delta = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
-    //     if (delta < deltaMin) {
-    //         deltaMin = delta;
-    //         if (delta < 50) {
-    //             // review: how close do we want?
-    //             x = slot.x;
-    //             y = slot.y;
-    //             snapped = true;
-    //         }
-    //     }
-    // }
+    let deltaMin = Number.MAX_VALUE;
+    let deltaRowMin = Number.MAX_VALUE;
+    const width = dragTarget.offsetWidth;
+    let snappedToExisting = false;
+    for (let i = 0; i < slots.length; i++) {
+        const slot = slots[i];
+        const deltaX = slot.x - x;
+        const deltaY = slot.y - y;
+        const delta = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+        // It's interesting if it is dropped on top of another target, but only if that target is in a row.
+        let inRow = false;
+        if (i > 0 && slots[i - 1].y === slot.y) {
+            inRow = true;
+        }
+        if (i < slots.length - 1 && slots[i + 1].y === slot.y) {
+            inRow = true;
+        }
+        if (inRow && delta < deltaMin) {
+            deltaMin = delta;
+            if (delta < snapDelta) {
+                x = slot.x;
+                y = slot.y;
+                snappedToExisting = true;
+            }
+        }
+        // It's also interesting if it is dropped to the right of another target
+        // Todo: possibly also if it is below another one?
+        let spacing = width + 15;
+        if (inRow) {
+            const row = slots.filter(s => s.y === slot.y);
+            const lastXInRow = Math.max(...row.map(s => s.x));
+            const othersInRow = row.filter(s => s.x < lastXInRow);
+            const secondLastXInRow = Math.max(...othersInRow.map(s => s.x));
+            spacing = lastXInRow - secondLastXInRow;
+        }
+        const deltaXRow = slot.x + spacing - x;
+        const deltaRow = Math.sqrt(deltaXRow * deltaXRow + deltaY * deltaY);
+        if (deltaRow < deltaRowMin && deltaRow < deltaMin) {
+            deltaRowMin = deltaRow;
+            if (delta < snapDelta) {
+                x = slot.x + spacing;
+                y = slot.y;
+            }
+        }
+        // Todo: if snappedToExisting, move things around.
+        // Todo: something intelligent if we snapped an item that is already in the row to a position beyond the end of the row.
+    }
     dragTarget.style.top = y + "px";
     dragTarget.style.left = x + "px";
     const targetId = dragTarget.getAttribute("data-target-of");
