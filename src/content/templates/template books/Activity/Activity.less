@@ -27,6 +27,31 @@
     }
 }
 
+// These items are hidden except when a special class is applied to the page.
+.drag-item-correct,
+.drag-item-wrong {
+    display: none;
+}
+
+.drag-activity-correct {
+    .drag-item-correct {
+        display: block;
+    }
+}
+.drag-activity-wrong {
+    .drag-item-wrong {
+        display: block;
+    }
+}
+
+.drag-activity-try-it {
+    #target-arrow,
+    .bloom-dragHandle,
+    .ui-resizable-handle {
+        display: none;
+    }
+}
+
 [data-target-of] {
     position: absolute;
     // above overlay canvas so we can drag it when the canvas is active

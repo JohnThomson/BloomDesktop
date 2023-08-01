@@ -51,6 +51,10 @@
         <source xml:lang="en">Try it out!</source>
         <note>ID: EditTab.Toolbox.DragActivity.TestInstructions</note>
       </trans-unit>
+      <trans-unit id="EditTab.Toolbox.DragActivity.TextToPutOnThePage">
+        <source xml:lang="en">Text to put on the page</source>
+        <note>ID: EditTab.Toolbox.DragActivity.TextToPutOnThePage</note>
+      </trans-unit>
       <trans-unit id="EditTab.Toolbox.DragActivity.Word">
         <source xml:lang="en">Word</source>
         <note>ID: EditTab.Toolbox.DragActivity.Word</note>

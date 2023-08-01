@@ -1064,13 +1064,15 @@ export class BubbleManager {
 
     // Move all child bubbles as necessary so they are at least partly inside their container
     // (by as much as we require when dragging them).
-    private ensureBubblesIntersectParent(parentContainer: HTMLElement) {
+    public ensureBubblesIntersectParent(parentContainer: HTMLElement) {
         const overlays = Array.from(
             parentContainer.getElementsByClassName(kTextOverPictureClass)
         );
         let changed = false;
         overlays.forEach(overlay => {
             const bubbleRect = overlay.getBoundingClientRect();
+            // If the bubble is not visible, its width will be 0. Don't try to adjust it.
+            if (bubbleRect.width === 0) return;
             this.adjustBubbleLocation(
                 overlay as HTMLElement,
                 parentContainer,
@@ -3039,9 +3041,13 @@ export class BubbleManager {
     // When in one of the latter states, it may be inferred that isComicEditingOn was true when
     // suspendComicEditing was called, that it is now false, and that resumeComicEditing should
     // turn it on again.
-    private comicEditingSuspendedState: "none" | "forDrag" | "forTool" = "none";
+    private comicEditingSuspendedState:
+        | "none"
+        | "forDrag"
+        | "forTool"
+        | "forTest" = "none";
 
-    public suspendComicEditing(forWhat: "forDrag" | "forTool") {
+    public suspendComicEditing(forWhat: "forDrag" | "forTool" | "forTest") {
         if (!this.isComicEditingOn) {
             // Note that this prevents us from getting into one of the suspended states
             // unless it was on to begin with. Therefore a subsequent resume won't turn
@@ -3049,6 +3055,22 @@ export class BubbleManager {
             return;
         }
         this.turnOffBubbleEditing();
+
+        if (forWhat === "forTest") {
+            const allOverPictureElements = Array.from(
+                document.getElementsByClassName(kTextOverPictureClass)
+            );
+            allOverPictureElements.forEach(element => {
+                $(element).draggable("destroy");
+                $(element).resizable("destroy");
+                const editables = Array.from(
+                    element.getElementsByClassName("bloom-editable")
+                );
+                editables.forEach(editable => {
+                    editable.removeAttribute("contenteditable");
+                });
+            });
+        }
         // We don't want to switch to state 'forDrag' while it is suspended by a tool.
         // But we don't need to prevent it because if it's suspended by a tool (e.g., origami layout),
         // any mouse events will find that comic editing is off and won't get this far.
@@ -3065,6 +3087,21 @@ export class BubbleManager {
         if (this.comicEditingSuspendedState === "forTool") {
             // after a forTool suspense, we might have new dividers to put handlers on.
             this.setupSplitterEventHandling();
+        }
+        if (this.comicEditingSuspendedState === "forTest") {
+            const allOverPictureElements = Array.from(
+                document.getElementsByClassName(kTextOverPictureSelector)
+            );
+            allOverPictureElements.forEach(element => {
+                $(element).draggable("enable");
+                $(element).resizable("enable");
+                const editables = Array.from(
+                    element.getElementsByClassName("bloom-editable")
+                );
+                editables.forEach(editable => {
+                    editable.setAttribute("contenteditable", "true"); // Review: even the ones that are hidden?
+                });
+            });
         }
         this.comicEditingSuspendedState = "none";
         this.turnOnBubbleEditing();

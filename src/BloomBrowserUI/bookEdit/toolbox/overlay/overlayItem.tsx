@@ -34,7 +34,8 @@ function getDimension(dist: string): number {
 const ondragend = (
     ev: React.DragEvent<HTMLElement>,
     style: string,
-    draggable: boolean
+    draggable: boolean,
+    addClass?: string
 ) => {
     const bubbleManager = OverlayTool.bubbleManager();
     // The Linux/Mono/Geckofx environment does not produce the dragenter, dragover,
@@ -48,6 +49,9 @@ const ondragend = (
             ev.screenY,
             style
         );
+        if (bubble && addClass) {
+            bubble.classList.add(addClass);
+        }
         if (bubble && draggable) {
             //setTimeout(() => {
             let id = Math.random()
@@ -89,6 +93,7 @@ export const OverlayImageItem: React.FunctionComponent<{
     src: string;
     style: string;
     draggable?: boolean;
+    addClass?: string;
 }> = props => {
     return (
         <img
@@ -101,7 +106,12 @@ export const OverlayImageItem: React.FunctionComponent<{
             draggable={true}
             onDragStart={ev => ondragstart(ev, props.style)}
             onDragEnd={ev =>
-                ondragend(ev, props.style, props.draggable ?? false)
+                ondragend(
+                    ev,
+                    props.style,
+                    props.draggable ?? false,
+                    props.addClass
+                )
             }
         />
     );
@@ -112,6 +122,7 @@ export const OverlayTextItem: React.FunctionComponent<{
     style: string;
     className?: string;
     draggable?: boolean;
+    addClass?: string;
 }> = props => {
     return (
         <Span
@@ -120,7 +131,12 @@ export const OverlayTextItem: React.FunctionComponent<{
             draggable={true}
             onDragStart={ev => ondragstart(ev, props.style)}
             onDragEnd={ev =>
-                ondragend(ev, props.style, props.draggable ?? false)
+                ondragend(
+                    ev,
+                    props.style,
+                    props.draggable ?? false,
+                    props.addClass
+                )
             }
         ></Span>
     );

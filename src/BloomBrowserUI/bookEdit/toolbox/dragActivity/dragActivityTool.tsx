@@ -21,6 +21,9 @@ import {
     OverlayTextItem
 } from "../overlay/overlayItem";
 import { OverlayTool } from "../overlay/overlayTool";
+import { ToolBox } from "../toolbox";
+import { prepareActivity } from "./dragActivityRuntime";
+import { BubbleManager, theOneBubbleManager } from "../../js/bubbleManager";
 //import { Tab } from "@mui/material";
 
 const Tabs: React.FunctionComponent<{
@@ -386,10 +389,71 @@ const Instructions: React.FunctionComponent<{
     );
 };
 
+const correctTabIndex = 1;
+const wrongTabIndex = 2;
+const tryItTabIndex = 3;
+let positionsToRestore: { x: string; y: string; elt: HTMLElement }[] = [];
+const savePositions = (page: HTMLElement) => {
+    positionsToRestore = [];
+    page.querySelectorAll("[data-bubble-id]").forEach((elt: HTMLElement) => {
+        positionsToRestore.push({
+            x: elt.style.left,
+            y: elt.style.top,
+            elt
+        });
+    });
+};
+const restorePositions = () => {
+    positionsToRestore.forEach(p => {
+        p.elt.style.left = p.x;
+        p.elt.style.top = p.y;
+    });
+    positionsToRestore = [];
+};
+
 const DragActivityControls: React.FunctionComponent = () => {
     const [activeTab, setActiveTab] = useState(0);
     const handleChange = (newValue: number) => {
         setActiveTab(newValue);
+        const pageBody = ToolBox.getPage();
+        if (!pageBody) {
+            return; // throw? By the time we're changing tabs, it should be possible to get the content page.
+        }
+        const classes = [
+            "drag-activity-start",
+            "drag-activity-correct",
+            "drag-activity-wrong",
+            "drag-activity-try-it"
+        ];
+        for (let i = 0; i < classes.length; i++) {
+            const className = classes[i];
+            if (newValue === i) {
+                pageBody.classList.add(className);
+            } else {
+                pageBody.classList.remove(className);
+            }
+        }
+        const bubbleManager = OverlayTool.bubbleManager();
+        const page = pageBody.getElementsByClassName(
+            "bloom-page"
+        )[0] as HTMLElement;
+        if (!page) {
+            return; // throw?
+        }
+        if (newValue === tryItTabIndex) {
+            savePositions(page);
+            bubbleManager?.suspendComicEditing("forTest");
+            prepareActivity(page);
+        } else {
+            restorePositions(); // in case we are leaving the try-it tab
+            const bubbleManager = OverlayTool.bubbleManager();
+            bubbleManager?.resumeComicEditing();
+        }
+        if (newValue === correctTabIndex || newValue === wrongTabIndex) {
+            // We can't currently do this for hidden bubbles, and selecting one of these tabs
+            // may cause some previously hidden bubbles to become visible.
+            bubbleManager?.ensureBubblesIntersectParent(page);
+        }
     };
     const [dragObjectType, setDragObjectType] = useState("text");
     // Todo: something has to call setDragObjectType when a draggable is selected.
@@ -408,7 +472,9 @@ const DragActivityControls: React.FunctionComponent = () => {
             <Tabs
                 value={activeTab}
                 onChange={handleChange}
-                labels={["Scene", "Object", "Correct", "Wrong", "Test"]}
+                labels={
+                    ["Start", "Correct", "Wrong", "Try It"] /* Todo: localize*/
+                }
             />
             {activeTab === 0 && (
                 <div>
@@ -445,29 +511,76 @@ const DragActivityControls: React.FunctionComponent = () => {
                                 src="/bloom/bookEdit/toolbox/overlay/image-overlay.svg"
                                 style="image"
                                 draggable={true}
-                                // Todo: we want an 'other' button
                             />
                         </OverlayItemRow>
                         {/* We want an item type control,a draggable checkbox, a sound-when-pressed control */}
                     </OverlayItemRegion>
                 </div>
             )}
+
             {activeTab === 1 && (
                 <div>
-                    <Instructions l10nKey={bodyId} l10nTitleKey={titleId} />
+                    <Instructions l10nKey="CorrectInstructions" />
+                    <OverlayItemRegion>
+                        <OverlayItemRow>
+                            <OverlayImageItem
+                                src="/bloom/bookEdit/toolbox/overlay/image-overlay.svg"
+                                style="image"
+                                draggable={false}
+                                addClass="drag-item-correct"
+                            />
+                        </OverlayItemRow>
+                        <OverlayItemRow>
+                            <OverlayTextItem
+                                css={css`
+                                    margin-left: 5px;
+                                    text-align: center; // Center the text horizontally
+                                    padding: 2px 0.5em;
+                                    vertical-align: middle;
+                                    color: white;
+                                    border: 1px dotted white;
+                                `}
+                                l10nKey="EditTab.Toolbox.DragActivity.TextToPutOnThePage"
+                                style="none"
+                                draggable={false}
+                                addClass="drag-item-correct"
+                            />
+                        </OverlayItemRow>
+                    </OverlayItemRegion>
                 </div>
             )}
             {activeTab === 2 && (
                 <div>
-                    <Instructions l10nKey="CorrectInstructions" />
+                    <Instructions l10nKey="WrongInstructions" />
+                    <OverlayItemRegion>
+                        <OverlayItemRow>
+                            <OverlayImageItem
+                                src="/bloom/bookEdit/toolbox/overlay/image-overlay.svg"
+                                style="image"
+                                draggable={false}
+                                addClass="drag-item-wrong"
+                            />
+                        </OverlayItemRow>
+                        <OverlayItemRow>
+                            <OverlayTextItem
+                                css={css`
+                                    margin-left: 5px;
+                                    text-align: center; // Center the text horizontally
+                                    padding: 2px 0.5em;
+                                    vertical-align: middle;
+                                    color: white;
+                                    border: 1px dotted white;
+                                `}
+                                l10nKey="EditTab.Toolbox.DragActivity.TextToPutOnThePage"
+                                style="none"
+                                draggable={false}
+                                addClass="drag-item-wrong"
+                            />
+                        </OverlayItemRow>
+                    </OverlayItemRegion>
                 </div>
             )}
             {activeTab === 3 && (
-                <div>
-                    <Instructions l10nKey="WrongInstructions" />
-                </div>
-            )}
-            {activeTab === 4 && (
                 <div>
                     <Div
                         css={css`
@@ -538,6 +651,9 @@ export class DragActivityTool extends ToolboxToolReactAdaptor {
     }
 
     public detachFromPage() {
+        // We don't want to leave the page in a state where things have been moved during testing.
+        // Especially we don't want to save it that way.
+        restorePositions();
         // const bubbleManager = OverlayTool.bubbleManager();
         // if (bubbleManager) {
         //     // For now we are leaving bubble editing on, because even with the toolbox hidden,
