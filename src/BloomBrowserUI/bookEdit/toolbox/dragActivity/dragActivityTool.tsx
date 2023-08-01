@@ -90,11 +90,27 @@ export const setupDraggingTargets = (startingPoint: HTMLElement) => {
     });
 };
 
+const overlap = (start: HTMLElement, end: HTMLElement): boolean => {
+    return (
+        start.offsetLeft + start.offsetWidth > end.offsetLeft &&
+        start.offsetLeft < end.offsetLeft + end.offsetWidth &&
+        start.offsetTop + start.offsetHeight > end.offsetTop &&
+        start.offsetTop < end.offsetTop + end.offsetHeight
+    );
+};
+
 export const makeArrow = (start: HTMLElement, end: HTMLElement | undefined) => {
     let arrow = (start.ownerDocument.getElementById(
         "target-arrow"
     ) as unknown) as SVGSVGElement;
     if (!end) {
+        if (arrow) {
+            arrow.remove();
+        }
+        return;
+    }
+    // if start and end overlap, we don't want an arrow
+    if (overlap(start, end)) {
         if (arrow) {
             arrow.remove();
         }
@@ -109,23 +125,24 @@ export const makeArrow = (start: HTMLElement, end: HTMLElement | undefined) => {
     let endX = endXCenter;
     let endY = endYCenter;
     if (end.offsetLeft > startX) {
+        // The target is entirely to the right of the center of the draggable.
+        // We will go for one of the left corners of the target.
         endX = end.offsetLeft;
     } else if (end.offsetLeft + end.offsetWidth < startX) {
+        // The target is entirely to the left of the center of the draggable.
+        // We will go for one of the right corners of the target.
         endX = end.offsetLeft + end.offsetWidth;
     }
     if (end.offsetTop > startY) {
+        // The target is entirely below the center of the draggable.
+        // We will go for one of the top corners of the target.
         endY = end.offsetTop;
     } else if (end.offsetTop + end.offsetHeight < startY) {
+        // The target is entirely above the center of the draggable.
+        // We will go for one of the bottom corners of the target.
         endY = end.offsetTop + end.offsetHeight;
     }
 
-    if (endX === endXCenter && endY === endYCenter) {
-        // The boxes are overlapping. Can't draw an arrow between them.
-        if (arrow) {
-            arrow.remove();
-        }
-        return;
-    }
     if (!arrow) {
         arrow = start.ownerDocument.createElementNS(
             "http://www.w3.org/2000/svg",
@@ -256,11 +273,12 @@ export const makeArrow = (start: HTMLElement, end: HTMLElement | undefined) => {
     //arrow.setAttribute("viewBox", `0 0 ${deltaX} ${deltaY}`);
 };
 
-let dragStartX = 0;
-let dragStartY = 0;
+let mouseOffsetFromLeft = 0;
+let mouseOffsetFromTop = 0;
 let dragTarget: HTMLElement;
 //let snapped = false;
-let slots: { x: number; y: number }[] = [];
+let slots: { x: number; y: number; elt: HTMLElement }[] = [];
+let snappedToExisting = false;
 
 const startDrag = (e: MouseEvent) => {
     // get the mouse cursor position at startup:
@@ -273,10 +291,11 @@ const startDrag = (e: MouseEvent) => {
     page.querySelectorAll("[data-target-of]").forEach((elt: HTMLElement) => {
         const x = elt.offsetLeft;
         const y = elt.offsetTop;
-        slots.push({ x, y });
+        slots.push({ x, y, elt });
     });
     slots.sort((a, b) => {
-        return a.y - b.y;
+        const yDelta = a.y - b.y;
+        return yDelta === 0 ? a.x - b.x : yDelta;
     });
     // if (!dragTarget.getAttribute("data-originalLeft")) {
     //     dragTarget.setAttribute(
@@ -285,29 +304,32 @@ const startDrag = (e: MouseEvent) => {
     //     );
     //     dragTarget.setAttribute("data-originalTop", target.style.top);
     // }
-    dragStartX = e.clientX / scale - target.offsetLeft;
-    dragStartY = e.clientY / scale - target.offsetTop;
+    mouseOffsetFromLeft = e.clientX / scale - target.offsetLeft;
+    mouseOffsetFromTop = e.clientY / scale - target.offsetTop;
     page.addEventListener("mouseup", stopDrag);
     // call a function whenever the cursor moves:
     page.addEventListener("mousemove", elementDrag);
 };
-const snapDelta = 50; // review: how close do we want?
+const snapDelta = 30; // review: how close do we want?
 const elementDrag = (e: MouseEvent) => {
     const page = dragTarget.closest(".bloom-page") as HTMLElement;
     const scale = page.getBoundingClientRect().width / page.offsetWidth;
     e.preventDefault();
-    let x = e.clientX / scale - dragStartX;
-    let y = e.clientY / scale - dragStartY;
+    // Where will we move the target to? If no snaps, we move it to stay in the same place
+    // relative to the mouse.
+    let x = e.clientX / scale - mouseOffsetFromLeft;
+    let y = e.clientY / scale - mouseOffsetFromTop;
     let deltaMin = Number.MAX_VALUE;
     let deltaRowMin = Number.MAX_VALUE;
     const width = dragTarget.offsetWidth;
-    let snappedToExisting = false;
+    snappedToExisting = false;
     for (let i = 0; i < slots.length; i++) {
         const slot = slots[i];
         const deltaX = slot.x - x;
         const deltaY = slot.y - y;
         const delta = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
-        // It's interesting if it is dropped on top of another target, but only if that target is in a row.
+        // It's interesting if it is dropped on top of another target(or where it started),
+        // but only if that target is in a row.
         let inRow = false;
         if (i > 0 && slots[i - 1].y === slot.y) {
             inRow = true;
@@ -325,28 +347,34 @@ const elementDrag = (e: MouseEvent) => {
         }
         // It's also interesting if it is dropped to the right of another target
         // Todo: possibly also if it is below another one?
+        // Right of it's own start position, which is likely in range initially, is not interesting.
+        if (slot.elt === dragTarget) {
+            continue;
+        }
         let spacing = width + 15;
         if (inRow) {
             const row = slots.filter(s => s.y === slot.y);
-            const lastXInRow = Math.max(...row.map(s => s.x));
-            const othersInRow = row.filter(s => s.x < lastXInRow);
-            const secondLastXInRow = Math.max(...othersInRow.map(s => s.x));
-            spacing = lastXInRow - secondLastXInRow;
+            spacing = row[row.length - 1].x - row[row.length - 2].x;
         }
         const deltaXRow = slot.x + spacing - x;
         const deltaRow = Math.sqrt(deltaXRow * deltaXRow + deltaY * deltaY);
-        if (deltaRow < deltaRowMin && deltaRow < deltaMin) {
+        if (deltaRow < deltaRowMin) {
             deltaRowMin = deltaRow;
-            if (delta < snapDelta) {
+            // For a "to the right of" position to be interesting, it must be closer to that
+            // position than to any other target
+            if (deltaRow < snapDelta && deltaRow < deltaMin) {
                 x = slot.x + spacing;
                 y = slot.y;
+                snappedToExisting = false;
             }
         }
-        // Todo: if snappedToExisting, move things around.
-        // Todo: something intelligent if we snapped an item that is already in the row to a position beyond the end of the row.
     }
+    // Todo: if snappedToExisting, move things around.
+
+    // Todo: something intelligent if we snapped an item that is already in the row to a position beyond the end of the row.
     dragTarget.style.top = y + "px";
     dragTarget.style.left = x + "px";
+
     const targetId = dragTarget.getAttribute("data-target-of");
     if (targetId) {
         const draggable = page.querySelector(`[data-bubble-id="${targetId}"]`);
@@ -357,6 +385,31 @@ const elementDrag = (e: MouseEvent) => {
 };
 const stopDrag = (e: MouseEvent) => {
     const page = dragTarget.closest(".bloom-page") as HTMLElement;
+    if (snappedToExisting) {
+        // These are in order by original x.
+        const row = slots.filter(s => s.y === dragTarget.offsetTop);
+        const indexDroppedOn = row.findIndex(
+            s => s.x === dragTarget.offsetLeft
+        );
+        const indexDragged = row.findIndex(s => s.elt === dragTarget);
+        const spacing = row[row.length - 1].x - row[row.length - 2].x;
+        if (indexDragged < 0) {
+            // Not in the row previously, move others over.
+            for (let i = row.length - 1; i >= indexDroppedOn; i--) {
+                row[i].elt.style.left = `${row[i].x + spacing}px`;
+            }
+        } else if (indexDroppedOn < indexDragged) {
+            // Move others over.
+            for (let i = indexDragged - 1; i >= indexDroppedOn; i--) {
+                row[i].elt.style.left = `${row[i].x + spacing}px`;
+            }
+        } else {
+            // Move others over.
+            for (let i = indexDragged + 1; i <= indexDroppedOn; i++) {
+                row[i].elt.style.left = `${row[i].x - spacing}px`;
+            }
+        }
+    }
     // if (!this.snapped) {
     //     this.dragTarget.style.top = this.dragTarget.getAttribute(
     //         "data-originalTop"
