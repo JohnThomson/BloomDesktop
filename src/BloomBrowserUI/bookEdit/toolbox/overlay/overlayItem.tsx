@@ -173,6 +173,7 @@ export const OverlayItemRow: React.FunctionComponent<{
 export const OverlayItemRegion: React.FunctionComponent<{
     children: React.ReactNode;
     className?: string;
+    l10nKey?: string;
 }> = props => {
     return (
         <div
@@ -185,7 +186,10 @@ export const OverlayItemRegion: React.FunctionComponent<{
             className={props.className}
         >
             <Div
-                l10nKey="EditTab.Toolbox.ComicTool.DragInstructions"
+                l10nKey={
+                    props.l10nKey ??
+                    "EditTab.Toolbox.ComicTool.DragInstructions"
+                }
                 className="overlayToolControlDragInstructions"
             >
                 Drag any of these overlays onto the image:

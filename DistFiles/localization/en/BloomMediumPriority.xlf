@@ -22,6 +22,10 @@
         <source xml:lang="en">Draggable Target</source>
         <note>ID: EditTab.Toolbox.DragActivity.DraggableTarget</note>
       </trans-unit>
+      <trans-unit id="EditTab.Toolbox.DragActivity.FixedInPlace">
+        <source xml:lang="en">Fixed In Place</source>
+        <note>ID: EditTab.Toolbox.DragActivity.FixedInPlace</note>
+      </trans-unit>
       <trans-unit id="EditTab.Toolbox.DragActivity.DraggableTargetInstructions">
         <source xml:lang="en">Place the targets in the places needed for the correct answer.</source>
         <note>ID: EditTab.Toolbox.DragActivity.DraggableTargetInstructions</note>
@@ -29,6 +33,10 @@
       <trans-unit id="EditTab.Toolbox.DragActivity.Instructions">
         <source xml:lang="en">Instructions</source>
         <note>ID: EditTab.Toolbox.DragActivity.Instructions</note>
+      </trans-unit>
+      <trans-unit id="EditTab.Toolbox.DragActivity.InstructionsOrLabels">
+        <source xml:lang="en">Instructions or other labels</source>
+        <note>ID: EditTab.Toolbox.DragActivity.InstructionsOrLabels</note>
       </trans-unit>
       <trans-unit id="EditTab.Toolbox.DragActivity.Letter">
         <source xml:lang="en">M</source>

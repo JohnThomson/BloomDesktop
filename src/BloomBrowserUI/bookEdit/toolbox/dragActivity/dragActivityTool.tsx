@@ -386,7 +386,7 @@ const elementDrag = (e: MouseEvent) => {
 const stopDrag = (e: MouseEvent) => {
     const page = dragTarget.closest(".bloom-page") as HTMLElement;
     if (snappedToExisting) {
-        // These are in order by original x.
+        // Move things around so we end up with an evenly spaced row again.
         const row = slots.filter(s => s.y === dragTarget.offsetTop);
         const indexDroppedOn = row.findIndex(
             s => s.x === dragTarget.offsetLeft
@@ -532,7 +532,7 @@ const DragActivityControls: React.FunctionComponent = () => {
             {activeTab === 0 && (
                 <div>
                     <Div l10nKey="SceneInstructions" />
-                    <OverlayItemRegion>
+                    <OverlayItemRegion l10nKey="EditTab.Toolbox.DragActivity.Draggable">
                         <OverlayItemRow>
                             <OverlayTextItem
                                 css={css`
@@ -566,7 +566,30 @@ const DragActivityControls: React.FunctionComponent = () => {
                                 draggable={true}
                             />
                         </OverlayItemRow>
-                        {/* We want an item type control,a draggable checkbox, a sound-when-pressed control */}
+                    </OverlayItemRegion>
+                    <OverlayItemRegion l10nKey="EditTab.Toolbox.DragActivity.FixedInPlace">
+                        <OverlayItemRow>
+                            <OverlayTextItem
+                                css={css`
+                                    margin-left: 5px;
+                                    text-align: center; // Center the text horizontally
+                                    padding: 2px 0.5em;
+                                    vertical-align: middle;
+                                    color: white;
+                                    border: 1px dotted white;
+                                `}
+                                l10nKey="EditTab.Toolbox.DragActivity.InstructionsOrLabels"
+                                style="none"
+                                draggable={false}
+                            />
+                        </OverlayItemRow>
+                        <OverlayItemRow>
+                            <OverlayImageItem
+                                src="/bloom/bookEdit/toolbox/overlay/image-overlay.svg"
+                                style="image"
+                                draggable={false}
+                            />
+                        </OverlayItemRow>
                     </OverlayItemRegion>
                 </div>
             )}
