@@ -194,6 +194,11 @@ export function addImageEditingButtons(containerDiv: HTMLElement): void {
     if (!containerDiv || containerDiv.classList.contains("hoverUp")) {
         return;
     }
+    if (containerDiv.closest(".drag-activity-try-it")) {
+        // I wish this knowledge was not here, but I don't see a better way to prevent image editing
+        // and hover effects when in test mode.
+        return;
+    }
     let img = getImgFromContainer(this);
     if (img.length === 0)
         // This case is probably a left over from some previous Bloom where

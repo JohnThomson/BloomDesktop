@@ -99,7 +99,10 @@ const overlap = (start: HTMLElement, end: HTMLElement): boolean => {
     );
 };
 
-export const makeArrow = (start: HTMLElement, end: HTMLElement | undefined) => {
+export const adjustTarget = (
+    start: HTMLElement,
+    end: HTMLElement | undefined
+) => {
     let arrow = (start.ownerDocument.getElementById(
         "target-arrow"
     ) as unknown) as SVGSVGElement;
@@ -108,6 +111,12 @@ export const makeArrow = (start: HTMLElement, end: HTMLElement | undefined) => {
             arrow.remove();
         }
         return;
+    }
+    if (end.offsetHeight !== start.offsetHeight) {
+        end.style.height = `${start.offsetHeight}px`;
+    }
+    if (end.offsetWidth !== start.offsetWidth) {
+        end.style.width = `${start.offsetWidth}px`;
     }
     // if start and end overlap, we don't want an arrow
     if (overlap(start, end)) {
@@ -379,7 +388,7 @@ const elementDrag = (e: MouseEvent) => {
     if (targetId) {
         const draggable = page.querySelector(`[data-bubble-id="${targetId}"]`);
         if (draggable) {
-            makeArrow(draggable as HTMLElement, dragTarget);
+            adjustTarget(draggable as HTMLElement, dragTarget);
         }
     }
 };

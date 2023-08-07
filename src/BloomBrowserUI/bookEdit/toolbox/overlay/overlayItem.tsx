@@ -6,7 +6,7 @@ import { OverlayTool } from "./overlayTool";
 import { Div, Span } from "../../../react_components/l10nComponents";
 import { kBloomGray } from "../../../utils/colorUtils";
 import {
-    makeArrow,
+    adjustTarget,
     setupDraggingTargets
 } from "../dragActivity/dragActivityTool";
 import { BubbleManager } from "../../js/bubbleManager";
@@ -83,7 +83,7 @@ const ondragend = (
             target.setAttribute("tabindex", "0");
             bubble.parentElement!.appendChild(target);
             setupDraggingTargets(target);
-            makeArrow(bubble, target);
+            adjustTarget(bubble, target);
             // }, 1000);
         }
     }

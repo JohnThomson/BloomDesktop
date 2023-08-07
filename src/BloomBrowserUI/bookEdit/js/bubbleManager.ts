@@ -27,7 +27,7 @@ import {
     EnableAllImageEditing,
     tryRemoveImageEditingButtons
 } from "./bloomImages";
-import { makeArrow as makeOrRemoveArrow } from "../toolbox/dragActivity/dragActivityTool";
+import { adjustTarget } from "../toolbox/dragActivity/dragActivityTool";
 
 export interface ITextColorInfo {
     color: string;
@@ -793,7 +793,7 @@ export class BubbleManager {
             this.notifyBubbleChange(this.getSelectedFamilySpec());
         }
         Comical.activateElement(this.activeElement);
-        this.adjustTargetArrow(this.activeElement);
+        this.adjustTarget(this.activeElement);
     }
 
     // Set the color of the text in all of the active bubble family's TextOverPicture boxes.
@@ -2621,22 +2621,19 @@ export class BubbleManager {
 
         BubbleManager.setTextboxPosition(wrapperBox, xOffset, yOffset);
 
-        this.adjustTargetArrow(wrapperBox.get(0));
+        this.adjustTarget(wrapperBox.get(0));
     }
 
-    private adjustTargetArrow(draggable: HTMLElement | undefined) {
+    private adjustTarget(draggable: HTMLElement | undefined) {
         if (!draggable) {
-            makeOrRemoveArrow(
-                document.firstElementChild as HTMLElement,
-                undefined
-            );
+            adjustTarget(document.firstElementChild as HTMLElement, undefined);
             return;
         }
         const targetId = draggable.getAttribute("data-bubble-id");
         const target = targetId
             ? document.querySelector(`[data-target-of="${targetId}"]`)
             : undefined;
-        makeOrRemoveArrow(draggable, target as HTMLElement);
+        adjustTarget(draggable, target as HTMLElement);
     }
 
     // This used to be called from a right-click context menu, but now it only gets called
@@ -3015,7 +3012,7 @@ export class BubbleManager {
                     Array.from(handles).forEach(element => {
                         (element as HTMLElement).classList.add("grabbing");
                     });
-                    this.adjustTargetArrow(thisOverPictureElement);
+                    this.adjustTarget(thisOverPictureElement);
                 },
                 stop: event => {
                     const target = event.target as Element;
