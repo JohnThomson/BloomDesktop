@@ -5,8 +5,9 @@
 
 // These items are hidden except when a special class is applied to the page.
 .drag-item-correct,
-.drag-item-wrong {
-    display: none;
+.drag-item-wrong,
+.check-button {
+    display: none; // default
 }
 
 .drag-activity-correct {
@@ -19,12 +20,34 @@
         display: block;
     }
 }
+.drag-activity-start {
+    .check-button {
+        display: block; // check button shows at start
+    }
+}
 
 .drag-activity-try-it {
     #target-arrow,
     .bloom-dragHandle,
     .ui-resizable-handle {
         display: none;
+    }
+    .check-button {
+        display: block; // displays in try-it mode initially...
+    }
+    &.drag-activity-wrong {
+        .check-button {
+            display: none; // but not if you already got it wrong
+        }
+        .try-again-button,
+        .show-correct-button {
+            display: block; // instead these show
+        }
+    }
+    &.drag-activity-correct {
+        .check-button {
+            display: none; // but not if you already got it right
+        }
     }
 }
 
@@ -98,9 +121,8 @@
     // might want to style them differently.
     .check-button,
     .try-again-button,
-    .correct-answer-button {
+    .show-correct-button {
         cursor: pointer;
-        display: inline-block;
         //font-size: 14px;
         font-weight: bold;
         //margin: 0 5px 5px 0;

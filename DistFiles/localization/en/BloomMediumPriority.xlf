@@ -6,6 +6,10 @@
     </header>
     <body>
       <!-- Drag Activity Tool -->
+      <trans-unit id="EditTab.Toolbox.DragActivity.CheckAnswer">
+        <source xml:lang="en">Check Answer</source>
+        <note>ID: EditTab.Toolbox.DragActivity.CheckAnswer</note>
+      </trans-unit>
       <trans-unit id="EditTab.Toolbox.DragActivity.CorrectInstructions">
         <source xml:lang="en">Add items that will show when the learner gets the correct answer. For example, you might add a text that says “Correct!” with a GIF of a dancing chicken.</source>
         <note>ID: EditTab.Toolbox.DragActivity.CorrectInstructions</note>
@@ -55,6 +59,10 @@
         <source xml:lang="en">Put the Order Circles in the correct order. Bloom will shuffle them when it is time to play.</source>
         <note>ID: EditTab.Toolbox.DragActivity.OrderCircleInstructions</note>
       </trans-unit>
+      <trans-unit id="EditTab.Toolbox.DragActivity.ShowAnswer">
+        <source xml:lang="en">Show Answer</source>
+        <note>ID: EditTab.Toolbox.DragActivity.ShowAnswer</note>
+      </trans-unit>
       <trans-unit id="EditTab.Toolbox.DragActivity.TestInstructions">
         <source xml:lang="en">Try it out!</source>
         <note>ID: EditTab.Toolbox.DragActivity.TestInstructions</note>
@@ -62,6 +70,10 @@
       <trans-unit id="EditTab.Toolbox.DragActivity.TextToPutOnThePage">
         <source xml:lang="en">Text to put on the page</source>
         <note>ID: EditTab.Toolbox.DragActivity.TextToPutOnThePage</note>
+      </trans-unit>
+      <trans-unit id="EditTab.Toolbox.DragActivity.TryAgain">
+        <source xml:lang="en">Try Again</source>
+        <note>ID: EditTab.Toolbox.DragActivity.TryAgain</note>
       </trans-unit>
       <trans-unit id="EditTab.Toolbox.DragActivity.Word">
         <source xml:lang="en">Word</source>

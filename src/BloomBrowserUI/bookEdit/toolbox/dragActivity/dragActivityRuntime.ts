@@ -1,5 +1,7 @@
 // This is the code that is shared between the test tab of the toolbox and bloom-player.
 
+import { get } from "jquery";
+
 let slots: { x: number; y: number }[] = [];
 export function prepareActivity(page: HTMLElement) {
     slots = [];
@@ -17,10 +19,36 @@ export function prepareActivity(page: HTMLElement) {
         // Todo: these should get cleaned up.
         elt.addEventListener("mousedown", startDrag);
     });
-    page.getElementsByClassName("check-button")[0].addEventListener(
-        "click",
-        performCheck
+    let checkButtons = Array.from(page.getElementsByClassName("check-button"));
+    const tryAgainButtons = Array.from(
+        page.getElementsByClassName("try-again-button")
     );
+    const showCorrectButtons = Array.from(
+        page.getElementsByClassName("show-correct-button")
+    );
+
+    checkButtons.concat(tryAgainButtons).forEach((elt: HTMLElement) => {
+        elt.addEventListener("click", performCheck);
+    });
+    showCorrectButtons.forEach((elt: HTMLElement) => {
+        elt.addEventListener("click", () => {
+            page.querySelectorAll("[data-bubble-id]").forEach(
+                (elt: HTMLElement) => {
+                    const targetId = elt.getAttribute("data-bubble-id");
+                    const target = page.querySelector(
+                        `[data-target-of="${targetId}"]`
+                    ) as HTMLElement;
+                    if (!target) {
+                        return;
+                    }
+                    const x = target.offsetLeft;
+                    const y = target.offsetTop;
+                    elt.style.left = x + "px";
+                    elt.style.top = y + "px";
+                }
+            );
+        });
+    });
 }
 
 let dragStartX = 0;
@@ -80,11 +108,28 @@ const stopDrag = (e: MouseEvent) => {
     page.removeEventListener("mousemove", elementDrag);
 };
 
+const getVisibleText = (elt: HTMLElement): string => {
+    const visibleDivs = elt.getElementsByClassName("bloom-visibility-code-on");
+    return Array.from(visibleDivs)
+        .map((elt: HTMLElement) => elt.textContent)
+        .join(" ");
+};
+
+const rightPosition = (elt: HTMLElement, correctX, correctY) => {
+    const actualX = elt.offsetLeft;
+    const actualY = elt.offsetTop;
+    return (
+        // Since anything correct should be snapped, this probably isn't necessary
+        Math.abs(correctX - actualX) < 0.5 && Math.abs(correctY - actualY) < 0.5
+    );
+};
+
 export const performCheck = (e: MouseEvent) => {
     const target = e.currentTarget as HTMLElement;
     const page = target.closest(".bloom-page") as HTMLElement;
     let allCorrect = true;
-    page.querySelectorAll("[data-bubble-id]").forEach((elt: HTMLElement) => {
+    const bubbles = Array.from(page.querySelectorAll("[data-bubble-id]"));
+    bubbles.forEach((elt: HTMLElement) => {
         const targetId = elt.getAttribute("data-bubble-id");
         const target = page.querySelector(
             `[data-target-of="${targetId}"]`
@@ -95,14 +140,23 @@ export const performCheck = (e: MouseEvent) => {
 
         const correctX = target.offsetLeft;
         const correctY = target.offsetTop;
-        const actualX = elt.offsetLeft;
-        const actualY = elt.offsetTop;
-        if (
-            // Since anything correct should be snapped, bloom probably isn't necessary
-            Math.abs(correctX - actualX) > 0.5 ||
-            Math.abs(correctY - actualY) > 0.5
-        ) {
-            allCorrect = false;
+
+        if (!rightPosition(elt, correctX, correctY)) {
+            // It's not in the expected place. But perhaps one with the same text is?
+            const visibleText = getVisibleText(elt);
+            if (
+                !bubbles.some((bubble: HTMLElement) => {
+                    if (bubble === elt) {
+                        return false; // already know this bubble is not at the right place
+                    }
+                    if (getVisibleText(bubble) !== visibleText) {
+                        return false; // only interested in ones with the same text
+                    }
+                    return rightPosition(bubble, correctX, correctY);
+                })
+            ) {
+                allCorrect = false;
+            }
         }
     });
     const showWhat = allCorrect

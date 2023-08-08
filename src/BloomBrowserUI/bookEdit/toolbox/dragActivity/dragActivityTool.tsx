@@ -6,7 +6,7 @@ import ReactDOM = require("react-dom");
 import ToolboxToolReactAdaptor from "../toolboxToolReactAdaptor";
 import { kDragActivityToolId } from "../toolIds";
 //import Tabs from "@mui/material/Tabs";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
     kBloomBlue,
     kUiFontStack,
@@ -15,6 +15,7 @@ import {
 import { TriangleCollapse } from "../../../react_components/TriangleCollapse";
 import { Div } from "../../../react_components/l10nComponents";
 import {
+    OverlayButtonItem,
     OverlayImageItem,
     OverlayItemRegion,
     OverlayItemRow,
@@ -473,27 +474,44 @@ const restorePositions = () => {
     positionsToRestore = [];
 };
 
-const DragActivityControls: React.FunctionComponent = () => {
+const updateTabClass = (tabIndex: number) => {
+    const pageBody = ToolBox.getPage();
+    if (!pageBody) {
+        // try again in a bit (this might happen if the toolbox iframe loads faster than the page iframe)
+        setTimeout(() => {
+            updateTabClass(tabIndex);
+        }, 100);
+        return;
+    }
+    const classes = [
+        "drag-activity-start",
+        "drag-activity-correct",
+        "drag-activity-wrong",
+        "drag-activity-try-it"
+    ];
+    for (let i = 0; i < classes.length; i++) {
+        const className = classes[i];
+        if (tabIndex === i) {
+            pageBody.classList.add(className);
+        } else {
+            pageBody.classList.remove(className);
+        }
+    }
+};
+
+const DragActivityControls: React.FunctionComponent<{
+    onTabChange: (tab: number) => void;
+}> = props => {
     const [activeTab, setActiveTab] = useState(0);
+    useEffect(() => {
+        updateTabClass(activeTab);
+    }, [activeTab]);
     const handleChange = (newValue: number) => {
         setActiveTab(newValue);
+        props.onTabChange(newValue);
         const pageBody = ToolBox.getPage();
         if (!pageBody) {
             return; // throw? By the time we're changing tabs, it should be possible to get the content page.
-        }
-        const classes = [
-            "drag-activity-start",
-            "drag-activity-correct",
-            "drag-activity-wrong",
-            "drag-activity-try-it"
-        ];
-        for (let i = 0; i < classes.length; i++) {
-            const className = classes[i];
-            if (newValue === i) {
-                pageBody.classList.add(className);
-            } else {
-                pageBody.classList.remove(className);
-            }
         }
         const bubbleManager = OverlayTool.bubbleManager();
         const page = pageBody.getElementsByClassName(
@@ -529,6 +547,15 @@ const DragActivityControls: React.FunctionComponent = () => {
         bodyId = "EditTab.Toolbox.DragActivity.OrderCircleInstructions";
     }
 
+    const textItemProps = css`
+        margin-left: 5px;
+        text-align: center; // Center the text horizontally
+        padding: 2px 0.5em;
+        vertical-align: middle;
+        color: "white";
+        background-color: ${kBloomBlue};
+        border: 1px dotted ${kBloomBlue};
+    `;
     return (
         <ThemeProvider theme={toolboxTheme}>
             <Tabs
@@ -541,52 +568,38 @@ const DragActivityControls: React.FunctionComponent = () => {
             {activeTab === 0 && (
                 <div>
                     <Div l10nKey="SceneInstructions" />
-                    <OverlayItemRegion l10nKey="EditTab.Toolbox.DragActivity.Draggable">
+                    <OverlayItemRegion
+                        l10nKey="EditTab.Toolbox.DragActivity.Draggable"
+                        theme="blueOnTan"
+                    >
                         <OverlayItemRow>
                             <OverlayTextItem
-                                css={css`
-                                    margin-left: 5px;
-                                    text-align: center; // Center the text horizontally
-                                    padding: 2px 0.5em;
-                                    vertical-align: middle;
-                                    color: white;
-                                    border: 1px dotted white;
-                                `}
+                                css={textItemProps}
                                 l10nKey="EditTab.Toolbox.DragActivity.Letter"
                                 style="none"
                                 draggable={true}
                             />
                             <OverlayTextItem
-                                css={css`
-                                    margin-left: 5px;
-                                    text-align: center; // Center the text horizontally
-                                    padding: 2px 0.5em;
-                                    vertical-align: middle;
-                                    color: white;
-                                    border: 1px dotted white;
-                                `}
+                                css={textItemProps}
                                 l10nKey="EditTab.Toolbox.DragActivity.Word"
                                 style="none"
                                 draggable={true}
                             />{" "}
                             <OverlayImageItem
-                                src="/bloom/bookEdit/toolbox/overlay/image-overlay.svg"
                                 style="image"
                                 draggable={true}
+                                color={kBloomBlue}
+                                strokeColor={kBloomBlue}
                             />
                         </OverlayItemRow>
                     </OverlayItemRegion>
-                    <OverlayItemRegion l10nKey="EditTab.Toolbox.DragActivity.FixedInPlace">
+                    <OverlayItemRegion
+                        l10nKey="EditTab.Toolbox.DragActivity.FixedInPlace"
+                        theme="blueOnTan"
+                    >
                         <OverlayItemRow>
                             <OverlayTextItem
-                                css={css`
-                                    margin-left: 5px;
-                                    text-align: center; // Center the text horizontally
-                                    padding: 2px 0.5em;
-                                    vertical-align: middle;
-                                    color: white;
-                                    border: 1px dotted white;
-                                `}
+                                css={textItemProps}
                                 l10nKey="EditTab.Toolbox.DragActivity.InstructionsOrLabels"
                                 style="none"
                                 draggable={false}
@@ -594,9 +607,14 @@ const DragActivityControls: React.FunctionComponent = () => {
                         </OverlayItemRow>
                         <OverlayItemRow>
                             <OverlayImageItem
-                                src="/bloom/bookEdit/toolbox/overlay/image-overlay.svg"
                                 style="image"
                                 draggable={false}
+                                color={kBloomBlue}
+                                strokeColor={kBloomBlue}
+                            />
+                            <OverlayButtonItem
+                                l10nKey="EditTab.Toolbox.DragActivity.CheckAnswer"
+                                addClasses="check-button"
                             />
                         </OverlayItemRow>
                     </OverlayItemRegion>
@@ -606,29 +624,23 @@ const DragActivityControls: React.FunctionComponent = () => {
             {activeTab === 1 && (
                 <div>
                     <Instructions l10nKey="CorrectInstructions" />
-                    <OverlayItemRegion>
+                    <OverlayItemRegion theme="blueOnTan">
                         <OverlayItemRow>
                             <OverlayImageItem
-                                src="/bloom/bookEdit/toolbox/overlay/image-overlay.svg"
                                 style="image"
                                 draggable={false}
-                                addClass="drag-item-correct"
+                                addClasses="drag-item-correct"
+                                color={kBloomBlue}
+                                strokeColor={kBloomBlue}
                             />
                         </OverlayItemRow>
                         <OverlayItemRow>
                             <OverlayTextItem
-                                css={css`
-                                    margin-left: 5px;
-                                    text-align: center; // Center the text horizontally
-                                    padding: 2px 0.5em;
-                                    vertical-align: middle;
-                                    color: white;
-                                    border: 1px dotted white;
-                                `}
+                                css={textItemProps}
                                 l10nKey="EditTab.Toolbox.DragActivity.TextToPutOnThePage"
                                 style="none"
                                 draggable={false}
-                                addClass="drag-item-correct"
+                                addClasses="drag-item-correct"
                             />
                         </OverlayItemRow>
                     </OverlayItemRegion>
@@ -637,29 +649,33 @@ const DragActivityControls: React.FunctionComponent = () => {
             {activeTab === 2 && (
                 <div>
                     <Instructions l10nKey="WrongInstructions" />
-                    <OverlayItemRegion>
+                    <OverlayItemRegion theme="blueOnTan">
                         <OverlayItemRow>
                             <OverlayImageItem
-                                src="/bloom/bookEdit/toolbox/overlay/image-overlay.svg"
                                 style="image"
                                 draggable={false}
-                                addClass="drag-item-wrong"
+                                addClasses="drag-item-wrong"
+                                color={kBloomBlue}
+                                strokeColor={kBloomBlue}
+                            />
+                        </OverlayItemRow>
+                        <OverlayItemRow>
+                            <OverlayButtonItem
+                                l10nKey="EditTab.Toolbox.DragActivity.TryAgain"
+                                addClasses="try-again-button drag-item-wrong"
+                            />
+                            <OverlayButtonItem
+                                l10nKey="EditTab.Toolbox.DragActivity.ShowAnswer"
+                                addClasses="show-correct-button drag-item-wrong"
                             />
                         </OverlayItemRow>
                         <OverlayItemRow>
                             <OverlayTextItem
-                                css={css`
-                                    margin-left: 5px;
-                                    text-align: center; // Center the text horizontally
-                                    padding: 2px 0.5em;
-                                    vertical-align: middle;
-                                    color: white;
-                                    border: 1px dotted white;
-                                `}
+                                css={textItemProps}
                                 l10nKey="EditTab.Toolbox.DragActivity.TextToPutOnThePage"
                                 style="none"
                                 draggable={false}
-                                addClass="drag-item-wrong"
+                                addClasses="drag-item-wrong"
                             />
                         </OverlayItemRow>
                     </OverlayItemRegion>
@@ -691,12 +707,18 @@ export class DragActivityTool extends ToolboxToolReactAdaptor {
         DragActivityTool.theOneDragActivityTool = this;
     }
 
+    private root: HTMLDivElement | undefined;
+    private tab = 0;
+
     public makeRootElement(): HTMLDivElement {
-        const root = document.createElement("div");
+        this.root = document.createElement("div") as HTMLDivElement;
         //root.setAttribute("class", "DragActivityBody");
 
-        ReactDOM.render(<DragActivityControls />, root);
-        return root as HTMLDivElement;
+        ReactDOM.render(
+            <DragActivityControls onTabChange={tab => (this.tab = tab)} />,
+            this.root
+        );
+        return this.root;
     }
 
     public id(): string {
@@ -733,6 +755,14 @@ export class DragActivityTool extends ToolboxToolReactAdaptor {
             return;
         }
         setupDraggingTargets(page);
+        updateTabClass(this.tab);
+        // if (this.root) {
+        //     // We can't get at or modify the activeTab state of the DragActivityControls
+        //     // component, so this is the easiest way I can find to get the page in a consistent state.
+        //     // If we want to mantain the tab setting through page changes, we'll have to maintain
+        //     // the state here and pass it to the component along with an onChange handler.
+        //     ReactDOM.render(<DragActivityControls />, this.root);
+        // }
     }
 
     public detachFromPage() {

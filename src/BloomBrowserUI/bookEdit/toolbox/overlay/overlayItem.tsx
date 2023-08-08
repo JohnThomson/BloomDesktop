@@ -4,14 +4,18 @@ import { jsx, css } from "@emotion/react";
 import * as React from "react";
 import { OverlayTool } from "./overlayTool";
 import { Div, Span } from "../../../react_components/l10nComponents";
-import { kBloomGray } from "../../../utils/colorUtils";
+import { kBloomBlue, kBloomGray } from "../../../utils/colorUtils";
 import {
     adjustTarget,
     setupDraggingTargets
 } from "../dragActivity/dragActivityTool";
 import { BubbleManager } from "../../js/bubbleManager";
+import { ImagePlaceholderIcon } from "../../../react_components/icons/ImagePlaceholderIcon";
 
-const ondragstart = (ev: React.DragEvent<HTMLElement>, style: string) => {
+const ondragstart = (
+    ev: React.DragEvent<HTMLElement> | React.DragEvent<SVGSVGElement>,
+    style: string
+) => {
     // Here "text/x-bloombubble" is a unique, private data type recognised
     // by ondragover and ondragdrop methods that BubbleManager
     // attaches to bloom image containers. It doesn't make sense to
@@ -32,10 +36,10 @@ function getDimension(dist: string): number {
 }
 
 const ondragend = (
-    ev: React.DragEvent<HTMLElement>,
+    ev: React.DragEvent<HTMLElement> | React.DragEvent<SVGSVGElement>,
     style: string,
     draggable: boolean,
-    addClass?: string
+    addClasses?: string
 ) => {
     const bubbleManager = OverlayTool.bubbleManager();
     // The Linux/Mono/Geckofx environment does not produce the dragenter, dragover,
@@ -49,8 +53,8 @@ const ondragend = (
             ev.screenY,
             style
         );
-        if (bubble && addClass) {
-            bubble.classList.add(addClass);
+        if (bubble && addClasses) {
+            bubble.classList.add(...addClasses.split(" "));
         }
         if (bubble && draggable) {
             //setTimeout(() => {
@@ -90,10 +94,48 @@ const ondragend = (
 };
 
 export const OverlayImageItem: React.FunctionComponent<{
+    style: string;
+    draggable?: boolean;
+    addClasses?: string;
+    color?: string;
+    strokeColor?: string;
+}> = props => {
+    return (
+        <div // infuriatingly, svgs don't support draggable, so we have to wrap.
+            css={css`
+                width: 50px;
+                height: 50px;
+                cursor: grab;
+            `}
+            draggable={true}
+            onDragStart={ev => ondragstart(ev, props.style)}
+            onDragEnd={ev =>
+                ondragend(
+                    ev,
+                    props.style,
+                    props.draggable ?? false,
+                    props.addClasses
+                )
+            }
+        >
+            <ImagePlaceholderIcon
+                css={css`
+                    width: 50px;
+                    height: 50px;
+                    cursor: grab;
+                `}
+                color={props.color}
+                strokeColor={props.strokeColor}
+            />
+        </div>
+    );
+};
+
+export const OverlayItem: React.FunctionComponent<{
     src: string;
     style: string;
     draggable?: boolean;
-    addClass?: string;
+    addClasses?: string;
 }> = props => {
     return (
         <img
@@ -110,7 +152,7 @@ export const OverlayImageItem: React.FunctionComponent<{
                     ev,
                     props.style,
                     props.draggable ?? false,
-                    props.addClass
+                    props.addClasses
                 )
             }
         />
@@ -122,7 +164,7 @@ export const OverlayTextItem: React.FunctionComponent<{
     style: string;
     className?: string;
     draggable?: boolean;
-    addClass?: string;
+    addClasses?: string;
 }> = props => {
     return (
         <Span
@@ -135,10 +177,35 @@ export const OverlayTextItem: React.FunctionComponent<{
                     ev,
                     props.style,
                     props.draggable ?? false,
-                    props.addClass
+                    props.addClasses
                 )
             }
         ></Span>
+    );
+};
+
+const buttonItemProps = css`
+    margin-left: 5px;
+    text-align: center;
+    padding: 2px 0.5em;
+    vertical-align: middle;
+    color: ${kBloomBlue};
+    background-color: "white";
+    box-shadow: 0px 4px 4px rgba(0, 0, 0, 0.2);
+`;
+
+export const OverlayButtonItem: React.FunctionComponent<{
+    l10nKey: string;
+    addClasses: string;
+}> = props => {
+    return (
+        <OverlayTextItem
+            css={buttonItemProps}
+            l10nKey={props.l10nKey}
+            addClasses={props.addClasses}
+            draggable={false}
+            style="none"
+        ></OverlayTextItem>
     );
 };
 
@@ -157,7 +224,7 @@ export const OverlayItemRow: React.FunctionComponent<{
                 width: 100%;
                 height: 50px;
                 align-items: center; // vertical
-                justify-content: space-between; // horizontal
+                justify-content: space-around; // horizontal
                 margin-right: 4px; // matches the space on the left
 
                 // Each row gets a little vertical cushion
@@ -174,11 +241,14 @@ export const OverlayItemRegion: React.FunctionComponent<{
     children: React.ReactNode;
     className?: string;
     l10nKey?: string;
+    theme?: string;
 }> = props => {
+    const bgColor = props.theme === "blueOnTan" ? "white" : kBloomGray;
+    const fgColor = props.theme === "blueOnTan" ? kBloomBlue : "white";
     return (
         <div
             css={css`
-                background-color: ${kBloomGray};
+                background-color: ${bgColor};
                 padding: 6px;
                 display: flex;
                 flex-wrap: wrap;
@@ -186,6 +256,9 @@ export const OverlayItemRegion: React.FunctionComponent<{
             className={props.className}
         >
             <Div
+                css={css`
+                    color: ${fgColor};
+                `}
                 l10nKey={
                     props.l10nKey ??
                     "EditTab.Toolbox.ComicTool.DragInstructions"

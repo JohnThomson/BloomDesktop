@@ -43,6 +43,7 @@ import { OverlayKeyHints } from "./overlayKeyHints";
 import { EnableAllImageEditing } from "../../js/bloomImages";
 import {
     OverlayImageItem,
+    OverlayItem,
     OverlayItemRegion,
     OverlayItemRow,
     OverlayTextItem
@@ -775,15 +776,12 @@ const OverlayToolControls: React.FunctionComponent = () => {
                 >
                     <OverlayItemRegion className={!isXmatter ? "" : "disabled"}>
                         <OverlayItemRow>
-                            <OverlayImageItem
+                            <OverlayItem
                                 src="/bloom/bookEdit/toolbox/overlay/comic-icon.svg"
                                 style="speech"
                             />
-                            <OverlayImageItem
-                                src="/bloom/bookEdit/toolbox/overlay/image-overlay.svg"
-                                style="image"
-                            />
-                            <OverlayImageItem
+                            <OverlayImageItem style="image" />
+                            <OverlayItem
                                 src="/bloom/bookEdit/toolbox/overlay/sign-language-overlay.svg"
                                 style="video"
                             />
