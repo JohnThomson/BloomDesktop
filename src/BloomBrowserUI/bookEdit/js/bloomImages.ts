@@ -467,10 +467,11 @@ function DisableImageTooltip(container: HTMLElement) {
 // Note: since this function (obviously) updates state / has side effects,
 // callers should consider the order operations are done if multiple operations happen at or near the same time
 // to ensure that the final state is the one they desire.
-function UpdateImageTooltipVisibility(container: HTMLElement) {
+export function UpdateImageTooltipVisibility(container: HTMLElement) {
     if (
         container.classList.contains("bloom-hideImageButtons") ||
-        container.classList.contains("ui-suppressImageButtons")
+        container.classList.contains("ui-suppressImageButtons") ||
+        container.closest(".drag-activity-try-it")
     ) {
         // Since the image buttons aren't visible, hide the image tooltip too
         DisableImageTooltip(container);

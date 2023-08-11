@@ -407,6 +407,7 @@ export default class BloomHintBubbles {
         elementWithBubbleAttributes: JQuery,
         preferredLangs?: Array<string>
     ) {
+        console.log("making help bubble");
         const target = $(targetElement);
         const source = $(elementWithBubbleAttributes);
 

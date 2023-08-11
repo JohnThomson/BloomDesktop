@@ -10,6 +10,8 @@ export const TriangleCollapse: React.FC<{
     labelL10nKey?: string;
     indented?: boolean;
     children: React.ReactNode;
+    className?: string;
+    buttonColor?: string;
 }> = props => {
     const [open, setOpen] = React.useState(props.initiallyOpen);
 
@@ -24,6 +26,7 @@ export const TriangleCollapse: React.FC<{
                 flex-direction: column;
                 gap: 5px;
             `}
+            className={props.className}
         >
             <Button
                 onClick={handleClick}
@@ -42,11 +45,17 @@ export const TriangleCollapse: React.FC<{
                         transform: ${open ? "rotate(135deg)" : "rotate(90deg)"};
                     `}
                 >
-                    <path d="M 0 10 L 5 0 L 10 10 Z" fill="white" />
+                    <path
+                        d="M 0 10 L 5 0 L 10 10 Z"
+                        fill={props.buttonColor ?? "white"}
+                    />
                 </svg>
                 <Span
                     css={css`
                         margin-left: 5px;
+                        ${props.buttonColor
+                            ? "color: " + props.buttonColor
+                            : "white"}
                     `}
                     l10nKey={props.labelL10nKey ?? "Common.Advanced"}
                 ></Span>

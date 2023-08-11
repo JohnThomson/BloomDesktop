@@ -372,7 +372,10 @@ export default class OverflowChecker {
                     // show the tooltip.
                     const shouldShow =
                         offsetY >= $overflowingAncestor.innerHeight() - 10 &&
-                        offsetY <= $overflowingAncestor.outerHeight(false) + 10;
+                        offsetY <=
+                            $overflowingAncestor.outerHeight(false) + 10 &&
+                        // I don't like this module knowing about this, but how else to hide it?
+                        !overflowingAncestor.closest(".drag-activity-try-it");
                     if (shouldShow && !showing) {
                         showing = true;
                         $overflowingAncestor.trigger("enterBorder");

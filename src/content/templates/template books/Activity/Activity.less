@@ -69,8 +69,12 @@
     // Buttons for editing images and formatting text should not show in test mode.
     // Review: should we instead make special cases in the code that makes these buttons?
     .imageButton,
-    #formatButton {
-        display: none;
+    #formatButton,
+    .ui-tooltip-plain {
+        // We need !important for the ui-tooltip-plain, which hides hint and source bubbles.
+        // jquery tooltip puts display:block in the style of the element itself, so only
+        // an !important rule can override it.
+        display: none !important;
     }
     .cke_editable {
         cursor: default;
@@ -96,7 +100,7 @@
         // need this for specificity
         background-color: @tan;
     }
-    .bloom-textOverPicture .bloom-translationGroup {
+    .bloom-textOverPicture.draggable-text {
         background-color: @bloom-blue;
         color: white;
     }
@@ -130,7 +134,12 @@
         text-decoration: none;
         //text-transform: uppercase;
         //transition: background-color 0.2s ease-in-out;
-        transform: skew(-5deg);
+
+        // This makes it look more like John's mockup, but it creates a stacking context,
+        // and that interferes with setting the z-index on the handles and format button
+        // to put them in front of the canvas even though they are outside the TOP box.
+        //transform: skew(-5deg);
+
         // This should work, but it gets clipped at the bottom because the height
         // of the TOP box is set explicly in its style.
         // Instead I use the :after kludge below

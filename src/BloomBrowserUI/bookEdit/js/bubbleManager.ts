@@ -2657,6 +2657,8 @@ export class BubbleManager {
 
         // Update UI and make sure things get redrawn correctly.
         this.refreshBubbleEditing(containerElement, undefined, false);
+        // By this point it's really gone, so this will clean up if it had a target.
+        this.removeDetachedTargets();
     }
 
     // We verify that 'textElement' is the active element before calling this method.
@@ -3111,12 +3113,39 @@ export class BubbleManager {
         this.suspendComicEditing("forDrag");
     };
 
+    public removeDetachedTargets() {
+        const detachedTargets = Array.from(
+            document.querySelectorAll("[data-target-of]")
+        );
+        const bubbles = Array.from(
+            document.querySelectorAll("[data-bubble-id]")
+        );
+        bubbles.forEach(bubble => {
+            const bubbleId = bubble.getAttribute("data-bubble-id");
+            if (bubbleId) {
+                const index = detachedTargets.findIndex(
+                    (target: Element) =>
+                        target.getAttribute("data-target-of") === bubbleId
+                );
+                if (index > -1) {
+                    detachedTargets.splice(index, 1); // not detached if bubble points to it
+                }
+            }
+        });
+        detachedTargets.forEach(target => {
+            target.remove();
+        });
+    }
+
     // on ANY mouse up, if comic editing was turned off by an origami click, turn it back on.
     // (This is attached to the document because I don't want it missed if the mouseUp
     // doesn't happen inside the slider.)
     private documentMouseUp = (ev: Event) => {
-        // ignore mouseup events while suspended for a tool.
-        if (this.comicEditingSuspendedState === "forTool") {
+        // ignore mouseup events while suspended for a tool or drag activity test
+        if (
+            this.comicEditingSuspendedState === "forTool" ||
+            this.comicEditingSuspendedState === "forTest"
+        ) {
             return;
         }
         this.resumeComicEditing();

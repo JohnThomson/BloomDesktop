@@ -3,8 +3,10 @@
 import { get } from "jquery";
 
 let slots: { x: number; y: number }[] = [];
+let originalPositions = new Map<HTMLElement, { x: number; y: number }>();
 export function prepareActivity(page: HTMLElement) {
     slots = [];
+    originalPositions = new Map<HTMLElement, { x: number; y: number }>();
     page.querySelectorAll("[data-bubble-id]").forEach((elt: HTMLElement) => {
         const targetId = elt.getAttribute("data-bubble-id");
         const target = page.querySelector(
@@ -16,6 +18,7 @@ export function prepareActivity(page: HTMLElement) {
         const x = target.offsetLeft;
         const y = target.offsetTop;
         slots.push({ x, y });
+        originalPositions.set(elt, { x: elt.offsetLeft, y: elt.offsetTop });
         // Todo: these should get cleaned up.
         elt.addEventListener("mousedown", startDrag);
     });
@@ -106,6 +109,24 @@ const stopDrag = (e: MouseEvent) => {
     }
     page.removeEventListener("mouseup", stopDrag);
     page.removeEventListener("mousemove", elementDrag);
+
+    // If there was already a bubble in that slot, move it back to its original position.
+    const bubbles = Array.from(page.querySelectorAll("[data-bubble-id]"));
+    bubbles.forEach((elt: HTMLElement) => {
+        if (elt === dragTarget) {
+            return;
+        }
+        if (
+            elt.offsetLeft === dragTarget.offsetLeft &&
+            elt.offsetTop === dragTarget.offsetTop
+        ) {
+            const originalPosition = originalPositions.get(elt);
+            if (originalPosition) {
+                elt.style.left = originalPosition.x + "px";
+                elt.style.top = originalPosition.y + "px";
+            }
+        }
+    });
 };
 
 const getVisibleText = (elt: HTMLElement): string => {

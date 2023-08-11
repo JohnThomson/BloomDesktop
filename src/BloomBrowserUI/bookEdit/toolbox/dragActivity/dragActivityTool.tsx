@@ -25,6 +25,7 @@ import { OverlayTool } from "../overlay/overlayTool";
 import { ToolBox } from "../toolbox";
 import { prepareActivity } from "./dragActivityRuntime";
 import { BubbleManager, theOneBubbleManager } from "../../js/bubbleManager";
+import { UpdateImageTooltipVisibility } from "../../js/bloomImages";
 //import { Tab } from "@mui/material";
 
 const Tabs: React.FunctionComponent<{
@@ -269,7 +270,7 @@ export const adjustTarget = (
     arrow.style.left = finalStartX + minX + "px";
     arrow.style.top = finalStartY + minY + "px";
 
-    const color = "red";
+    const color = "#80808080";
     const strokeWidth = "3";
     const lines = [line, line2, line3];
     lines.forEach(l => {
@@ -373,7 +374,11 @@ const elementDrag = (e: MouseEvent) => {
             // For a "to the right of" position to be interesting, it must be closer to that
             // position than to any other target
             if (deltaRow < snapDelta && deltaRow < deltaMin) {
-                x = slot.x + spacing;
+                if (inRow) {
+                    // If there isn't already a row, we'd only be guessing at spacing
+                    // so don't snap in that direction.
+                    x = slot.x + spacing;
+                }
                 y = slot.y;
                 snappedToExisting = false;
             }
@@ -438,7 +443,13 @@ const Instructions: React.FunctionComponent<{
 }> = props => {
     return (
         <TriangleCollapse
+            css={css`
+                color: ${kBloomBlue};
+                background-color: white;
+                padding-left: 5px;
+            `}
             initiallyOpen={true}
+            buttonColor={kBloomBlue}
             labelL10nKey={
                 props.l10nTitleKey ??
                 "EditTab.Toolbox.DragActivity.Instructions"
@@ -497,17 +508,23 @@ const updateTabClass = (tabIndex: number) => {
             pageBody.classList.remove(className);
         }
     }
+    if (tabIndex === tryItTabIndex) {
+        Array.from(
+            document.getElementsByClassName("bloom-imageContainer")
+        ).forEach(container => {
+            (container as HTMLElement).title = "";
+        });
+    }
 };
 
 const DragActivityControls: React.FunctionComponent<{
+    activeTab: number;
     onTabChange: (tab: number) => void;
 }> = props => {
-    const [activeTab, setActiveTab] = useState(0);
     useEffect(() => {
-        updateTabClass(activeTab);
-    }, [activeTab]);
+        updateTabClass(props.activeTab);
+    }, [props.activeTab]);
     const handleChange = (newValue: number) => {
-        setActiveTab(newValue);
         props.onTabChange(newValue);
         const pageBody = ToolBox.getPage();
         if (!pageBody) {
@@ -559,13 +576,13 @@ const DragActivityControls: React.FunctionComponent<{
     return (
         <ThemeProvider theme={toolboxTheme}>
             <Tabs
-                value={activeTab}
+                value={props.activeTab}
                 onChange={handleChange}
                 labels={
                     ["Start", "Correct", "Wrong", "Try It"] /* Todo: localize*/
                 }
             />
-            {activeTab === 0 && (
+            {props.activeTab === 0 && (
                 <div>
                     <Div l10nKey="SceneInstructions" />
                     <OverlayItemRegion
@@ -578,12 +595,14 @@ const DragActivityControls: React.FunctionComponent<{
                                 l10nKey="EditTab.Toolbox.DragActivity.Letter"
                                 style="none"
                                 draggable={true}
+                                addClasses="draggable-text"
                             />
                             <OverlayTextItem
                                 css={textItemProps}
                                 l10nKey="EditTab.Toolbox.DragActivity.Word"
                                 style="none"
                                 draggable={true}
+                                addClasses="draggable-text"
                             />{" "}
                             <OverlayImageItem
                                 style="image"
@@ -621,10 +640,10 @@ const DragActivityControls: React.FunctionComponent<{
                 </div>
             )}
 
-            {activeTab === 1 && (
+            {props.activeTab === 1 && (
                 <div>
                     <Instructions l10nKey="CorrectInstructions" />
-                    <OverlayItemRegion theme="blueOnTan">
+                    <OverlayItemRegion theme="blueOnTan" l10nKey="">
                         <OverlayItemRow>
                             <OverlayImageItem
                                 style="image"
@@ -646,10 +665,10 @@ const DragActivityControls: React.FunctionComponent<{
                     </OverlayItemRegion>
                 </div>
             )}
-            {activeTab === 2 && (
+            {props.activeTab === 2 && (
                 <div>
                     <Instructions l10nKey="WrongInstructions" />
-                    <OverlayItemRegion theme="blueOnTan">
+                    <OverlayItemRegion theme="blueOnTan" l10nKey="">
                         <OverlayItemRow>
                             <OverlayImageItem
                                 style="image"
@@ -681,7 +700,7 @@ const DragActivityControls: React.FunctionComponent<{
                     </OverlayItemRegion>
                 </div>
             )}
-            {activeTab === 3 && (
+            {props.activeTab === 3 && (
                 <div>
                     <Div
                         css={css`
@@ -714,11 +733,24 @@ export class DragActivityTool extends ToolboxToolReactAdaptor {
         this.root = document.createElement("div") as HTMLDivElement;
         //root.setAttribute("class", "DragActivityBody");
 
+        this.renderRoot();
+        return this.root;
+    }
+
+    private renderRoot(): void {
+        if (!this.root) return;
         ReactDOM.render(
-            <DragActivityControls onTabChange={tab => (this.tab = tab)} />,
+            <DragActivityControls
+                activeTab={this.tab}
+                onTabChange={tab => {
+                    this.tab = tab;
+                    // We are controlling this property, so the only way it gets into
+                    // the other tab is when we change it.
+                    this.renderRoot();
+                }}
+            />,
             this.root
         );
-        return this.root;
     }
 
     public id(): string {
@@ -741,28 +773,30 @@ export class DragActivityTool extends ToolboxToolReactAdaptor {
     }
 
     public newPageReady() {
-        // const bubbleManager = OverlayTool.bubbleManager();
-        // if (!bubbleManager) {
-        //     // probably the toolbox just finished loading before the page.
-        //     // No clean way to fix this
-        //     window.setTimeout(() => this.newPageReady(), 100);
-        //     return;
-        // }
+        const bubbleManager = OverlayTool.bubbleManager();
         const page = DragActivityTool.getBloomPage();
-        if (!page) {
+        if (!bubbleManager || !page) {
             // probably the toolbox just finished loading before the page.
+            // No clean way to fix this
             window.setTimeout(() => this.newPageReady(), 100);
             return;
         }
+        // useful during development, MAY not need in production.
+        bubbleManager.removeDetachedTargets();
+
         setupDraggingTargets(page);
-        updateTabClass(this.tab);
-        // if (this.root) {
-        //     // We can't get at or modify the activeTab state of the DragActivityControls
-        //     // component, so this is the easiest way I can find to get the page in a consistent state.
-        //     // If we want to mantain the tab setting through page changes, we'll have to maintain
-        //     // the state here and pass it to the component along with an onChange handler.
-        //     ReactDOM.render(<DragActivityControls />, this.root);
-        // }
+        //updateTabClass(this.tab);
+        // Force things to Start tab as we change page.
+        // If we decide not to do this, we should probably at least find a way to do it
+        // when it's a brand newly-created page.
+        if (this.tab != 0) {
+            // We can't get at or modify the activeTab state of the DragActivityControls
+            // component, so this is the easiest way I can find to get the page in a consistent state.
+            // If we want to mantain the tab setting through page changes, we'll have to maintain
+            // the state here and pass it to the component along with an onChange handler.
+            this.tab = 0;
+            this.renderRoot();
+        }
     }
 
     public detachFromPage() {

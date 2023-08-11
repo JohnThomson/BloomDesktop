@@ -255,18 +255,20 @@ export const OverlayItemRegion: React.FunctionComponent<{
             `}
             className={props.className}
         >
-            <Div
-                css={css`
-                    color: ${fgColor};
-                `}
-                l10nKey={
-                    props.l10nKey ??
-                    "EditTab.Toolbox.ComicTool.DragInstructions"
-                }
-                className="overlayToolControlDragInstructions"
-            >
-                Drag any of these overlays onto the image:
-            </Div>
+            {props.l10nKey === "" || (
+                <Div
+                    css={css`
+                        color: ${fgColor};
+                    `}
+                    l10nKey={
+                        props.l10nKey ??
+                        "EditTab.Toolbox.ComicTool.DragInstructions"
+                    }
+                    className="overlayToolControlDragInstructions"
+                >
+                    Drag any of these overlays onto the image:
+                </Div>
+            )}
             {props.children}
         </div>
     );
