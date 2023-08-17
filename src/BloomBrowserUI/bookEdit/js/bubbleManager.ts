@@ -28,6 +28,8 @@ import {
     tryRemoveImageEditingButtons
 } from "./bloomImages";
 import { adjustTarget } from "../toolbox/dragActivity/dragActivityTool";
+import BloomSourceBubbles from "../sourceBubbles/BloomSourceBubbles";
+import BloomHintBubbles from "./BloomHintBubbles";
 
 export interface ITextColorInfo {
     color: string;
@@ -514,6 +516,43 @@ export class BubbleManager {
                 );
             }
         );
+    }
+
+    // This is not a great place to make this available to the world.
+    // But GetSettings only works in the page Iframe, and the bubble manager
+    // is one componenent from there that the drag activity code already works with
+    // and that already uses the injected GetSettings(). I don't have a better idea,
+    // short of refactoring so that we get settings from an API call rather than
+    // by injection. But that may involve making a lot of stuff async.
+    public getSettings(): ICollectionSettings {
+        return GetSettings();
+    }
+
+    // For a similar reason, I want this logic here.
+    public addSourceAndHintBubbles(translationGroup: HTMLElement) {
+        const bubble = BloomSourceBubbles.ProduceSourceBubbles(
+            translationGroup
+        );
+        const divsThatHaveSourceBubbles: HTMLElement[] = [];
+        const bubbleDivs: any[] = [];
+        if (bubble.length !== 0) {
+            divsThatHaveSourceBubbles.push(translationGroup);
+            bubbleDivs.push(bubble);
+        }
+        BloomHintBubbles.addHintBubbles(
+            translationGroup.parentElement!,
+            divsThatHaveSourceBubbles,
+            bubbleDivs
+        );
+        if (divsThatHaveSourceBubbles.length > 0) {
+            BloomSourceBubbles.MakeSourceBubblesIntoQtips(
+                divsThatHaveSourceBubbles[0],
+                bubbleDivs[0]
+            );
+            BloomSourceBubbles.setupSizeChangedHandling(
+                divsThatHaveSourceBubbles
+            );
+        }
     }
 
     adjustOverlaysForCurrentLanguage(container: HTMLElement) {

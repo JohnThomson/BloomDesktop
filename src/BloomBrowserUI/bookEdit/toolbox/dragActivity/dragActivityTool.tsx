@@ -634,6 +634,8 @@ const DragActivityControls: React.FunctionComponent<{
                             <OverlayButtonItem
                                 l10nKey="EditTab.Toolbox.DragActivity.CheckAnswer"
                                 addClasses="check-button"
+                                contentL10nKey="EditTab.Toolbox.DragActivity.Check"
+                                hintL10nKey="EditTab.Toolbox.DragActivity.CheckHint"
                             />
                         </OverlayItemRow>
                     </OverlayItemRegion>
@@ -682,10 +684,12 @@ const DragActivityControls: React.FunctionComponent<{
                             <OverlayButtonItem
                                 l10nKey="EditTab.Toolbox.DragActivity.TryAgain"
                                 addClasses="try-again-button drag-item-wrong"
+                                contentL10nKey="EditTab.Toolbox.DragActivity.TryAgain"
                             />
                             <OverlayButtonItem
                                 l10nKey="EditTab.Toolbox.DragActivity.ShowAnswer"
                                 addClasses="show-correct-button drag-item-wrong"
+                                contentL10nKey="EditTab.Toolbox.DragActivity.ShowAnswer"
                             />
                         </OverlayItemRow>
                         <OverlayItemRow>

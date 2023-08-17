@@ -11,6 +11,7 @@ import {
 } from "../dragActivity/dragActivityTool";
 import { BubbleManager } from "../../js/bubbleManager";
 import { ImagePlaceholderIcon } from "../../../react_components/icons/ImagePlaceholderIcon";
+import theOneLocalizationManager from "../../../lib/localizationManager/localizationManager";
 
 const ondragstart = (
     ev: React.DragEvent<HTMLElement> | React.DragEvent<SVGSVGElement>,
@@ -39,7 +40,9 @@ const ondragend = (
     ev: React.DragEvent<HTMLElement> | React.DragEvent<SVGSVGElement>,
     style: string,
     draggable: boolean,
-    addClasses?: string
+    addClasses?: string,
+    contentL10nKey?: string,
+    hintL10nKey?: string
 ) => {
     const bubbleManager = OverlayTool.bubbleManager();
     // The Linux/Mono/Geckofx environment does not produce the dragenter, dragover,
@@ -53,10 +56,90 @@ const ondragend = (
             ev.screenY,
             style
         );
-        if (bubble && addClasses) {
+        if (!bubble) return;
+        if (addClasses) {
             bubble.classList.add(...addClasses.split(" "));
         }
-        if (bubble && draggable) {
+        let langsToWaitFor = 0;
+        if (contentL10nKey) {
+            const settings = bubbleManager.getSettings();
+            const langs = [settings.languageForNewTextBoxes];
+            if (
+                settings.currentCollectionLanguage2 &&
+                !langs.includes(settings.currentCollectionLanguage2)
+            ) {
+                langs.push(settings.currentCollectionLanguage2);
+            }
+            if (
+                settings.currentCollectionLanguage3 &&
+                !langs.includes(settings.currentCollectionLanguage3)
+            ) {
+                langs.push(settings.currentCollectionLanguage3);
+            }
+            if (!langs.includes("en")) {
+                langs.push("en");
+            }
+            langsToWaitFor = langs.length;
+            langs.forEach(lang => {
+                theOneLocalizationManager
+                    .asyncGetTextInLang(contentL10nKey!, "", lang, "")
+                    .then(text => {
+                        const editables = Array.from(
+                            bubble.getElementsByClassName("bloom-editable")
+                        );
+                        const prototype = editables[0];
+                        let editableInLang = editables.find(
+                            e => e.getAttribute("lang") === lang
+                        );
+                        if (!editableInLang) {
+                            editableInLang = prototype.cloneNode(
+                                true
+                            ) as HTMLElement;
+                            editableInLang.setAttribute("lang", lang);
+                            // only the primary language should be visible  in the bubble, and it should
+                            // be present already, so we won't be adding it. But it will be the prototype,
+                            // so we need to get rid of these classes. We'll get a more exactly correct
+                            // set of visibility classes when the page next loads, but we'd prefer not
+                            // to go through that rather time-consuming process right now.
+                            editableInLang.classList.remove(
+                                "bloom-visibility-code-on",
+                                "bloom-content1"
+                            );
+                            prototype.parentElement!.appendChild(
+                                editableInLang
+                            );
+                        }
+                        editableInLang.getElementsByTagName(
+                            "p"
+                        )[0].textContent = text;
+                        langsToWaitFor--;
+                    });
+            });
+        }
+        if (hintL10nKey) {
+            // const label = bubble.ownerDocument.createElement("label");
+            // label.classList.add("bubble");
+            const tg = bubble.getElementsByClassName(
+                "bloom-translationGroup"
+            )[0];
+            // tg.insertBefore(label, tg.firstChild);
+            // label.setAttribute("data-hint", hintL10nKey);
+            tg.setAttribute("data-hint", hintL10nKey);
+        }
+        if (contentL10nKey || hintL10nKey) {
+            const addBubbles = () => {
+                if (langsToWaitFor) {
+                    setTimeout(addBubbles, 100);
+                    return;
+                }
+                const tg = bubble.getElementsByClassName(
+                    "bloom-translationGroup"
+                )[0] as HTMLElement;
+                bubbleManager.addSourceAndHintBubbles(tg);
+            };
+            addBubbles();
+        }
+        if (draggable) {
             //setTimeout(() => {
             let id = Math.random()
                 .toString(36)
@@ -165,6 +248,8 @@ export const OverlayTextItem: React.FunctionComponent<{
     className?: string;
     draggable?: boolean;
     addClasses?: string;
+    contentL10nKey?: string;
+    hintL10nKey?: string;
 }> = props => {
     return (
         <Span
@@ -177,7 +262,9 @@ export const OverlayTextItem: React.FunctionComponent<{
                     ev,
                     props.style,
                     props.draggable ?? false,
-                    props.addClasses
+                    props.addClasses,
+                    props.contentL10nKey,
+                    props.hintL10nKey
                 )
             }
         ></Span>
@@ -197,6 +284,8 @@ const buttonItemProps = css`
 export const OverlayButtonItem: React.FunctionComponent<{
     l10nKey: string;
     addClasses: string;
+    contentL10nKey?: string;
+    hintL10nKey?: string;
 }> = props => {
     return (
         <OverlayTextItem
@@ -205,6 +294,8 @@ export const OverlayButtonItem: React.FunctionComponent<{
             addClasses={props.addClasses}
             draggable={false}
             style="none"
+            contentL10nKey={props.contentL10nKey}
+            hintL10nKey={props.hintL10nKey}
         ></OverlayTextItem>
     );
 };

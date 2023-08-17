@@ -5,6 +5,21 @@
       <note>We are in the process of moving strings from Bloom.xlf to BloomMediumPriority.xlf and BloomLowPriority.xlf while trying very hard to preserve translations and approval status.</note>
     </header>
     <body>
+      <!-- Drag Activity Tool. Just for testing, Do NOT check in. -->
+      <trans-unit id="EditTab.Toolbox.DragActivity.Check" approved="yes">
+        <source xml:lang="en">Check</source>
+        <target xml:lang="fr" state="final">CheckF</target>
+        <note>ID: EditTab.Toolbox.DragActivity.Check</note>
+      </trans-unit>
+      <trans-unit id="EditTab.Toolbox.DragActivity.CheckAnswer" approved="yes">
+        <source xml:lang="en">Check AnswerF</source>
+        <note>ID: EditTab.Toolbox.DragActivity.CheckAnswer</note>
+      </trans-unit>
+      <trans-unit id="EditTab.Toolbox.DragActivity.CheckHint" approved="yes">
+        <source xml:lang="en">Clicking this in French validates the positions things have been dragged to.</source>
+        <note>ID: EditTab.Toolbox.DragActivity.CheckHint</note>
+      </trans-unit>
+
       <!-- Talking Book Advanced -->
       <trans-unit id="EditTab.Toolbox.TalkingBookTool.ESpeakPreview.Error" approved="yes">
         <source xml:lang="en">eSpeak failed.</source>

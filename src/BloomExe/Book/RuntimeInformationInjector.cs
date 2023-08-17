@@ -268,6 +268,8 @@ namespace Bloom.Book
 			AddTranslationToDictionaryUsingKey(d, "EditTab.FrontMatter.MarkTheBookEnd", "Something to tell the reader/viewer that this is the end of the book.");
 			// Used in Video-XMatter
 			AddTranslationToDictionaryUsingKey(d, "EditTab.FrontMatter.MarkTheVideoEnd", "Something to tell the reader/viewer that this is the end.");
+			// Used in Drag Activity
+			AddTranslationToDictionaryUsingKey(d, "EditTab.Toolbox.DragActivity.CheckHint", "Clicking this validates the positions things have been dragged to.");
 		}
 
 		private static void AddTranslationToDictionaryUsingKey(Dictionary<string, string> dictionary, string key, string defaultText)
