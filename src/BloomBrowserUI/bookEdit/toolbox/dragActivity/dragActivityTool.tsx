@@ -114,11 +114,32 @@ export const adjustTarget = (
         }
         return;
     }
+    let adjustAll = false;
     if (end.offsetHeight !== start.offsetHeight) {
         end.style.height = `${start.offsetHeight}px`;
+        adjustAll = true;
     }
     if (end.offsetWidth !== start.offsetWidth) {
         end.style.width = `${start.offsetWidth}px`;
+        adjustAll = true;
+    }
+    if (adjustAll) {
+        // We need to adjust the position of all the other targets.
+        const page = start.closest(".bloom-page") as HTMLElement;
+        const otherDraggables = Array.from(
+            page.querySelectorAll("[data-bubble-id]")
+        ).filter(x => x !== start);
+        const otherTargets = Array.from(
+            page.querySelectorAll("[data-target-of]")
+        ).filter(x => x !== end);
+        otherDraggables.concat(otherTargets).forEach((elt: HTMLElement) => {
+            if (elt.offsetHeight !== start.offsetHeight) {
+                elt.style.height = `${start.offsetHeight}px`;
+            }
+            if (elt.offsetWidth !== start.offsetWidth) {
+                elt.style.width = `${start.offsetWidth}px`;
+            }
+        });
     }
     // if start and end overlap, we don't want an arrow
     if (overlap(start, end)) {

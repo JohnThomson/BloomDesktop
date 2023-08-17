@@ -5,7 +5,7 @@
 import theOneLocalizationManager from "../../lib/localizationManager/localizationManager";
 import bloomQtipUtils from "../js/bloomQtipUtils";
 import { MeasureText } from "../../utils/measureText";
-import { BubbleManager } from "../js/bubbleManager";
+import { BubbleManager, theOneBubbleManager } from "../js/bubbleManager";
 
 interface qtipInterface extends JQuery {
     qtip(options: string): JQuery;
@@ -268,7 +268,7 @@ export default class OverflowChecker {
         const overflowAmounts = OverflowChecker.getSelfOverflowAmounts(box);
         const overflowX = overflowAmounts[0];
         let overflowY = overflowAmounts[1];
-        if (BubbleManager.growOverflowingBox(box, overflowY)) {
+        if (theOneBubbleManager.growOverflowingBox(box, overflowY)) {
             overflowY = 0;
         }
         if (preventOverflowY) {

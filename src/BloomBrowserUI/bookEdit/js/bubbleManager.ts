@@ -100,10 +100,7 @@ export class BubbleManager {
     // Returns true if successful; it will currently fail if box is not
     // inside a valid OverPicture element or if the OverPicture element can't grow this much while
     // remaining inside the image container. If it returns false, it makes no changes at all.
-    public static growOverflowingBox(
-        box: HTMLElement,
-        overflowY: number
-    ): boolean {
+    public growOverflowingBox(box: HTMLElement, overflowY: number): boolean {
         const wrapperBox = box.closest(kTextOverPictureSelector) as HTMLElement;
         if (!wrapperBox) {
             return false; // we can't fix it
@@ -166,6 +163,7 @@ export class BubbleManager {
 
         wrapperBox.style.height = newHeight + "px"; // next line will change to percent
         BubbleManager.convertTextboxPositionToAbsolute(wrapperBox, container);
+        this.adjustTarget(wrapperBox);
         return true;
     }
 
@@ -3277,7 +3275,7 @@ export class BubbleManager {
                 }
             },
             resize: (event, ui) => {
-                const target = event.target as Element;
+                const target = event.target as HTMLElement;
                 if (target) {
                     // If the user changed the height, prevent automatic shrinking.
                     // If only the width changed, this is the case where we want it.
@@ -3289,6 +3287,7 @@ export class BubbleManager {
                         target.classList.add("bloom-allowAutoShrink");
                     }
                     this.adjustResizingForScale(ui, scale);
+                    this.adjustTarget(target);
                 }
             }
         });
