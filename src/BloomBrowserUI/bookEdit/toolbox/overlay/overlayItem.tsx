@@ -158,8 +158,14 @@ const ondragend = (
             const top = getDimension(bubble.style.top);
             const width = getDimension(bubble.style.width);
             const height = getDimension(bubble.style.height);
-            const newLeft = left + 20;
-            const newTop = top + height + 30;
+            let newLeft = left + 20;
+            let newTop = top + height + 30;
+            if (newTop + height > bubble.parentElement!.clientHeight) {
+                newTop = top - height - 30;
+            }
+            if (newLeft + width > bubble.parentElement!.clientWidth) {
+                newLeft = left - width - 30;
+            }
             // Todo: if this puts it outside the parent of bubble, move it somewhere else
             target.style.left = `${newLeft}px`;
             target.style.top = `${newTop}px`;
