@@ -4,7 +4,9 @@ import { get } from "jquery";
 
 let slots: { x: number; y: number }[] = [];
 let originalPositions = new Map<HTMLElement, { x: number; y: number }>();
+let currentPage: HTMLElement | undefined;
 export function prepareActivity(page: HTMLElement) {
+    currentPage = page;
     slots = [];
     originalPositions = new Map<HTMLElement, { x: number; y: number }>();
     page.querySelectorAll("[data-bubble-id]").forEach((elt: HTMLElement) => {
@@ -19,10 +21,11 @@ export function prepareActivity(page: HTMLElement) {
         const y = target.offsetTop;
         slots.push({ x, y });
         originalPositions.set(elt, { x: elt.offsetLeft, y: elt.offsetTop });
-        // Todo: these should get cleaned up.
         elt.addEventListener("mousedown", startDrag);
     });
-    let checkButtons = Array.from(page.getElementsByClassName("check-button"));
+    const checkButtons = Array.from(
+        page.getElementsByClassName("check-button")
+    );
     const tryAgainButtons = Array.from(
         page.getElementsByClassName("try-again-button")
     );
@@ -34,25 +37,52 @@ export function prepareActivity(page: HTMLElement) {
         elt.addEventListener("click", performCheck);
     });
     showCorrectButtons.forEach((elt: HTMLElement) => {
-        elt.addEventListener("click", () => {
-            page.querySelectorAll("[data-bubble-id]").forEach(
-                (elt: HTMLElement) => {
-                    const targetId = elt.getAttribute("data-bubble-id");
-                    const target = page.querySelector(
-                        `[data-target-of="${targetId}"]`
-                    ) as HTMLElement;
-                    if (!target) {
-                        return;
-                    }
-                    const x = target.offsetLeft;
-                    const y = target.offsetTop;
-                    elt.style.left = x + "px";
-                    elt.style.top = y + "px";
-                }
-            );
-        });
+        elt.addEventListener("click", showCorrect);
     });
 }
+
+// Cleans up whatever prepareACtivity() did, especially when switching to another tab.
+// May also be useful to do when switching pages in player. If not, we may want to move
+// this out of this runtime file; but it's nice to keep it with prepareActivity.
+export function undoPrepareActivity(page: HTMLElement) {
+    page.querySelectorAll("[data-bubble-id]").forEach((elt: HTMLElement) => {
+        elt.removeEventListener("mousedown", startDrag);
+    });
+    const checkButtons = Array.from(
+        page.getElementsByClassName("check-button")
+    );
+    const tryAgainButtons = Array.from(
+        page.getElementsByClassName("try-again-button")
+    );
+    const showCorrectButtons = Array.from(
+        page.getElementsByClassName("show-correct-button")
+    );
+
+    checkButtons.concat(tryAgainButtons).forEach((elt: HTMLElement) => {
+        elt.removeEventListener("click", performCheck);
+    });
+    showCorrectButtons.forEach((elt: HTMLElement) => {
+        elt.removeEventListener("click", showCorrect);
+    });
+}
+
+const showCorrect = (e: MouseEvent) => {
+    currentPage
+        ?.querySelectorAll("[data-bubble-id]")
+        .forEach((elt: HTMLElement) => {
+            const targetId = elt.getAttribute("data-bubble-id");
+            const target = currentPage?.querySelector(
+                `[data-target-of="${targetId}"]`
+            ) as HTMLElement;
+            if (!target) {
+                return;
+            }
+            const x = target.offsetLeft;
+            const y = target.offsetTop;
+            elt.style.left = x + "px";
+            elt.style.top = y + "px";
+        });
+};
 
 let dragStartX = 0;
 let dragStartY = 0;

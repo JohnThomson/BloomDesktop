@@ -3126,11 +3126,9 @@ export class BubbleManager {
         }
         if (this.comicEditingSuspendedState === "forTest") {
             const allOverPictureElements = Array.from(
-                document.getElementsByClassName(kTextOverPictureSelector)
+                document.getElementsByClassName(kTextOverPictureClass)
             );
             allOverPictureElements.forEach(element => {
-                $(element).draggable("enable");
-                $(element).resizable("enable");
                 const editables = Array.from(
                     element.getElementsByClassName("bloom-editable")
                 );
@@ -3138,6 +3136,7 @@ export class BubbleManager {
                     editable.setAttribute("contenteditable", "true"); // Review: even the ones that are hidden?
                 });
             });
+            this.makeOverPictureElementsDraggableClickableAndResizable();
         }
         this.comicEditingSuspendedState = "none";
         this.turnOnBubbleEditing();

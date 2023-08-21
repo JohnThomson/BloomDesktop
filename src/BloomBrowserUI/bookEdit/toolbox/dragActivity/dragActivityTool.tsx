@@ -23,7 +23,7 @@ import {
 } from "../overlay/overlayItem";
 import { OverlayTool } from "../overlay/overlayTool";
 import { ToolBox } from "../toolbox";
-import { prepareActivity } from "./dragActivityRuntime";
+import { prepareActivity, undoPrepareActivity } from "./dragActivityRuntime";
 import { BubbleManager, theOneBubbleManager } from "../../js/bubbleManager";
 import { UpdateImageTooltipVisibility } from "../../js/bloomImages";
 //import { Tab } from "@mui/material";
@@ -123,6 +123,8 @@ export const adjustTarget = (
         end.style.width = `${start.offsetWidth}px`;
         adjustAll = true;
     }
+    // Enhance: possibly we should only resize the ones that are initially the same size as the
+    // target used to be? Maybe we ned a way to turn off this behavior?
     if (adjustAll) {
         // We need to adjust the position of all the other targets.
         const page = start.closest(".bloom-page") as HTMLElement;
@@ -563,6 +565,7 @@ const DragActivityControls: React.FunctionComponent<{
             bubbleManager?.suspendComicEditing("forTest");
             prepareActivity(page);
         } else {
+            undoPrepareActivity(page);
             restorePositions(); // in case we are leaving the try-it tab
             const bubbleManager = OverlayTool.bubbleManager();
             bubbleManager?.resumeComicEditing();
