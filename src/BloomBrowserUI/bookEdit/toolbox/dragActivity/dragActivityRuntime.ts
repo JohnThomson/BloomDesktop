@@ -33,8 +33,11 @@ export function prepareActivity(page: HTMLElement) {
         page.getElementsByClassName("show-correct-button")
     );
 
-    checkButtons.concat(tryAgainButtons).forEach((elt: HTMLElement) => {
+    checkButtons.forEach((elt: HTMLElement) => {
         elt.addEventListener("click", performCheck);
+    });
+    tryAgainButtons.forEach((elt: HTMLElement) => {
+        elt.addEventListener("click", performTryAgain);
     });
     showCorrectButtons.forEach((elt: HTMLElement) => {
         elt.addEventListener("click", showCorrect);
@@ -219,4 +222,11 @@ export const performCheck = (e: MouseEvent) => {
     // Todo: play sound
 
     return allCorrect;
+};
+
+export const performTryAgain = (e: MouseEvent) => {
+    const target = e.currentTarget as HTMLElement;
+    const page = target.closest(".bloom-page") as HTMLElement;
+    page.ownerDocument.body.classList.remove("drag-activity-correct");
+    page.ownerDocument.body.classList.remove("drag-activity-wrong");
 };
