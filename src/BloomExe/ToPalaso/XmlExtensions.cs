@@ -44,6 +44,12 @@ namespace Bloom.ToPalaso
 			return current;
 		}
 
+		public static bool HasClass(this XmlElement element, string className)
+		{
+			var elementClassName = element.Attributes["class"]?.Value ?? "";
+			return (elementClassName.Split(' ')).Contains(className);
+		}
+
 		/// <summary>
 		/// Replace the element with its children.
 		/// </summary>

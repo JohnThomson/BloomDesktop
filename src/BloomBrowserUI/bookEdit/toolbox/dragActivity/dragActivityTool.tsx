@@ -16,10 +16,13 @@ import { TriangleCollapse } from "../../../react_components/TriangleCollapse";
 import { Div } from "../../../react_components/l10nComponents";
 import {
     OverlayButtonItem,
+    OverlayGifItem,
     OverlayImageItem,
+    OverlayItem,
     OverlayItemRegion,
     OverlayItemRow,
-    OverlayTextItem
+    OverlayTextItem,
+    OverlayVideoItem
 } from "../overlay/overlayItem";
 import { OverlayTool } from "../overlay/overlayTool";
 import { ToolBox } from "../toolbox";
@@ -292,6 +295,9 @@ export const adjustTarget = (
     );
     arrow.style.left = finalStartX + minX + "px";
     arrow.style.top = finalStartY + minY + "px";
+    // The arrow is "on top" of the targets, so if one of them happens to be inside the
+    // rectangle that contains the arrow, without this it would not get mouse events.
+    arrow.style.pointerEvents = "none";
 
     const color = "#80808080";
     const strokeWidth = "3";
@@ -343,6 +349,7 @@ const startDrag = (e: MouseEvent) => {
     page.addEventListener("mouseup", stopDrag);
     // call a function whenever the cursor moves:
     page.addEventListener("mousemove", elementDrag);
+    elementDrag(e); // some side effects like drawing the arrow we want even if no movement happens.
 };
 const snapDelta = 30; // review: how close do we want?
 const elementDrag = (e: MouseEvent) => {
@@ -430,21 +437,28 @@ const stopDrag = (e: MouseEvent) => {
             s => s.x === dragTarget.offsetLeft
         );
         const indexDragged = row.findIndex(s => s.elt === dragTarget);
-        const spacing = row[row.length - 1].x - row[row.length - 2].x;
-        if (indexDragged < 0) {
-            // Not in the row previously, move others over.
-            for (let i = row.length - 1; i >= indexDroppedOn; i--) {
-                row[i].elt.style.left = `${row[i].x + spacing}px`;
-            }
-        } else if (indexDroppedOn < indexDragged) {
-            // Move others over.
-            for (let i = indexDragged - 1; i >= indexDroppedOn; i--) {
-                row[i].elt.style.left = `${row[i].x + spacing}px`;
-            }
-        } else {
-            // Move others over.
-            for (let i = indexDragged + 1; i <= indexDroppedOn; i++) {
-                row[i].elt.style.left = `${row[i].x - spacing}px`;
+        if (indexDragged !== indexDroppedOn) {
+            // if equal, we didn't really move it at all.
+            const spacing =
+                row.length >= 2
+                    ? row[row.length - 1].x - row[row.length - 2].x
+                    : // We dropped on another target that's not in a row. Create a row.
+                      dragTarget.offsetWidth + 15;
+            if (indexDragged < 0) {
+                // Not in the row previously, move others over.
+                for (let i = row.length - 1; i >= indexDroppedOn; i--) {
+                    row[i].elt.style.left = `${row[i].x + spacing}px`;
+                }
+            } else if (indexDroppedOn < indexDragged) {
+                // Move others over.
+                for (let i = indexDragged - 1; i >= indexDroppedOn; i--) {
+                    row[i].elt.style.left = `${row[i].x + spacing}px`;
+                }
+            } else {
+                // Move others over.
+                for (let i = indexDragged + 1; i <= indexDroppedOn; i++) {
+                    row[i].elt.style.left = `${row[i].x - spacing}px`;
+                }
             }
         }
     }
@@ -662,6 +676,16 @@ const DragActivityControls: React.FunctionComponent<{
                                 hintL10nKey="EditTab.Toolbox.DragActivity.CheckHint"
                             />
                         </OverlayItemRow>
+                        <OverlayItemRow>
+                            <OverlayVideoItem
+                                style="video"
+                                color={kBloomBlue}
+                            />
+                            <OverlayGifItem
+                                style="image"
+                                strokeColor={kBloomBlue}
+                            />
+                        </OverlayItemRow>
                     </OverlayItemRegion>
                 </div>
             )}
@@ -677,6 +701,16 @@ const DragActivityControls: React.FunctionComponent<{
                                 addClasses="drag-item-correct"
                                 color={kBloomBlue}
                                 strokeColor={kBloomBlue}
+                            />
+                            <OverlayVideoItem
+                                style="video"
+                                color={kBloomBlue}
+                                addClasses="drag-item-correct"
+                            />
+                            <OverlayGifItem
+                                style="image"
+                                strokeColor={kBloomBlue}
+                                addClasses="drag-item-correct"
                             />
                         </OverlayItemRow>
                         <OverlayItemRow>
@@ -702,6 +736,16 @@ const DragActivityControls: React.FunctionComponent<{
                                 addClasses="drag-item-wrong"
                                 color={kBloomBlue}
                                 strokeColor={kBloomBlue}
+                            />
+                            <OverlayVideoItem
+                                style="video"
+                                color={kBloomBlue}
+                                addClasses="drag-item-wrong"
+                            />
+                            <OverlayGifItem
+                                style="image"
+                                strokeColor={kBloomBlue}
+                                addClasses="drag-item-wrong"
                             />
                         </OverlayItemRow>
                         <OverlayItemRow>
@@ -824,6 +868,8 @@ export class DragActivityTool extends ToolboxToolReactAdaptor {
             // the state here and pass it to the component along with an onChange handler.
             this.tab = 0;
             this.renderRoot();
+        } else {
+            updateTabClass(0); // renderRoot handles this if it gets called.
         }
     }
 

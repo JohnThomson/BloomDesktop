@@ -12,6 +12,8 @@ import {
 import { BubbleManager } from "../../js/bubbleManager";
 import { ImagePlaceholderIcon } from "../../../react_components/icons/ImagePlaceholderIcon";
 import theOneLocalizationManager from "../../../lib/localizationManager/localizationManager";
+import { SignLanguageIcon } from "../../../react_components/icons/SignLanguageIcon";
+import { GifIcon } from "../../../react_components/icons/GifIcon";
 
 const ondragstart = (
     ev: React.DragEvent<HTMLElement> | React.DragEvent<SVGSVGElement>,
@@ -58,7 +60,9 @@ const ondragend = (
         );
         if (!bubble) return;
         if (addClasses) {
-            bubble.classList.add(...addClasses.split(" "));
+            // trim because an exception is thrown if we try to add a class that is empty,
+            // which we will otherwise do if there is a leading or trailing space.
+            bubble.classList.add(...addClasses.trim().split(" "));
         }
         let langsToWaitFor = 0;
         if (contentL10nKey) {
@@ -182,12 +186,12 @@ const ondragend = (
     }
 };
 
-export const OverlayImageItem: React.FunctionComponent<{
+// A wrapper for something that is an overlay source icon, typically an SVG.
+// Supports dragging it onto the canvas.
+export const OverlaySvgItem: React.FunctionComponent<{
     style: string;
     draggable?: boolean;
     addClasses?: string;
-    color?: string;
-    strokeColor?: string;
 }> = props => {
     return (
         <div // infuriatingly, svgs don't support draggable, so we have to wrap.
@@ -207,6 +211,24 @@ export const OverlayImageItem: React.FunctionComponent<{
                 )
             }
         >
+            {props.children}
+        </div>
+    );
+};
+
+export const OverlayImageItem: React.FunctionComponent<{
+    style: string;
+    draggable?: boolean;
+    addClasses?: string;
+    color?: string;
+    strokeColor?: string;
+}> = props => {
+    return (
+        <OverlaySvgItem
+            style={props.style}
+            draggable={props.draggable}
+            addClasses={props.addClasses}
+        >
             <ImagePlaceholderIcon
                 css={css`
                     width: 50px;
@@ -216,7 +238,55 @@ export const OverlayImageItem: React.FunctionComponent<{
                 color={props.color}
                 strokeColor={props.strokeColor}
             />
-        </div>
+        </OverlaySvgItem>
+    );
+};
+
+export const OverlayGifItem: React.FunctionComponent<{
+    style: string;
+    //draggable?: boolean;
+    addClasses?: string;
+    color?: string;
+    strokeColor?: string;
+}> = props => {
+    return (
+        <OverlaySvgItem
+            style={props.style}
+            draggable={false}
+            addClasses={"bloom-gif " + (props.addClasses ?? "")}
+        >
+            <GifIcon
+                css={css`
+                    width: 50px;
+                    height: 50px;
+                    cursor: grab;
+                `}
+                color={props.color}
+                strokeColor={props.strokeColor}
+            />
+        </OverlaySvgItem>
+    );
+};
+
+export const OverlayVideoItem: React.FunctionComponent<{
+    style: string;
+    // We could easily add draggable?: boolean; but we don't want to allow video dragging in the finished book
+    addClasses?: string;
+    color?: string;
+}> = props => {
+    return (
+        <OverlaySvgItem style={props.style} addClasses={props.addClasses}>
+            <SignLanguageIcon
+                css={css`
+                    width: 50px;
+                    height: 50px;
+                    cursor: grab;
+                `}
+                color={props.color ?? "white"}
+                //strokeColor={props.strokeColor}
+            />
+            ;
+        </OverlaySvgItem>
     );
 };
 
