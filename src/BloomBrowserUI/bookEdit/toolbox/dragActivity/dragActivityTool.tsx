@@ -29,6 +29,11 @@ import { ToolBox } from "../toolbox";
 import { prepareActivity, undoPrepareActivity } from "./dragActivityRuntime";
 import { BubbleManager, theOneBubbleManager } from "../../js/bubbleManager";
 import { UpdateImageTooltipVisibility } from "../../js/bloomImages";
+import BloomButton from "../../../react_components/bloomButton";
+import theOneLocalizationManager, {
+    LocalizationManager
+} from "../../../lib/localizationManager/localizationManager";
+import { postJson } from "../../../utils/bloomApi";
 //import { Tab } from "@mui/material";
 
 const Tabs: React.FunctionComponent<{
@@ -558,6 +563,62 @@ const DragActivityControls: React.FunctionComponent<{
     activeTab: number;
     onTabChange: (tab: number) => void;
 }> = props => {
+    const [correctSound, setCorrectSound] = useState("");
+    const [wrongSound, setWrongSound] = useState("");
+    const [soundFolder, setSoundFolder] = useState("");
+    useEffect(() => {
+        const getSoundState = () => {
+            const pageBody = ToolBox.getPage();
+            const page = pageBody?.getElementsByClassName(
+                "bloom-page"
+            )[0] as HTMLElement;
+            if (!page) {
+                setTimeout(() => {
+                    getSoundState();
+                }, 100);
+                return;
+            }
+
+            const correctSound = page.getAttribute("data-correct-sound");
+            const wrongSound = page.getAttribute("data-wrong-sound");
+            theOneLocalizationManager
+                .asyncGetText("EditTab.Toolbox.DragActivity.None", "None", "")
+                .then(none => {
+                    setCorrectSound(correctSound || none);
+                    setWrongSound(wrongSound || none);
+                });
+        };
+        getSoundState();
+    }, []);
+    const storeCorrectSound = (sound: string) => {};
+    const getSound = async forCorrect => {
+        const result = await postJson("fileIO/chooseFile", {
+            title: "Choose Sound File",
+            fileTypes: [
+                {
+                    name: "MP#",
+                    extensions: ["mp3"]
+                }
+            ],
+            defaultPath: soundFolder,
+            destFolder: "audio"
+        });
+        if (!result || !result.data) {
+            return;
+        }
+        const pageBody = ToolBox.getPage();
+        const page = pageBody?.getElementsByClassName(
+            "bloom-page"
+        )[0] as HTMLElement;
+        setSoundFolder(result.data);
+        if (forCorrect) {
+            setCorrectSound(result.data);
+            page.setAttribute("data-correct-sound", result.data);
+        } else {
+            setWrongSound(result.data);
+            page.setAttribute("data-wrong-sound", result.data);
+        }
+    };
     useEffect(() => {
         updateTabClass(props.activeTab);
     }, [props.activeTab]);
@@ -610,6 +671,11 @@ const DragActivityControls: React.FunctionComponent<{
         color: "white";
         background-color: ${kBloomBlue};
         border: 1px dotted ${kBloomBlue};
+    `;
+
+    const playAudioCss = css`
+        margin-left: 10px;
+        margin-top: 10px;
     `;
     return (
         <ThemeProvider theme={toolboxTheme}>
@@ -723,6 +789,12 @@ const DragActivityControls: React.FunctionComponent<{
                             />
                         </OverlayItemRow>
                     </OverlayItemRegion>
+                    <div css={playAudioCss}>
+                        <Div l10nKey="EditTab.Toolbox.DragActivity.PlayAudio" />
+                        <button onClick={() => getSound(true)}>
+                            {correctSound}
+                        </button>
+                    </div>
                 </div>
             )}
             {props.activeTab === 2 && (
@@ -770,6 +842,12 @@ const DragActivityControls: React.FunctionComponent<{
                             />
                         </OverlayItemRow>
                     </OverlayItemRegion>
+                    <div css={playAudioCss}>
+                        <Div l10nKey="EditTab.Toolbox.DragActivity.PlayAudio" />
+                        <button onClick={() => getSound(false)}>
+                            {wrongSound}
+                        </button>
+                    </div>
                 </div>
             )}
             {props.activeTab === 3 && (

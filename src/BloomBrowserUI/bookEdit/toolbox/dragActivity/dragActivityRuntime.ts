@@ -220,6 +220,13 @@ export const performCheck = (e: MouseEvent) => {
     page.ownerDocument.body.classList.remove("drag-activity-wrong");
     page.ownerDocument.body.classList.add(showWhat);
     // Todo: play sound
+    const soundFile = page.getAttribute(
+        allCorrect ? "data-correct-sound" : "data-wrong-sound"
+    );
+    if (soundFile) {
+        const audio = new Audio("audio/" + soundFile);
+        audio.play();
+    }
 
     return allCorrect;
 };

@@ -57,6 +57,15 @@
         <note>ID: EditTab.Toolbox.DragActivity.Letter</note>
         <note>This is the label of an item that can be dragged onto the canvas to hold text, typically a single letter. It works best if it is one of the widest letters (including digraphs) in your alphabet</note>
       </trans-unit>
+      <trans-unit id="EditTab.Toolbox.DragActivity.PlayAudio">
+        <source xml:lang="en">Play Audio</source>
+        <note>ID: EditTab.Toolbox.DragActivity.PlayAudio</note>
+      </trans-unit>
+      <trans-unit id="EditTab.Toolbox.DragActivity.None">
+        <source xml:lang="en">None</source>
+        <note>ID: EditTab.Toolbox.DragActivity.None</note>
+        <note>Used as the label of a button that is otherwise the name of a sound file, indicating that no sound has been chosen.</note>
+      </trans-unit>
       <trans-unit id="EditTab.Toolbox.DragActivity.SceneInstructions">
         <source xml:lang="en">Properties of the Scene</source>
         <note>ID: EditTab.Toolbox.DragActivity.SceneInstructions</note>
