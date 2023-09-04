@@ -26,7 +26,11 @@ import {
 } from "../overlay/overlayItem";
 import { OverlayTool } from "../overlay/overlayTool";
 import { ToolBox } from "../toolbox";
-import { prepareActivity, undoPrepareActivity } from "./dragActivityRuntime";
+import {
+    classSetter,
+    prepareActivity,
+    undoPrepareActivity
+} from "./dragActivityRuntime";
 import { BubbleManager, theOneBubbleManager } from "../../js/bubbleManager";
 import { UpdateImageTooltipVisibility } from "../../js/bloomImages";
 import BloomButton from "../../../react_components/bloomButton";
@@ -529,7 +533,10 @@ const restorePositions = () => {
 
 const updateTabClass = (tabIndex: number) => {
     const pageBody = ToolBox.getPage();
-    if (!pageBody) {
+    const page = pageBody?.getElementsByClassName(
+        "bloom-page"
+    )[0] as HTMLElement;
+    if (!page) {
         // try again in a bit (this might happen if the toolbox iframe loads faster than the page iframe)
         setTimeout(() => {
             updateTabClass(tabIndex);
@@ -544,11 +551,7 @@ const updateTabClass = (tabIndex: number) => {
     ];
     for (let i = 0; i < classes.length; i++) {
         const className = classes[i];
-        if (tabIndex === i) {
-            pageBody.classList.add(className);
-        } else {
-            pageBody.classList.remove(className);
-        }
+        classSetter(page, className, i === tabIndex);
     }
     if (tabIndex === tryItTabIndex) {
         Array.from(
@@ -590,7 +593,6 @@ const DragActivityControls: React.FunctionComponent<{
         };
         getSoundState();
     }, []);
-    const storeCorrectSound = (sound: string) => {};
     const getSound = async forCorrect => {
         const result = await postJson("fileIO/chooseFile", {
             title: "Choose Sound File",

@@ -137,8 +137,9 @@ const elementDrag = (e: MouseEvent) => {
 const stopDrag = (e: MouseEvent) => {
     const page = dragTarget.closest(".bloom-page") as HTMLElement;
     if (!snapped) {
-        dragTarget.style.top = originalTop;
-        dragTarget.style.left = originalLeft;
+        const oldPosition = originalPositions.get(dragTarget);
+        dragTarget.style.top = oldPosition?.y + "px";
+        dragTarget.style.left = oldPosition?.x + "px";
     }
     page.removeEventListener("mouseup", stopDrag);
     page.removeEventListener("mousemove", elementDrag);
@@ -213,19 +214,26 @@ export const performCheck = (e: MouseEvent) => {
             }
         }
     });
-    const showWhat = allCorrect
-        ? "drag-activity-correct"
-        : "drag-activity-wrong";
-    page.ownerDocument.body.classList.remove("drag-activity-correct");
-    page.ownerDocument.body.classList.remove("drag-activity-wrong");
-    page.ownerDocument.body.classList.add(showWhat);
-    // Todo: play sound
+
+    classSetter(page, "drag-activity-correct", allCorrect);
+    classSetter(page, "drag-activity-wrong", !allCorrect);
+
+    // play sound
     const soundFile = page.getAttribute(
         allCorrect ? "data-correct-sound" : "data-wrong-sound"
     );
     if (soundFile) {
         const audio = new Audio("audio/" + soundFile);
+        audio.style.visibility = "hidden";
+        // To my surprise, in BP storybook it works without adding the audio to any document.
+        // But in Bloom proper, it does not. I think it is because this code is part of the toolbox,
+        // so the audio element doesn't have the right context to interpret the relative URL.
+        page.append(audio);
+        // It feels cleaner if we remove it when done. This could fail, e.g., if the user
+        // switches tabs or pages before we get done playing. Removing it immediately
+        // prevents the sound being played. It's not a big deal if it doesn't get removed.
         audio.play();
+        audio.addEventListener("ended", () => page.removeChild(audio));
     }
 
     return allCorrect;
@@ -234,6 +242,18 @@ export const performCheck = (e: MouseEvent) => {
 export const performTryAgain = (e: MouseEvent) => {
     const target = e.currentTarget as HTMLElement;
     const page = target.closest(".bloom-page") as HTMLElement;
-    page.ownerDocument.body.classList.remove("drag-activity-correct");
-    page.ownerDocument.body.classList.remove("drag-activity-wrong");
+    classSetter(page, "drag-activity-correct", false);
+    classSetter(page, "drag-activity-wrong", false);
+};
+
+export const classSetter = (
+    page: HTMLElement,
+    className: string,
+    wanted: boolean
+) => {
+    if (wanted) {
+        page.parentElement?.classList.add(className);
+    } else {
+        page.parentElement?.classList.remove(className);
+    }
 };

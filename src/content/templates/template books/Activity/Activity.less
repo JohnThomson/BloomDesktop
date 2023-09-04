@@ -3,26 +3,37 @@
 @import "./simpleComprehensionQuiz.less";
 @import "./simple-dom-choice-activities.less";
 
-// These items are hidden except when a special class is applied to the page.
-.drag-item-correct,
-.drag-item-wrong,
-.check-button {
-    display: none; // default
+// These items are visible by default (when not in the drag activity tool, especially
+// when in the sign language or talking book tool), but not when we are in a tab
+// or when "trying it" or running bloom player and in certain states
+
+// These ones show in the Correct tab, or when the user has given a correct answer.
+.drag-activity-start,
+.drag-activity-wrong,
+.drag-activity-try-it {
+    &:not(.drag-activity-correct) {
+        .drag-item-correct {
+            display: none;
+        }
+    }
 }
 
-.drag-activity-correct {
-    .drag-item-correct {
-        display: block;
+// In the Wrong tab, or when the user has given a wrong answer.
+.drag-activity-start,
+.drag-activity-correct,
+.drag-activity-try-it {
+    &:not(.drag-activity-wrong) {
+        .drag-item-wrong {
+            display: none;
+        }
     }
 }
+
+// In the start tab, or in try-it when the user has not yet given an answer (or has clicked try-again)
+.drag-activity-correct,
 .drag-activity-wrong {
-    .drag-item-wrong {
-        display: block;
-    }
-}
-.drag-activity-start {
     .check-button {
-        display: block; // check button shows at start
+        display: none;
     }
 }
 
@@ -96,28 +107,34 @@
 // Eventually, a different class would be applied when a different theme is chosen.
 // The same nested classes should have different colors for each theme.
 .activityBlueOnTan {
+    --page-color: #e9d9bd;
+    --target-color: #f9e9cc;
+    --dragable-background-color: #2980bb;
+    --draggable-color: white;
+    --fixed-color: #fc8602;
     &.bloom-page {
         // need this for specificity
-        background-color: @tan;
+        background-color: var(--page-color);
     }
     .bloom-textOverPicture.draggable-text {
-        background-color: @bloom-blue;
-        color: white;
+        background-color: var(--dragable-background-color);
+        color: var(--draggable-color);
     }
     .drag-item-correct,
     .drag-item-wrong {
         .bloom-translationGroup {
             background-color: transparent;
-            color: #fc8602;
+            color: var(--fixed-color);
         }
     }
 
     [data-target-of] {
-        border: dashed 2px @bloom-blue;
-        background-color: @paleTan;
+        border: dashed 2px var(--dragable-background-color);
+        background-color: var(--target-color);
 
         &:focus {
-            box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1), 0 0 8px @bloom-blue;
+            box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1),
+                0 0 8px var(--dragable-background-color);
         }
     }
 
@@ -147,8 +164,8 @@
         // border-radius: 4px;
 
         .bloom-translationGroup {
-            background-color: #2f82bc;
-            color: white;
+            background-color: var(--dragable-background-color);
+            color: var(--draggable-color);
             height: 100%;
             width: 100%;
             border-radius: 4px;
