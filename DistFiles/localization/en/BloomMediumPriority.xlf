@@ -57,6 +57,10 @@
         <note>ID: EditTab.Toolbox.DragActivity.Letter</note>
         <note>This is the label of an item that can be dragged onto the canvas to hold text, typically a single letter. It works best if it is one of the widest letters (including digraphs) in your alphabet</note>
       </trans-unit>
+      <trans-unit id="EditTab.Toolbox.DragActivity.OrderSentence">
+        <source xml:lang="en">Order Sentence</source>
+        <note>ID: EditTab.Toolbox.DragActivity.OrderSentence</note>
+      </trans-unit>
       <trans-unit id="EditTab.Toolbox.DragActivity.PlayAudio">
         <source xml:lang="en">Play Audio</source>
         <note>ID: EditTab.Toolbox.DragActivity.PlayAudio</note>

@@ -717,6 +717,15 @@ const DragActivityControls: React.FunctionComponent<{
                                 strokeColor={kBloomBlue}
                             />
                         </OverlayItemRow>
+                        <OverlayItemRow>
+                            <OverlayTextItem
+                                css={textItemProps}
+                                l10nKey="EditTab.Toolbox.DragActivity.OrderSentence"
+                                style="none"
+                                draggable={false}
+                                addClasses="drag-item-order-sentence"
+                            />
+                        </OverlayItemRow>
                     </OverlayItemRegion>
                     <OverlayItemRegion
                         l10nKey="EditTab.Toolbox.DragActivity.FixedInPlace"

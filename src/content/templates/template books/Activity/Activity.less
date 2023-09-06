@@ -20,17 +20,28 @@
 
 .drag-activity-correct {
     .bloom-textOverPicture:not(.drag-item-correct),
-    [data-target-of] {
-        opacity:30%;
+    [data-target-of],
+    .drag-item-random-sentence {
+        opacity: 30%;
     }
 }
 .drag-activity-wrong {
     .bloom-textOverPicture:not(.drag-item-wrong),
-    [data-target-of] {
-        opacity:30%;
+    [data-target-of],
+    .drag-item-random-sentence {
+        opacity: 30%;
     }
 }
 
+.drag-activity-try-it .drag-item-order-sentence {
+    display: none;
+}
+
+.drag-item-random-sentence {
+    display: flex;
+    flex-wrap: wrap;
+    row-gap: 5px;
+}
 
 // In the Wrong tab, or when the user has given a wrong answer.
 .drag-activity-start,
@@ -140,6 +151,13 @@
             background-color: transparent;
             color: var(--fixed-color);
         }
+    }
+    .drag-item-order-word {
+        background-color: var(--dragable-background-color);
+        color: var(--draggable-color);
+        border-radius: 10px;
+        padding: 0px 11px;
+        margin-right: 5px;
     }
 
     [data-target-of] {
