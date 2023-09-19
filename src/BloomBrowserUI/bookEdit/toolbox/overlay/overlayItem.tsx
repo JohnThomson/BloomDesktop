@@ -10,7 +10,10 @@ import {
     setupDraggingTargets
 } from "../dragActivity/dragActivityTool";
 import { BubbleManager } from "../../js/bubbleManager";
-import { ImagePlaceholderIcon } from "../../../react_components/icons/ImagePlaceholderIcon";
+import {
+    ImagePlaceholderIcon,
+    WrongImagePlaceholderIcon
+} from "../../../react_components/icons/ImagePlaceholderIcon";
 import theOneLocalizationManager from "../../../lib/localizationManager/localizationManager";
 import { SignLanguageIcon } from "../../../react_components/icons/SignLanguageIcon";
 import { GifIcon } from "../../../react_components/icons/GifIcon";
@@ -42,9 +45,12 @@ const ondragend = (
     ev: React.DragEvent<HTMLElement> | React.DragEvent<SVGSVGElement>,
     style: string,
     draggable: boolean,
+    matchingTextBox: boolean,
     addClasses?: string,
     contentL10nKey?: string,
-    hintL10nKey?: string
+    hintL10nKey?: string,
+    // Anything extra the client wants to do to the bubble
+    extraAction?: (top: HTMLElement) => void
 ) => {
     const bubbleManager = OverlayTool.bubbleManager();
     // The Linux/Mono/Geckofx environment does not produce the dragenter, dragover,
@@ -59,10 +65,44 @@ const ondragend = (
             style
         );
         if (!bubble) return;
+        if (extraAction) {
+            extraAction(bubble);
+        }
         if (addClasses) {
             // trim because an exception is thrown if we try to add a class that is empty,
             // which we will otherwise do if there is a leading or trailing space.
             bubble.classList.add(...addClasses.trim().split(" "));
+        }
+        if (matchingTextBox) {
+            const existing = Array.from(
+                bubble.ownerDocument.getElementsByClassName("bloom-wordChoice")
+            );
+            const pattern = existing[0];
+            if (pattern) {
+                // should always be one, it's on the template. Unless the user deletes them all!
+                // That will just mess things up for now. Eventually, we might make code to
+                // re-create it, but where?
+                // Note that this duplication causes it to be in the same place as the pattern.
+                // It will be invisible until we select the corresponding bubble.
+                const newTextBox = pattern.cloneNode(true) as HTMLElement;
+                // Enhance: do something about the value pathologically not parsing
+                const existingIds = existing.map(el =>
+                    parseInt(el.getAttribute("data-txt-img") ?? "1")
+                );
+                const newId = "" + (Math.max(...existingIds) + 1);
+                bubble.setAttribute("data-img-txt", newId);
+                newTextBox.setAttribute("data-txt-img", newId);
+                // The order doesn't matter much, but keeping them in the order created feels right,
+                // and makes sure we will find the original when making the next clone.
+                bubble.parentElement?.insertBefore(
+                    newTextBox,
+                    existing[existing.length - 1].nextElementSibling
+                );
+                // remove any copied content (do we have a common function to do this somewhere?)
+                Array.from(
+                    newTextBox.getElementsByClassName("bloom-editable")
+                ).forEach(editable => (editable.innerHTML = "<p></p>"));
+            }
         }
         let langsToWaitFor = 0;
         if (contentL10nKey) {
@@ -191,7 +231,9 @@ const ondragend = (
 export const OverlaySvgItem: React.FunctionComponent<{
     style: string;
     draggable?: boolean;
+    matchingTextBox?: boolean;
     addClasses?: string;
+    extraAction?: (top: HTMLElement) => void;
 }> = props => {
     return (
         <div // infuriatingly, svgs don't support draggable, so we have to wrap.
@@ -207,7 +249,11 @@ export const OverlaySvgItem: React.FunctionComponent<{
                     ev,
                     props.style,
                     props.draggable ?? false,
-                    props.addClasses
+                    props.matchingTextBox ?? false,
+                    props.addClasses,
+                    undefined,
+                    undefined,
+                    props.extraAction
                 )
             }
         >
@@ -219,6 +265,7 @@ export const OverlaySvgItem: React.FunctionComponent<{
 export const OverlayImageItem: React.FunctionComponent<{
     style: string;
     draggable?: boolean;
+    matchingTextBox?: boolean;
     addClasses?: string;
     color?: string;
     strokeColor?: string;
@@ -227,9 +274,40 @@ export const OverlayImageItem: React.FunctionComponent<{
         <OverlaySvgItem
             style={props.style}
             draggable={props.draggable}
+            matchingTextBox={props.matchingTextBox}
             addClasses={props.addClasses}
         >
             <ImagePlaceholderIcon
+                css={css`
+                    width: 50px;
+                    height: 50px;
+                    cursor: grab;
+                `}
+                color={props.color}
+                strokeColor={props.strokeColor}
+            />
+        </OverlaySvgItem>
+    );
+};
+
+export const OverlayWrongImageItem: React.FunctionComponent<{
+    style: string;
+    draggable?: boolean;
+    matchingTextBox?: boolean;
+    addClasses?: string;
+    color?: string;
+    strokeColor?: string;
+    extraAction?: (top: HTMLElement) => void;
+}> = props => {
+    return (
+        <OverlaySvgItem
+            style={props.style}
+            draggable={props.draggable}
+            matchingTextBox={props.matchingTextBox}
+            addClasses={props.addClasses}
+            extraAction={props.extraAction}
+        >
+            <WrongImagePlaceholderIcon
                 css={css`
                     width: 50px;
                     height: 50px;
@@ -311,6 +389,7 @@ export const OverlayItem: React.FunctionComponent<{
                     ev,
                     props.style,
                     props.draggable ?? false,
+                    false, // don't make a matching text box
                     props.addClasses
                 )
             }
@@ -326,7 +405,11 @@ export const OverlayTextItem: React.FunctionComponent<{
     addClasses?: string;
     contentL10nKey?: string;
     hintL10nKey?: string;
+    hide?: boolean; // If true, we don't want this item at all.
 }> = props => {
+    if (props.hide) {
+        return null;
+    }
     return (
         <Span
             l10nKey={props.l10nKey}
@@ -338,6 +421,7 @@ export const OverlayTextItem: React.FunctionComponent<{
                     ev,
                     props.style,
                     props.draggable ?? false,
+                    false, // don't make a matching text box
                     props.addClasses,
                     props.contentL10nKey,
                     props.hintL10nKey

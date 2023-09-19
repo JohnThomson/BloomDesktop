@@ -814,7 +814,40 @@ export class BubbleManager {
         return this.activeElement;
     }
 
-    private setActiveElement(element: HTMLElement | undefined) {
+    private showCorrespondingTextBox(element: HTMLElement | undefined) {
+        if (!element) {
+            return;
+        }
+        const linkId = element.getAttribute("data-img-txt");
+        if (!linkId) {
+            return;
+        }
+        const textBox = element.ownerDocument.querySelector(
+            "[data-txt-img='" + linkId + "']"
+        );
+        const allTextBoxes = Array.from(
+            element.ownerDocument.getElementsByClassName("bloom-wordChoice")
+        );
+        allTextBoxes.forEach(box => {
+            if (box !== textBox) {
+                box.classList.remove("bloom-activeTextBox");
+            }
+        });
+        Array.from(
+            element.ownerDocument.getElementsByClassName("bloom-activePicture")
+        ).forEach(box => {
+            box.classList.remove("bloom-activePicture");
+        });
+        // Note that if this is a 'wrong' picture, there may be no corresponding text box.
+        // (In that case we still want to hide the other picture-specific ones.)
+        if (textBox) {
+            textBox.classList.add("bloom-activeTextBox");
+        } else {
+            element.classList.add("bloom-activePicture");
+        }
+    }
+
+    public setActiveElement(element: HTMLElement | undefined) {
         if (this.activeElement === element) {
             return;
         }
@@ -831,6 +864,7 @@ export class BubbleManager {
         }
         Comical.activateElement(this.activeElement);
         this.adjustTarget(this.activeElement);
+        this.showCorrespondingTextBox(this.activeElement);
     }
 
     // Set the color of the text in all of the active bubble family's TextOverPicture boxes.
@@ -2596,6 +2630,7 @@ export class BubbleManager {
             if (this.notifyBubbleChange) {
                 this.notifyBubbleChange(this.getSelectedFamilySpec());
             }
+            this.showCorrespondingTextBox(contentElement);
         }
         const bubble = new Bubble(contentElement);
         const bubbleSpec: BubbleSpec = Bubble.getDefaultBubbleSpec(
@@ -3459,6 +3494,16 @@ export class BubbleManager {
             // but getting this one is quite taxing on the CPU
             .css("width", textBox.width() + "px")
             .css("height", textBox.height() + "px");
+
+        if (textBox.get(0).getAttribute("data-txt-img")) {
+            // Only one of these is ever visible; move them together.
+            Array.from(
+                textBox.get(0).ownerDocument.querySelectorAll("[data-txt-img]")
+            ).forEach((tbox: HTMLElement) => {
+                tbox.style.left = unscaledRelativeLeft + "px";
+                tbox.style.top = unscaledRelativeTop + "px";
+            });
+        }
     }
 
     // Determines the unrounded width/height of the content of an element (i.e, excluding its margin, border, padding)

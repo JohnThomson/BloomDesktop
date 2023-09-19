@@ -18,20 +18,35 @@
     }
 }
 
-.drag-activity-correct {
+// The slider can go away once everything is correctly placed.
+.drag-activity-correct .bloom-activity-slider {
+    display: none;
+}
+
+.drag-activity-correct .bloom-page:not([data-activity="word-chooser-slider"]) {
     .bloom-textOverPicture:not(.drag-item-correct),
     [data-target-of],
     .drag-item-random-sentence {
         opacity: 30%;
     }
 }
-.drag-activity-wrong {
+.drag-activity-wrong .bloom-page:not([data-activity="word-chooser-slider"]) {
     .bloom-textOverPicture:not(.drag-item-wrong),
     [data-target-of],
     .drag-item-random-sentence {
         opacity: 30%;
     }
 }
+
+// // For this activity, we want the pictures to be visible in their final positions even when showing correct or wrong state.
+// .drag-activity-correct,
+// .drag-activity-wrong {
+//     .bloom-page[data-activity="word-chooser-slider"] {
+//         .bloom-textOverPicture {
+//             opacity: 100%;
+//         }
+//     }
+// }
 
 .drag-activity-try-it .drag-item-order-sentence {
     display: none;
@@ -124,6 +139,73 @@
     }
 }
 
+.bloom-page[data-activity="word-chooser-slider"] {
+    --slider-height: 80px;
+    --slider-item-height: 76px;
+    .marginBox {
+        left: 0 !important;
+        top: 0 !important;
+        width: 100% !important;
+        height: 100% !important;
+        box-sizing: border-box; // redundant with no border?
+        border: 0 !important;
+        img {
+            // defeats a rule in basepage.css that otherwise prevents the image from filling the page.
+            max-width: unset;
+        }
+    }
+    .bloom-activity-slider {
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        height: var(--slider-height);
+        box-sizing: border-box;
+        // Same as the canvas is enough to put in in front, since it comes later.
+        z-index: @bubbleCanvasZIndex;
+        .bloom-activity-slider-content {
+            display: flex;
+            height: 100%;
+            position: absolute;
+            top: 0;
+        }
+        .bloom-activity-slider-item {
+            height: calc(100% - 4px);
+            margin: 2px 22px;
+            box-sizing: border-box;
+            padding: 10px 3px;
+            border-radius: 20px;
+            min-width: calc(var(--slider-item-height) + 10px);
+        }
+        img {
+            height: 100%;
+            box-sizing: border-box;
+            max-width: var(--slider-height);
+        }
+    }
+    &:after {
+        display: none; // no page number
+    }
+    .bloom-wordChoice {
+        display: none; // only the active text box is shown
+        &.bloom-activeTextBox {
+            display: block;
+        }
+    }
+    .bloom-textOverPicture {
+        transition: opacity 1s ease-in-out;
+    }
+    .bloom-hideSliderImage {
+        opacity: 0;
+    }
+    [data-img-txt="wrong"] {
+        display: none;
+        &.bloom-activePicture {
+            display: block;
+        }
+    }
+}
+
 @tan: #e9d9bd;
 @paleTan: #f9e9cc;
 
@@ -137,9 +219,27 @@
     --dragable-background-color: #2980bb;
     --draggable-color: white;
     --fixed-color: #fc8602;
+    --slider-button-color: #2980bb;
+    --slider-keyword-color: #902a90;
+    --text-background: #75d0ee;
+    &[data-activity="word-chooser-slider"] {
+        [data-txt-img] {
+            border: 8px solid var(--slider-keyword-color) !important;
+            border-radius: 18px;
+            background-color: var(--text-background);
+        }
+    }
     &.bloom-page {
         // need this for specificity
         background-color: var(--page-color);
+    }
+    .bloom-activity-slider {
+        //background-color: yellow; // Todo
+        background-image: linear-gradient(white, yellow);
+        .bloom-activity-slider-item {
+            border: 6px solid var(--slider-button-color);
+            background-color: var(--text-background);
+        }
     }
     .bloom-textOverPicture.draggable-text {
         background-color: var(--dragable-background-color);

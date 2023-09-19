@@ -69,9 +69,15 @@ export function prepareActivity(page: HTMLElement) {
             elt.parentElement?.insertBefore(container, elt);
         }
     );
+
+    // for word-chooser-slider
+    setupWordChooserSlider(page);
+    setSlideablesVisibility(page, false);
+    showARandomWord(page);
+    setupSliderImageEvents(page);
 }
 
-function shuffle(array: string[]) {
+function shuffle<T>(array: T[]): T[] {
     // review: something Copliot came up with. Is it guaranteed to be sufficiently different
     // from the correct answer?
     let currentIndex = array.length,
@@ -115,6 +121,10 @@ export function undoPrepareActivity(page: HTMLElement) {
         page.getElementsByClassName("drag-item-random-sentence")
     ).forEach((elt: HTMLElement) => {
         elt.parentElement?.removeChild(elt);
+    });
+    setSlideablesVisibility(page, true);
+    Array.from(page.getElementsByTagName("img")).forEach((img: HTMLElement) => {
+        img.removeEventListener("click", clickSliderImage);
     });
 }
 
@@ -233,26 +243,7 @@ export const performCheck = (e: MouseEvent) => {
     const page = target.closest(".bloom-page") as HTMLElement;
     const allCorrect = checkDraggables(page) && checkRandomSentences(page);
 
-    classSetter(page, "drag-activity-correct", allCorrect);
-    classSetter(page, "drag-activity-wrong", !allCorrect);
-
-    // play sound
-    const soundFile = page.getAttribute(
-        allCorrect ? "data-correct-sound" : "data-wrong-sound"
-    );
-    if (soundFile) {
-        const audio = new Audio("audio/" + soundFile);
-        audio.style.visibility = "hidden";
-        // To my surprise, in BP storybook it works without adding the audio to any document.
-        // But in Bloom proper, it does not. I think it is because this code is part of the toolbox,
-        // so the audio element doesn't have the right context to interpret the relative URL.
-        page.append(audio);
-        // It feels cleaner if we remove it when done. This could fail, e.g., if the user
-        // switches tabs or pages before we get done playing. Removing it immediately
-        // prevents the sound being played. It's not a big deal if it doesn't get removed.
-        audio.play();
-        audio.addEventListener("ended", () => page.removeChild(audio));
-    }
+    showCorrectOrWrongItems(page, allCorrect);
 
     return allCorrect;
 };
@@ -278,6 +269,29 @@ export const classSetter = (
 
 let draggableReposition: HTMLElement;
 let itemBeingRepositioned: HTMLElement;
+function showCorrectOrWrongItems(page: HTMLElement, allCorrect: boolean) {
+    classSetter(page, "drag-activity-correct", allCorrect);
+    classSetter(page, "drag-activity-wrong", !allCorrect);
+
+    // play sound
+    const soundFile = page.getAttribute(
+        allCorrect ? "data-correct-sound" : "data-wrong-sound"
+    );
+    if (soundFile) {
+        const audio = new Audio("audio/" + soundFile);
+        audio.style.visibility = "hidden";
+        // To my surprise, in BP storybook it works without adding the audio to any document.
+        // But in Bloom proper, it does not. I think it is because this code is part of the toolbox,
+        // so the audio element doesn't have the right context to interpret the relative URL.
+        page.append(audio);
+        // It feels cleaner if we remove it when done. This could fail, e.g., if the user
+        // switches tabs or pages before we get done playing. Removing it immediately
+        // prevents the sound being played. It's not a big deal if it doesn't get removed.
+        audio.play();
+        audio.addEventListener("ended", () => page.removeChild(audio));
+    }
+}
+
 function checkDraggables(page: HTMLElement) {
     let allCorrect = true;
     const bubbles = Array.from(page.querySelectorAll("[data-bubble-id]"));
@@ -412,5 +426,182 @@ function checkRandomSentences(page: HTMLElement) {
             }
         }
     }
+    return true;
+}
+
+export let draggingSlider = false;
+
+// Setup that is common to try-it and design time
+export function setupWordChooserSlider(page: HTMLElement) {
+    const wrapper = page.getElementsByClassName(
+        "bloom-activity-slider"
+    )[0] as HTMLElement;
+    if (!wrapper) {
+        return; // panic?
+    }
+    wrapper.innerHTML = ""; // clear out any existing content.
+    const slider = page.ownerDocument.createElement("div");
+    slider.classList.add("bloom-activity-slider-content");
+    slider.style.left = 0 + "px";
+    wrapper.appendChild(slider);
+    dragStartX = 0;
+    const scale = page.getBoundingClientRect().width / page.offsetWidth;
+    // Review: maybe we should use some sort of fancier slider? This one, for example,
+    // won't have fancy effects like continuing to slide if you flick it.
+    // But it's also possible this is good enough. Not really expecting a lot more items
+    // than will fit.
+    const moveHandler = (e: MouseEvent) => {
+        let x = e.clientX / scale - dragStartX;
+        if (Math.abs(x) > 4) {
+            draggingSlider = true;
+        }
+        if (x > 0) {
+            x = 0;
+        }
+        const maxScroll = Math.max(slider.offsetWidth - wrapper.offsetWidth, 0);
+        if (x < -maxScroll) {
+            x = -maxScroll;
+        }
+        slider.style.left = x + "px";
+    };
+    const upHandler = (e: MouseEvent) => {
+        slider.removeEventListener("mousemove", moveHandler);
+        page.ownerDocument.removeEventListener("mouseup", upHandler);
+        setTimeout(() => {
+            draggingSlider = false;
+        }, 50);
+    };
+    slider.addEventListener("mousedown", e => {
+        dragStartX = e.clientX / scale - slider.offsetLeft;
+        slider.addEventListener("mousemove", moveHandler);
+        // added to the document so we catch it even if it happens outside the slider
+        page.ownerDocument.addEventListener("mouseup", upHandler);
+    });
+
+    const imagesToPlace = shuffle(
+        Array.from(page.querySelectorAll("[data-img-txt]"))
+    );
+    imagesToPlace.forEach((imgTop: HTMLElement) => {
+        const img = imgTop.getElementsByTagName("img")[0];
+        if (!img) {
+            return; // weird
+        }
+        // not using cloneNode here because I don't want to bring along any alt text that might provide a clue
+        const sliderImg = img.ownerDocument.createElement("img");
+        // Not just img.src: that yields a full URL, which will show the image, but will not match
+        // when we are later trying to find the corresponding original image.
+        sliderImg.src = img.getAttribute("src")!;
+        sliderImg.ondragstart = () => false;
+        sliderImg.setAttribute(
+            "data-img",
+            imgTop.getAttribute("data-img-txt")!
+        );
+        const sliderItem = img.ownerDocument.createElement("div");
+        sliderItem.classList.add("bloom-activity-slider-item");
+        sliderItem.appendChild(sliderImg);
+        slider.appendChild(sliderItem);
+    });
+    if (slider.offsetWidth > wrapper.offsetWidth) {
+        // We need a slider effect. We want one of the images to be partly visible as a clue that
+        // sliding is possible.
+        const avWidth = slider.offsetWidth / imagesToPlace.length;
+        let indexNearBorder = Math.floor(wrapper.offsetWidth / avWidth);
+        let sliderItem = slider.children[indexNearBorder] as HTMLElement;
+        if (sliderItem.offsetLeft > wrapper.offsetWidth - 30) {
+            // The item we initially selected is mostly off the right edge.
+            // Stretch things to make the previous item half-off-screen.
+            indexNearBorder--;
+            sliderItem = slider.children[indexNearBorder] as HTMLElement;
+        }
+        if (
+            sliderItem.offsetLeft + sliderItem.offsetWidth <
+            wrapper.offsetWidth + 30
+        ) {
+            const oldMarginPx =
+                sliderItem.ownerDocument.defaultView?.getComputedStyle(
+                    sliderItem
+                ).marginLeft ?? "22px";
+            const oldMargin = parseInt(
+                oldMarginPx.substring(0, oldMarginPx.length - 2)
+            );
+            const desiredLeft =
+                wrapper.offsetWidth - sliderItem.offsetWidth / 2;
+            const newMargin =
+                oldMargin +
+                (desiredLeft - sliderItem.offsetLeft) / indexNearBorder / 2;
+            Array.from(slider.children).forEach((elt: HTMLElement) => {
+                elt.style.marginLeft = newMargin + "px";
+                elt.style.marginRight = newMargin + "px";
+            });
+        }
+    }
+}
+
+const clickSliderImage = (e: MouseEvent) => {
+    if (draggingSlider) {
+        return;
+    }
+    const img = e.currentTarget as HTMLElement;
+    const page = img.closest(".bloom-page") as HTMLElement;
+    const activeTextBox = page.getElementsByClassName("bloom-activeTextBox")[0];
+    if (!activeTextBox) {
+        return; // weird
+    }
+    var activeId = activeTextBox.getAttribute("data-txt-img");
+    const imgId = img.getAttribute("data-img");
+    if (activeId === imgId) {
+        const imgTop = page.querySelector(`[data-img-txt="${imgId}"]`);
+        if (!imgTop) {
+            return; // weird
+        }
+        imgTop.classList.remove("bloom-hideSliderImage");
+        setTimeout(() => {
+            if (!showARandomWord(page)) {
+                showCorrectOrWrongItems(page, true);
+            }
+        }, 1000); // should roughly correspond to the css transition showing the item
+    } else {
+        showCorrectOrWrongItems(page, false);
+    }
+};
+
+function setupSliderImageEvents(page: HTMLElement) {
+    const slider = page.getElementsByClassName("bloom-activity-slider")[0];
+    if (!slider) {
+        return; // panic?
+    }
+    const sliderImages = Array.from(slider.getElementsByTagName("img"));
+    sliderImages.forEach((img: HTMLElement) => {
+        img.addEventListener("click", clickSliderImage);
+    });
+}
+
+export function setSlideablesVisibility(page: HTMLElement, visible: boolean) {
+    const slideables = Array.from(page.querySelectorAll("[data-img-txt]"));
+    slideables.forEach((elt: HTMLElement) => {
+        if (visible) {
+            elt.classList.remove("bloom-hideSliderImage");
+        } else {
+            elt.classList.add("bloom-hideSliderImage");
+        }
+    });
+}
+
+function showARandomWord(page: HTMLElement) {
+    const possibleWords = Array.from(page.querySelectorAll("[data-txt-img]"));
+    const targetWords = possibleWords.filter(w => {
+        const imgId = w.getAttribute("data-txt-img");
+        const img = page.querySelector(`[data-img-txt="${imgId}"]`);
+        return img?.classList.contains("bloom-hideSliderImage");
+    });
+    possibleWords.forEach(w => {
+        w.classList.remove("bloom-activeTextBox");
+    });
+    if (targetWords.length === 0) {
+        return false;
+    }
+
+    const randomIndex = Math.floor(Math.random() * targetWords.length);
+    targetWords[randomIndex].classList.add("bloom-activeTextBox");
     return true;
 }

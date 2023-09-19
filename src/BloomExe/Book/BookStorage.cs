@@ -1032,7 +1032,7 @@ namespace Bloom.Book
 			var backgroundMusicFileNames = GetBackgroundMusicFileNamesReferencedInBook();
 			usedAudioFileNames.AddRange(backgroundMusicFileNames);
 
-			var dragActivitypages = Dom.SafeSelectNodes("//div[@data-activity=\"drag-to-destination\"]");
+			var dragActivitypages = Dom.SafeSelectNodes("//div[@data-activity]");
 			foreach (XmlElement dap in dragActivitypages)
 			{
 				var correctSound = dap.Attributes["data-correct-sound"];

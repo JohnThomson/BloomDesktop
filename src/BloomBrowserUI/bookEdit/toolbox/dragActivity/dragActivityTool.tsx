@@ -22,13 +22,16 @@ import {
     OverlayItemRegion,
     OverlayItemRow,
     OverlayTextItem,
-    OverlayVideoItem
+    OverlayVideoItem,
+    OverlayWrongImageItem
 } from "../overlay/overlayItem";
 import { OverlayTool } from "../overlay/overlayTool";
 import { ToolBox } from "../toolbox";
 import {
     classSetter,
+    draggingSlider,
     prepareActivity,
+    setupWordChooserSlider,
     undoPrepareActivity
 } from "./dragActivityRuntime";
 import { BubbleManager, theOneBubbleManager } from "../../js/bubbleManager";
@@ -102,6 +105,13 @@ export const setupDraggingTargets = (startingPoint: HTMLElement) => {
 
         elt.addEventListener("mousedown", startDrag);
     });
+    if (page.getAttribute("data-activity") === "word-chooser-slider") {
+        setupWordChooserSlider(page);
+        const wrapper = page.getElementsByClassName(
+            "bloom-activity-slider"
+        )[0] as HTMLElement;
+        wrapper.addEventListener("click", designTimeClickOnSlider);
+    }
 };
 
 const overlap = (start: HTMLElement, end: HTMLElement): boolean => {
@@ -569,15 +579,16 @@ const DragActivityControls: React.FunctionComponent<{
     const [correctSound, setCorrectSound] = useState("");
     const [wrongSound, setWrongSound] = useState("");
     const [soundFolder, setSoundFolder] = useState("");
+    const [activityType, setActivityType] = useState("");
     useEffect(() => {
-        const getSoundState = () => {
+        const getStateFromPage = () => {
             const pageBody = ToolBox.getPage();
             const page = pageBody?.getElementsByClassName(
                 "bloom-page"
             )[0] as HTMLElement;
             if (!page) {
                 setTimeout(() => {
-                    getSoundState();
+                    getStateFromPage();
                 }, 100);
                 return;
             }
@@ -590,8 +601,9 @@ const DragActivityControls: React.FunctionComponent<{
                     setCorrectSound(correctSound || none);
                     setWrongSound(wrongSound || none);
                 });
+            setActivityType(page.getAttribute("data-activity") ?? "");
         };
-        getSoundState();
+        getStateFromPage();
     }, []);
     const getSound = async forCorrect => {
         const result = await postJson("fileIO/chooseFile", {
@@ -637,15 +649,21 @@ const DragActivityControls: React.FunctionComponent<{
         if (!page) {
             return; // throw?
         }
+        const wrapper = page.getElementsByClassName(
+            "bloom-activity-slider"
+        )[0] as HTMLElement;
+
         if (newValue === tryItTabIndex) {
             savePositions(page);
             bubbleManager?.suspendComicEditing("forTest");
             prepareActivity(page);
+            wrapper.removeEventListener("click", designTimeClickOnSlider);
         } else {
             undoPrepareActivity(page);
             restorePositions(); // in case we are leaving the try-it tab
             const bubbleManager = OverlayTool.bubbleManager();
             bubbleManager?.resumeComicEditing();
+            wrapper.addEventListener("click", designTimeClickOnSlider);
         }
         if (newValue === correctTabIndex || newValue === wrongTabIndex) {
             // We can't currently do this for hidden bubbles, and selecting one of these tabs
@@ -702,6 +720,7 @@ const DragActivityControls: React.FunctionComponent<{
                                 style="none"
                                 draggable={true}
                                 addClasses="draggable-text"
+                                hide={activityType === "word-chooser-slider"}
                             />
                             <OverlayTextItem
                                 css={textItemProps}
@@ -709,12 +728,30 @@ const DragActivityControls: React.FunctionComponent<{
                                 style="none"
                                 draggable={true}
                                 addClasses="draggable-text"
+                                hide={activityType === "word-chooser-slider"}
                             />{" "}
                             <OverlayImageItem
                                 style="image"
-                                draggable={true}
+                                draggable={
+                                    activityType !== "word-chooser-slider"
+                                }
+                                matchingTextBox={
+                                    activityType === "word-chooser-slider"
+                                }
                                 color={kBloomBlue}
                                 strokeColor={kBloomBlue}
+                            />
+                            <OverlayWrongImageItem
+                                style="image"
+                                draggable={false}
+                                matchingTextBox={false}
+                                color={kBloomBlue}
+                                strokeColor={kBloomBlue}
+                                // without this it won't be initially visible
+                                addClasses="bloom-activePicture"
+                                extraAction={bubble =>
+                                    bubble.setAttribute("data-img-txt", "wrong")
+                                }
                             />
                         </OverlayItemRow>
                         <OverlayItemRow>
@@ -981,4 +1018,27 @@ export class DragActivityTool extends ToolboxToolReactAdaptor {
     //     const exports = getEditablePageBundleExports();
     //     return exports ? exports.getTheOneBubbleManager() : undefined;
     // }
+}
+function designTimeClickOnSlider(this: HTMLElement, ev: MouseEvent) {
+    if (draggingSlider) {
+        return;
+    }
+    const target = ev.target as HTMLElement;
+    const src = target.getAttribute("src");
+    const id = target.getAttribute("data-img");
+    if (!id) {
+        return;
+    }
+    const possibleBubbles = Array.from(
+        target.ownerDocument.querySelectorAll("[data-img-txt='" + id + "']")
+    );
+    // usually there will only be one possibleBubble, but all the 'wrong' ones have the same data-img-txt.
+    const bubbleToSelect = possibleBubbles.find(
+        b => b.getElementsByTagName("img")[0].getAttribute("src") === src
+    );
+    if (bubbleToSelect) {
+        OverlayTool.bubbleManager()?.setActiveElement(
+            bubbleToSelect as HTMLElement
+        );
+    }
 }
