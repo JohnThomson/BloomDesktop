@@ -74,6 +74,10 @@
         <source xml:lang="en">Properties of the Scene</source>
         <note>ID: EditTab.Toolbox.DragActivity.SceneInstructions</note>
       </trans-unit>
+      <trans-unit id="EditTab.Toolbox.DragActivity.SentenceHint">
+        <source xml:lang="en">Type a sentence. The reader will be asked to sort the words.</source>
+        <note>ID: EditTab.Toolbox.DragActivity.SentenceHint</note>
+      </trans-unit>
       <trans-unit id="EditTab.Toolbox.DragActivity.OrderCircle">
         <source xml:lang="en">Order Circle</source>
         <note>ID: EditTab.Toolbox.DragActivity.OrderCircle</note>

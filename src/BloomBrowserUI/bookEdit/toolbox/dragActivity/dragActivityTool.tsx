@@ -575,6 +575,7 @@ const updateTabClass = (tabIndex: number) => {
 const DragActivityControls: React.FunctionComponent<{
     activeTab: number;
     onTabChange: (tab: number) => void;
+    pageGeneration: number;
 }> = props => {
     const [correctSound, setCorrectSound] = useState("");
     const [wrongSound, setWrongSound] = useState("");
@@ -604,7 +605,7 @@ const DragActivityControls: React.FunctionComponent<{
             setActivityType(page.getAttribute("data-activity") ?? "");
         };
         getStateFromPage();
-    }, []);
+    }, [props.pageGeneration]);
     const getSound = async forCorrect => {
         const result = await postJson("fileIO/chooseFile", {
             title: "Choose Sound File",
@@ -657,13 +658,13 @@ const DragActivityControls: React.FunctionComponent<{
             savePositions(page);
             bubbleManager?.suspendComicEditing("forTest");
             prepareActivity(page);
-            wrapper.removeEventListener("click", designTimeClickOnSlider);
+            wrapper?.removeEventListener("click", designTimeClickOnSlider);
         } else {
             undoPrepareActivity(page);
             restorePositions(); // in case we are leaving the try-it tab
             const bubbleManager = OverlayTool.bubbleManager();
             bubbleManager?.resumeComicEditing();
-            wrapper.addEventListener("click", designTimeClickOnSlider);
+            wrapper?.addEventListener("click", designTimeClickOnSlider);
         }
         if (newValue === correctTabIndex || newValue === wrongTabIndex) {
             // We can't currently do this for hidden bubbles, and selecting one of these tabs
@@ -697,6 +698,7 @@ const DragActivityControls: React.FunctionComponent<{
         margin-left: 10px;
         margin-top: 10px;
     `;
+    const anyDraggables = activityType != "sort-sentence";
     return (
         <ThemeProvider theme={toolboxTheme}>
             <Tabs
@@ -709,52 +711,62 @@ const DragActivityControls: React.FunctionComponent<{
             {props.activeTab === 0 && (
                 <div>
                     <Div l10nKey="SceneInstructions" />
-                    <OverlayItemRegion
-                        l10nKey="EditTab.Toolbox.DragActivity.Draggable"
-                        theme="blueOnTan"
-                    >
-                        <OverlayItemRow>
-                            <OverlayTextItem
-                                css={textItemProps}
-                                l10nKey="EditTab.Toolbox.DragActivity.Letter"
-                                style="none"
-                                draggable={true}
-                                addClasses="draggable-text"
-                                hide={activityType === "word-chooser-slider"}
-                            />
-                            <OverlayTextItem
-                                css={textItemProps}
-                                l10nKey="EditTab.Toolbox.DragActivity.Word"
-                                style="none"
-                                draggable={true}
-                                addClasses="draggable-text"
-                                hide={activityType === "word-chooser-slider"}
-                            />{" "}
-                            <OverlayImageItem
-                                style="image"
-                                draggable={
-                                    activityType !== "word-chooser-slider"
-                                }
-                                matchingTextBox={
-                                    activityType === "word-chooser-slider"
-                                }
-                                color={kBloomBlue}
-                                strokeColor={kBloomBlue}
-                            />
-                            <OverlayWrongImageItem
-                                style="image"
-                                draggable={false}
-                                matchingTextBox={false}
-                                color={kBloomBlue}
-                                strokeColor={kBloomBlue}
-                                // without this it won't be initially visible
-                                addClasses="bloom-activePicture"
-                                extraAction={bubble =>
-                                    bubble.setAttribute("data-img-txt", "wrong")
-                                }
-                            />
-                        </OverlayItemRow>
-                        <OverlayItemRow>
+                    {anyDraggables && (
+                        <OverlayItemRegion
+                            l10nKey="EditTab.Toolbox.DragActivity.Draggable"
+                            theme="blueOnTan"
+                        >
+                            <OverlayItemRow>
+                                <OverlayTextItem
+                                    css={textItemProps}
+                                    l10nKey="EditTab.Toolbox.DragActivity.Letter"
+                                    style="none"
+                                    draggable={true}
+                                    addClasses="draggable-text"
+                                    hide={
+                                        activityType === "word-chooser-slider"
+                                    }
+                                />
+                                <OverlayTextItem
+                                    css={textItemProps}
+                                    l10nKey="EditTab.Toolbox.DragActivity.Word"
+                                    style="none"
+                                    draggable={true}
+                                    addClasses="draggable-text"
+                                    hide={
+                                        activityType === "word-chooser-slider"
+                                    }
+                                />{" "}
+                                <OverlayImageItem
+                                    style="image"
+                                    draggable={
+                                        activityType !== "word-chooser-slider"
+                                    }
+                                    matchingTextBox={
+                                        activityType === "word-chooser-slider"
+                                    }
+                                    color={kBloomBlue}
+                                    strokeColor={kBloomBlue}
+                                />
+                                {activityType === "word-chooser-slider" && (
+                                    <OverlayWrongImageItem
+                                        style="image"
+                                        draggable={false}
+                                        matchingTextBox={false}
+                                        color={kBloomBlue}
+                                        strokeColor={kBloomBlue}
+                                        // without this it won't be initially visible
+                                        addClasses="bloom-activePicture"
+                                        extraAction={bubble =>
+                                            bubble.setAttribute(
+                                                "data-img-txt",
+                                                "wrong"
+                                            )
+                                        }
+                                    />
+                                )}
+                            </OverlayItemRow>
+                            {/* If we want this at all, it would only be in the sort-sentence activity
                             <OverlayTextItem
                                 css={textItemProps}
                                 l10nKey="EditTab.Toolbox.DragActivity.OrderSentence"
@@ -762,8 +774,9 @@ const DragActivityControls: React.FunctionComponent<{
                                 draggable={false}
                                 addClasses="drag-item-order-sentence"
                             />
-                        </OverlayItemRow>
-                    </OverlayItemRegion>
+                        </OverlayItemRow> */}
+                        </OverlayItemRegion>
+                    )}
                     <OverlayItemRegion
                         l10nKey="EditTab.Toolbox.DragActivity.FixedInPlace"
                         theme="blueOnTan"
@@ -935,8 +948,11 @@ export class DragActivityTool extends ToolboxToolReactAdaptor {
         return this.root;
     }
 
+    private pageGeneration = 0;
+
     private renderRoot(): void {
         if (!this.root) return;
+        this.pageGeneration++;
         ReactDOM.render(
             <DragActivityControls
                 activeTab={this.tab}
@@ -946,6 +962,7 @@ export class DragActivityTool extends ToolboxToolReactAdaptor {
                     // the other tab is when we change it.
                     this.renderRoot();
                 }}
+                pageGeneration={this.pageGeneration}
             />,
             this.root
         );
@@ -981,22 +998,14 @@ export class DragActivityTool extends ToolboxToolReactAdaptor {
         }
         // useful during development, MAY not need in production.
         bubbleManager.removeDetachedTargets();
-
-        setupDraggingTargets(page);
-        //updateTabClass(this.tab);
         // Force things to Start tab as we change page.
         // If we decide not to do this, we should probably at least find a way to do it
         // when it's a brand newly-created page.
-        if (this.tab != 0) {
-            // We can't get at or modify the activeTab state of the DragActivityControls
-            // component, so this is the easiest way I can find to get the page in a consistent state.
-            // If we want to mantain the tab setting through page changes, we'll have to maintain
-            // the state here and pass it to the component along with an onChange handler.
-            this.tab = 0;
-            this.renderRoot();
-        } else {
-            updateTabClass(0); // renderRoot handles this if it gets called.
-        }
+        this.tab = 0;
+        // This forces various things to update to match the new page.
+        this.renderRoot();
+
+        setupDraggingTargets(page);
     }
 
     public detachFromPage() {
