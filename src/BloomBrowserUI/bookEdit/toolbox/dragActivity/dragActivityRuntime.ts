@@ -343,7 +343,7 @@ function startDragReposition(e: MouseEvent) {
     draggableReposition.style.position = "absolute";
     draggableReposition.style.left = target.offsetLeft / scale + "px"; // scale?
     draggableReposition.style.top = target.offsetTop / scale + "px";
-    draggableReposition.addEventListener("mouseup", stopDragReposition);
+    page.addEventListener("mouseup", stopDragReposition);
     // call a function whenever the cursor moves:
     draggableReposition.addEventListener("mousemove", elementDragReposition);
     target.parentElement?.appendChild(draggableReposition);
@@ -378,6 +378,7 @@ const elementDragReposition = (e: MouseEvent) => {
 
 const stopDragReposition = (e: MouseEvent) => {
     const page = draggableReposition.closest(".bloom-page") as HTMLElement;
+    page.removeEventListener("mouseup", stopDragReposition);
     const scale = page.getBoundingClientRect().width / page.offsetWidth;
     e.preventDefault();
     let x = e.clientX / scale;

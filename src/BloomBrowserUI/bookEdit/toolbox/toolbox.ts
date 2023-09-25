@@ -9,6 +9,7 @@ import theOneLocalizationManager from "../../lib/localizationManager/localizatio
 import { hookupLinkHandler } from "../../utils/linkHandler";
 import { ckeditableSelector } from "../../utils/shared";
 import { EditableDivUtils } from "../js/editableDivUtils";
+import { DragActivityTool } from "./dragActivity/dragActivityTool";
 
 export const isLongPressEvaluating: string = "isLongPressEvaluating";
 
@@ -145,6 +146,10 @@ export class ToolBox {
                     handleKeyboardInput();
                 });
         }
+    }
+
+    public getTheOneDragActivityTool(): DragActivityTool | undefined {
+        return DragActivityTool.theOneDragActivityTool;
     }
 
     public static addStringTool(

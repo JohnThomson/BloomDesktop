@@ -41,6 +41,7 @@ import theOneLocalizationManager, {
     LocalizationManager
 } from "../../../lib/localizationManager/localizationManager";
 import { postJson } from "../../../utils/bloomApi";
+import { getToolboxBundleExports } from "../../editViewFrame";
 //import { Tab } from "@mui/material";
 
 const Tabs: React.FunctionComponent<{
@@ -637,41 +638,7 @@ const DragActivityControls: React.FunctionComponent<{
     useEffect(() => {
         updateTabClass(props.activeTab);
     }, [props.activeTab]);
-    const handleChange = (newValue: number) => {
-        props.onTabChange(newValue);
-        const pageBody = ToolBox.getPage();
-        if (!pageBody) {
-            return; // throw? By the time we're changing tabs, it should be possible to get the content page.
-        }
-        const bubbleManager = OverlayTool.bubbleManager();
-        const page = pageBody.getElementsByClassName(
-            "bloom-page"
-        )[0] as HTMLElement;
-        if (!page) {
-            return; // throw?
-        }
-        const wrapper = page.getElementsByClassName(
-            "bloom-activity-slider"
-        )[0] as HTMLElement;
 
-        if (newValue === tryItTabIndex) {
-            savePositions(page);
-            bubbleManager?.suspendComicEditing("forTest");
-            prepareActivity(page);
-            wrapper?.removeEventListener("click", designTimeClickOnSlider);
-        } else {
-            undoPrepareActivity(page);
-            restorePositions(); // in case we are leaving the try-it tab
-            const bubbleManager = OverlayTool.bubbleManager();
-            bubbleManager?.resumeComicEditing();
-            wrapper?.addEventListener("click", designTimeClickOnSlider);
-        }
-        if (newValue === correctTabIndex || newValue === wrongTabIndex) {
-            // We can't currently do this for hidden bubbles, and selecting one of these tabs
-            // may cause some previously hidden bubbles to become visible.
-            bubbleManager?.ensureBubblesIntersectParent(page);
-        }
-    };
     const [dragObjectType, setDragObjectType] = useState("text");
     // Todo: something has to call setDragObjectType when a draggable is selected.
     let titleId = "EditTab.Toolbox.DragActivity.Draggable";
@@ -701,16 +668,17 @@ const DragActivityControls: React.FunctionComponent<{
     const anyDraggables = activityType != "sort-sentence";
     return (
         <ThemeProvider theme={toolboxTheme}>
-            <Tabs
-                value={props.activeTab}
-                onChange={handleChange}
-                labels={
-                    ["Start", "Correct", "Wrong", "Try It"] /* Todo: localize*/
-                }
-            />
             {props.activeTab === 0 && (
                 <div>
-                    <Div l10nKey="SceneInstructions" />
+                    <Div
+                        css={css`
+                            color: ${kBloomBlue};
+                            background-color: white;
+                            padding-left: 5px;
+                            padding-top: 10px;
+                        `}
+                        l10nKey="EditTab.Toolbox.DragActivity.SceneInstructions"
+                    />
                     {anyDraggables && (
                         <OverlayItemRegion
                             l10nKey="EditTab.Toolbox.DragActivity.Draggable"
@@ -937,6 +905,11 @@ export class DragActivityTool extends ToolboxToolReactAdaptor {
         DragActivityTool.theOneDragActivityTool = this;
     }
 
+    public setActiveTab(tab: number) {
+        this.tab = tab;
+        this.renderRoot();
+    }
+
     private root: HTMLDivElement | undefined;
     private tab = 0;
 
@@ -1012,6 +985,10 @@ export class DragActivityTool extends ToolboxToolReactAdaptor {
         // We don't want to leave the page in a state where things have been moved during testing.
         // Especially we don't want to save it that way.
         restorePositions();
+        const page = DragActivityTool.getBloomPage();
+        if (page) {
+            undoPrepareActivity(page);
+        }
         // const bubbleManager = OverlayTool.bubbleManager();
         // if (bubbleManager) {
         //     // For now we are leaving bubble editing on, because even with the toolbox hidden,
@@ -1051,3 +1028,139 @@ function designTimeClickOnSlider(this: HTMLElement, ev: MouseEvent) {
         );
     }
 }
+
+const dragActivityTypes = [
+    "word-chooser-slider",
+    "drag-to-destination",
+    "sort-sentence"
+];
+
+// After careful thought, I think the right source of truth for which tab is active is an
+// attribute of the parent elemen of the bloom-page.
+// I don't want it anywhere in the toolbox, because it is applicable even when the Drag Activity Toolbox is not active.
+// I don't want it part of the page, because then I have to take steps to prevent persisting it.
+// I don't want it in the element we add to hold the tab control, because it's possible for the page
+// to exist before that gets created, and then we have another complication for the toolbox to worry about
+// when trying to get it.
+// I don't want it all the way up on the body because that is shared by multiple pages in BloomPlayer,
+// and style rules that depend on anything there don't work. (This is less important because I don't plan
+// to have any rules that depend on data-drag-activity-tab, but it's convenient to have it on the same
+// element that does have classes for that purpose.
+
+export function getActiveDragActivityTab(): number {
+    const page = DragActivityTool.getBloomPage();
+    if (!page) {
+        return 0;
+    }
+    const parent = page.parentElement;
+    if (!parent) {
+        return 0;
+    }
+    const tab = parent.getAttribute("data-drag-activity-tab");
+    if (!tab) {
+        return 0;
+    }
+    const result = parseInt(tab);
+    if (isNaN(result)) {
+        return 0;
+    }
+    return result;
+}
+
+export function setActiveDragActivityTab(tab: number) {
+    const page = DragActivityTool.getBloomPage();
+    if (!page) {
+        return;
+    }
+    const parent = page.parentElement;
+    if (!parent) {
+        return;
+    }
+    parent.setAttribute("data-drag-activity-tab", tab.toString());
+    updateTabClass(tab);
+    renderDragActivityTabControl();
+    // Update the toolbox.
+    /// Review: might it not exist yet? Do we need a timeout if so?
+    // I think we're OK, if for no other reason, because both the dragActivityTool code and the
+    // code here agree that we start in the Start tab after switching pages.
+    const toolbox = getToolboxBundleExports()?.getTheOneToolbox();
+    toolbox?.getTheOneDragActivityTool()?.setActiveTab(tab);
+
+    const bubbleManager = OverlayTool.bubbleManager();
+    const wrapper = page.getElementsByClassName(
+        "bloom-activity-slider"
+    )[0] as HTMLElement;
+
+    if (tab === tryItTabIndex) {
+        savePositions(page);
+        bubbleManager?.suspendComicEditing("forTest");
+        prepareActivity(page);
+        wrapper?.removeEventListener("click", designTimeClickOnSlider);
+    } else {
+        undoPrepareActivity(page);
+        restorePositions(); // in case we are leaving the try-it tab
+        const bubbleManager = OverlayTool.bubbleManager();
+        bubbleManager?.resumeComicEditing();
+        wrapper?.addEventListener("click", designTimeClickOnSlider);
+    }
+    if (tab === correctTabIndex || tab === wrongTabIndex) {
+        // We can't currently do this for hidden bubbles, and selecting one of these tabs
+        // may cause some previously hidden bubbles to become visible.
+        bubbleManager?.ensureBubblesIntersectParent(page);
+    }
+}
+
+export function setupDragActivityTabControl() {
+    const page = DragActivityTool.getBloomPage();
+    if (!page) {
+        return;
+    }
+    const activityType = page.getAttribute("data-activity") ?? "";
+    if (dragActivityTypes.indexOf(activityType) < 0) {
+        return;
+    }
+    const tabControl = page.ownerDocument.createElement("div");
+    tabControl.style.position = "absolute";
+    tabControl.style.top = "-40px";
+    tabControl.style.left = "0";
+    tabControl.style.width = "250px";
+    tabControl.setAttribute("id", "drag-activity-tab-control");
+    page.ownerDocument
+        .getElementById("page-scaling-container")
+        ?.appendChild(tabControl);
+    setActiveDragActivityTab(0);
+    //renderDragActivityTabControl();
+}
+function renderDragActivityTabControl() {
+    const page = DragActivityTool.getBloomPage();
+    const root = page?.ownerDocument.getElementById(
+        "drag-activity-tab-control"
+    );
+    if (!root) {
+        return;
+    }
+    ReactDOM.render(
+        <DragActivityTabControl
+            activeTab={getActiveDragActivityTab()}
+            onTabChange={setActiveDragActivityTab}
+        />,
+        root
+    );
+}
+
+const DragActivityTabControl: React.FunctionComponent<{
+    activeTab: number;
+    onTabChange: (tab: number) => void;
+}> = props => {
+    return (
+        <ThemeProvider theme={toolboxTheme}>
+            <Tabs
+                value={props.activeTab}
+                onChange={props.onTabChange}
+                labels={
+                    ["Start", "Correct", "Wrong", "Try It"] /* Todo: localize*/
+                }
+            />
+        </ThemeProvider>
+    );
+};

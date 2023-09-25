@@ -50,6 +50,7 @@ import {
 } from "../../react_components/color-picking/bloomPalette";
 import { ckeditableSelector } from "../../utils/shared";
 import { EditableDivUtils } from "./editableDivUtils";
+import { setupDragActivityTabControl } from "../toolbox/dragActivity/dragActivityTool";
 
 // Allows toolbox code to make an element properly in the context of this iframe.
 export function makeElement(
@@ -1122,6 +1123,7 @@ function AddXMatterLabelAfterPageLabel(container) {
 function OneTimeSetup() {
     setupOrigami();
     hookupLinkHandler();
+    setupDragActivityTabControl();
 }
 
 interface String {
