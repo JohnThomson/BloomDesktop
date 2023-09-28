@@ -910,6 +910,10 @@ export class DragActivityTool extends ToolboxToolReactAdaptor {
         this.renderRoot();
     }
 
+    public requiresToolId(): boolean {
+        return true;
+    }
+
     private root: HTMLDivElement | undefined;
     private tab = 0;
 

@@ -21,6 +21,10 @@ export default class TalkingBookTool implements ITool {
         return false;
     }
 
+    public requiresToolId(): boolean {
+        return false;
+    }
+
     public configureElements(container: HTMLElement) {
         // one-time setup whether or not the tool is open.
     }

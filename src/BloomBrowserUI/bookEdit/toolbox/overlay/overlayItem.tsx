@@ -363,7 +363,6 @@ export const OverlayVideoItem: React.FunctionComponent<{
                 color={props.color ?? "white"}
                 //strokeColor={props.strokeColor}
             />
-            ;
         </OverlaySvgItem>
     );
 };

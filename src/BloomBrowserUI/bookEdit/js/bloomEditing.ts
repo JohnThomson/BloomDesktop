@@ -502,6 +502,14 @@ export function SetupElements(container: HTMLElement) {
 
         if (toolbox) {
             toolbox.configureElementsForTools(container);
+            const page = container.getElementsByClassName(
+                "bloom-page"
+            )[0] as HTMLElement;
+            // if we're setting up for things in say an image container, the toolbox should already be set for this page.
+            // In that case we won't find a page inside it.
+            if (page) {
+                toolbox.adjustToolListForPage(page);
+            }
         }
     });
 
