@@ -1,6 +1,7 @@
 // This is the code that is shared between the test tab of the toolbox and bloom-player.
 
 import { get } from "jquery";
+import { kAudioSentence, playAllAudio } from "./dragActivityNarration";
 
 let slots: { x: number; y: number }[] = [];
 let originalPositions = new Map<HTMLElement, { x: number; y: number }>();
@@ -75,6 +76,62 @@ export function prepareActivity(page: HTMLElement) {
     setSlideablesVisibility(page, false);
     showARandomWord(page);
     setupSliderImageEvents(page);
+    playFixedElements(page);
+}
+
+function playFixedElements(page: HTMLElement) {
+    const possibleElements = getPlayableDivs(page).filter(e => {
+        const top = e.closest(".bloom-textOverPicture") as HTMLElement;
+        if (!top) {
+            return false; // don't expect any non-TOP in a drag-activity, but just in case
+        }
+        if (top.classList.contains("draggable-text")) {
+            return false; // drraggable items are played only when clicked
+        }
+        if (top.classList.contains("drag-item-order-sentence")) {
+            return false; // This would give away the answer
+        }
+        if (top.classList.contains("bloom-wordChoice")) {
+            return false; // Only one of these should be played, after any instructions
+        }
+        // This might be redundant since they are not visible, but just in case
+        if (
+            top.classList.contains("drag-item-correct") ||
+            top.classList.contains("drag-item-wrong")
+        ) {
+            return false; // These are only played after they become visible
+        }
+        return true;
+    });
+    // Todo: filter
+    const playables = getAudioSentences(possibleElements);
+    playAllAudio(playables);
+}
+
+function getAudioSentences(editables: HTMLElement[]) {
+    // Could be done more cleanly with flatMap or flat() but not ready to switch to es2019 yet.
+    const result: HTMLElement[] = [];
+    editables.forEach(e => {
+        if (e.classList.contains(kAudioSentence)) {
+            result.push(e);
+        }
+        result.push(
+            ...(Array.from(
+                e.getElementsByClassName(kAudioSentence)
+            ) as HTMLElement[])
+        );
+    });
+    return result;
+}
+
+function getPlayableDivs(container: HTMLElement) {
+    // We want to play any audio we have from divs the user can see.
+    // This is a crude test, but currently we always use display:none to hide unwanted languages.
+    return Array.from(
+        container.getElementsByClassName("bloom-editable")
+    ).filter(
+        e => window.getComputedStyle(e).display !== "none"
+    ) as HTMLElement[];
 }
 
 function shuffle<T>(array: T[]): T[] {
