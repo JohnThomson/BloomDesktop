@@ -1014,6 +1014,10 @@ function designTimeClickOnSlider(this: HTMLElement, ev: MouseEvent) {
         return;
     }
     const target = ev.target as HTMLElement;
+    // If they click on the wrong one in try-it mode, don't select it.
+    if (target.closest(".drag-activity-try-it")) {
+        return;
+    }
     const src = target.getAttribute("src");
     const id = target.getAttribute("data-img");
     if (!id) {

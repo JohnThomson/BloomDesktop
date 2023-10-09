@@ -61,7 +61,6 @@ export default class TalkingBookTool implements ITool {
                 : "none";
         }
         const pageReadyPromise = AudioRecorder.theOneAudioRecorder.newPageReady(
-            imageDescToolActive,
             TalkingBookTool.deshroudPhraseDelimiters
         );
         return pageReadyPromise;

@@ -76,10 +76,10 @@ export function prepareActivity(page: HTMLElement) {
     setSlideablesVisibility(page, false);
     showARandomWord(page);
     setupSliderImageEvents(page);
-    playFixedElements(page);
+    playInitialElements(page);
 }
 
-function playFixedElements(page: HTMLElement) {
+function playInitialElements(page: HTMLElement) {
     const possibleElements = getPlayableDivs(page).filter(e => {
         const top = e.closest(".bloom-textOverPicture") as HTMLElement;
         if (!top) {
@@ -103,7 +103,13 @@ function playFixedElements(page: HTMLElement) {
         }
         return true;
     });
-    // Todo: filter
+    const activeTextBox = page.getElementsByClassName(
+        "bloom-activeTextBox"
+    )[0] as HTMLElement;
+    if (activeTextBox) {
+        possibleElements.push(activeTextBox);
+    }
+
     const playables = getAudioSentences(possibleElements);
     playAllAudio(playables);
 }
@@ -223,6 +229,9 @@ const startDrag = (e: MouseEvent) => {
     page.addEventListener("mouseup", stopDrag);
     // call a function whenever the cursor moves:
     page.addEventListener("mousemove", elementDrag);
+    const possibleElements = getPlayableDivs(target);
+    const playables = getAudioSentences(possibleElements);
+    playAllAudio(playables);
 };
 
 const elementDrag = (e: MouseEvent) => {
@@ -345,7 +354,20 @@ function showCorrectOrWrongItems(page: HTMLElement, allCorrect: boolean) {
         // switches tabs or pages before we get done playing. Removing it immediately
         // prevents the sound being played. It's not a big deal if it doesn't get removed.
         audio.play();
-        audio.addEventListener("ended", () => page.removeChild(audio));
+        audio.addEventListener("ended", () => {
+            page.removeChild(audio);
+            const elementsMadeVisible = Array.from(
+                page.getElementsByClassName(
+                    allCorrect ? "drag-item-correct" : "drag-item-wrong"
+                )
+            ) as HTMLElement[];
+            const possibleElements: HTMLElement[] = [];
+            elementsMadeVisible.forEach(e => {
+                possibleElements.push(...getPlayableDivs(e));
+                const playables = getAudioSentences(possibleElements);
+                playAllAudio(playables);
+            });
+        });
     }
 }
 
@@ -661,5 +683,9 @@ function showARandomWord(page: HTMLElement) {
 
     const randomIndex = Math.floor(Math.random() * targetWords.length);
     targetWords[randomIndex].classList.add("bloom-activeTextBox");
+    const playables = getAudioSentences([
+        targetWords[randomIndex] as HTMLElement
+    ]);
+    playAllAudio(playables);
     return true;
 }
