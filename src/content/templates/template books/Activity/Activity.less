@@ -8,14 +8,13 @@
 // or when "trying it" or running bloom player and in certain states
 
 // These ones show in the Correct tab, or when the user has given a correct answer.
-.drag-activity-start,
-.drag-activity-wrong,
-.drag-activity-try-it {
-    &:not(.drag-activity-correct) {
-        .drag-item-correct {
-            display: none;
-        }
-    }
+.drag-item-correct,
+.drag-item-wrong {
+    display: none;
+}
+.drag-activity-correct .drag-item-correct,
+.drag-activity-wrong .drag-item-wrong {
+    display: block;
 }
 
 // The slider can go away at runtime once everything is correctly placed.
@@ -28,6 +27,7 @@
     [data-target-of],
     .drag-item-random-sentence {
         opacity: 30%;
+        pointer-events: none;
     }
 }
 .drag-activity-wrong .bloom-page:not([data-activity="word-chooser-slider"]) {
@@ -35,18 +35,9 @@
     [data-target-of],
     .drag-item-random-sentence {
         opacity: 30%;
+        pointer-events: none;
     }
 }
-
-// // For this activity, we want the pictures to be visible in their final positions even when showing correct or wrong state.
-// .drag-activity-correct,
-// .drag-activity-wrong {
-//     .bloom-page[data-activity="word-chooser-slider"] {
-//         .bloom-textOverPicture {
-//             opacity: 100%;
-//         }
-//     }
-// }
 
 .drag-activity-try-it .drag-item-order-sentence {
     display: none;
@@ -59,15 +50,15 @@
 }
 
 // In the Wrong tab, or when the user has given a wrong answer.
-.drag-activity-start,
-.drag-activity-correct,
-.drag-activity-try-it {
-    &:not(.drag-activity-wrong) {
-        .drag-item-wrong {
-            display: none;
-        }
-    }
-}
+// .drag-activity-start,
+// .drag-activity-correct,
+// .drag-activity-try-it {
+//     &:not(.drag-activity-wrong) {
+//         .drag-item-wrong {
+//             display: none;
+//         }
+//     }
+// }
 
 // In the start tab, or in try-it when the user has not yet given an answer (or has clicked try-again)
 .drag-activity-correct,

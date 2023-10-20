@@ -24,7 +24,32 @@ let elementsToPlayConsecutivelyStack: HTMLElement[] = [];
 // that will replace something already playing.
 let currentAudioSessionNum: number = 0;
 
+// Play the specified elements, one after the other. When the last completes (or at once if the array is empty),
+// perform the 'then' action (typically used to play narration, which we put after videos).
+// Todo: Bloom Player version, at least, should work with play/pause/resume/change page architecture.
+export function playAllVideo(elements: HTMLVideoElement[], then: () => void) {
+    if (elements.length === 0) {
+        then();
+        return;
+    }
+    const video = elements[0];
+    // Note: sometimes this event does not fire normally, even when the video is played to the end.
+    // I have no figured out why. It may be something to do with how we are trimming them.
+    // In Bloom, this is worked around by raising the ended event when we detect that it has paused past the end point
+    // in resetToStartAfterPlayingToEndPoint.
+    // In BloomPlayer, we may need to do something similar.
+    video.addEventListener(
+        "ended",
+        () => {
+            playAllVideo(elements.slice(1), then);
+        },
+        { once: true }
+    );
+    video.play();
+}
+
 export function playAllAudio(elements: HTMLElement[]): void {
+    console.log("playAllAudio " + elements.length);
     const mediaPlayer = getPlayer();
     if (mediaPlayer) {
         //mediaPlayer.pause();
@@ -106,7 +131,7 @@ function getPlayer(): HTMLMediaElement {
     // Because it is a fixed function for the lifetime of this object, addEventListener
     // will not add it repeatedly.
     audio.addEventListener("ended", playEnded);
-    audio.addEventListener("error", playEnded);
+    audio.addEventListener("error", handlePlayError);
     return audio;
 }
 
@@ -213,7 +238,7 @@ function urlPrefix(): string {
     const bookSrc = window.location.href;
     const index = bookSrc.lastIndexOf("/");
     const bookFolderUrl = bookSrc.substring(0, index + 1);
-    return "/bloom/api/audio/wavFile?id=" + bookFolderUrl + "audio/";
+    return bookFolderUrl + "audio/";
 }
 
 function getFirstAudioSentenceWithinElement(
@@ -420,6 +445,8 @@ function playCurrentInternal() {
             //     );
             // }
 
+            gotErrorPlaying = false;
+            console.log("playing " + currentAudioId + "..." + mediaPlayer.src);
             const promise = mediaPlayer.play();
             ++currentAudioSessionNum;
             audioPlayCurrentStartTime = new Date().getTime();
@@ -534,7 +561,9 @@ function handlePlayPromise(promise: Promise<void>) {
     // so we mustn't call catch.
     if (promise && promise.catch) {
         promise.catch((reason: any) => {
-            // There is an error handler here, but the HTMLMediaElement also has an error handler (which will end up calling playEnded()).
+            // There is an error handler here, but the HTMLMediaElement also has an error handler (which may end up calling playEnded()).
+            // In case it doesn't, we make sure here that it happens
+            handlePlayError();
             // This promise.catch error handler is the only one that handles NotAllowedException (that is, playback not started because user has not interacted with the page yet).
             // However, older versions of browsers don't support promise from HTMLMediaElement.play(). So this cannot be the only error handler.
             // Thus we need both the promise.catch error handler as well as the HTMLMediaElement's error handler.
@@ -584,4 +613,22 @@ function handlePlayPromise(promise: Promise<void>) {
             // }
         });
     }
+}
+
+// If something goes wrong playing a media element, typically that we don't actually have a recording
+// for a particular one, we seem to sometimes get an error event, while other times, the promise returned
+// by play() is rejected. Both cases call handlePlayError, which calls playEnded, but in case we get both,
+// we don't want to call playEnded twice.
+let gotErrorPlaying = false;
+
+function handlePlayError() {
+    if (gotErrorPlaying) {
+        console.log("Already got error playing, not handling again");
+        return;
+    }
+    gotErrorPlaying = true;
+    console.log("Error playing, handling");
+    setTimeout(() => {
+        playEnded();
+    }, 100);
 }

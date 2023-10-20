@@ -1,7 +1,11 @@
 // This is the code that is shared between the test tab of the toolbox and bloom-player.
 
 import { get } from "jquery";
-import { kAudioSentence, playAllAudio } from "./dragActivityNarration";
+import {
+    kAudioSentence,
+    playAllAudio,
+    playAllVideo
+} from "./dragActivityNarration";
 
 let slots: { x: number; y: number }[] = [];
 let originalPositions = new Map<HTMLElement, { x: number; y: number }>();
@@ -80,7 +84,7 @@ export function prepareActivity(page: HTMLElement) {
 }
 
 function playInitialElements(page: HTMLElement) {
-    const possibleElements = getPlayableDivs(page).filter(e => {
+    const initialFilter = e => {
         const top = e.closest(".bloom-textOverPicture") as HTMLElement;
         if (!top) {
             return false; // don't expect any non-TOP in a drag-activity, but just in case
@@ -102,16 +106,19 @@ function playInitialElements(page: HTMLElement) {
             return false; // These are only played after they become visible
         }
         return true;
-    });
+    };
+    const videoElements = Array.from(page.getElementsByTagName("video")).filter(
+        initialFilter
+    );
+    const audioElements = getPlayableDivs(page).filter(initialFilter);
     const activeTextBox = page.getElementsByClassName(
         "bloom-activeTextBox"
     )[0] as HTMLElement;
     if (activeTextBox) {
-        possibleElements.push(activeTextBox);
+        audioElements.push(activeTextBox);
     }
-
-    const playables = getAudioSentences(possibleElements);
-    playAllAudio(playables);
+    const playables = getAudioSentences(audioElements);
+    playAllVideo(videoElements, () => playAllAudio(playables));
 }
 
 function getAudioSentences(editables: HTMLElement[]) {
@@ -343,6 +350,22 @@ function showCorrectOrWrongItems(page: HTMLElement, allCorrect: boolean) {
     const soundFile = page.getAttribute(
         allCorrect ? "data-correct-sound" : "data-wrong-sound"
     );
+    const playOtherStuff = () => {
+        const elementsMadeVisible = Array.from(
+            page.getElementsByClassName(
+                allCorrect ? "drag-item-correct" : "drag-item-wrong"
+            )
+        ) as HTMLElement[];
+        const possibleElements: HTMLElement[] = [];
+        const videoElements: HTMLVideoElement[] = [];
+        elementsMadeVisible.forEach(e => {
+            possibleElements.push(...getPlayableDivs(e));
+            videoElements.push(...Array.from(e.getElementsByTagName("video")));
+        });
+        const playables = getAudioSentences(possibleElements);
+        console.log("showCorrectOrWrongItems", playables);
+        playAllVideo(videoElements, () => playAllAudio(playables));
+    };
     if (soundFile) {
         const audio = new Audio("audio/" + soundFile);
         audio.style.visibility = "hidden";
@@ -354,20 +377,16 @@ function showCorrectOrWrongItems(page: HTMLElement, allCorrect: boolean) {
         // switches tabs or pages before we get done playing. Removing it immediately
         // prevents the sound being played. It's not a big deal if it doesn't get removed.
         audio.play();
-        audio.addEventListener("ended", () => {
-            page.removeChild(audio);
-            const elementsMadeVisible = Array.from(
-                page.getElementsByClassName(
-                    allCorrect ? "drag-item-correct" : "drag-item-wrong"
-                )
-            ) as HTMLElement[];
-            const possibleElements: HTMLElement[] = [];
-            elementsMadeVisible.forEach(e => {
-                possibleElements.push(...getPlayableDivs(e));
-                const playables = getAudioSentences(possibleElements);
-                playAllAudio(playables);
-            });
-        });
+        audio.addEventListener(
+            "ended",
+            () => {
+                page.removeChild(audio);
+                playOtherStuff();
+            },
+            { once: true }
+        );
+    } else {
+        playOtherStuff();
     }
 }
 
