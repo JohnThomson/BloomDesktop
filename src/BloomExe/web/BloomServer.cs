@@ -363,174 +363,193 @@ namespace Bloom.Api
 
 			var localPath = GetLocalPathWithoutQuery(info);
 
-			// root of our UI from a web browser pointed at localhost:8089
-			if (localPath == "")
+			try
 			{
-				info.ResponseContentType = "text/html";
-				info.WriteCompleteOutput(GetHtmlForRootOfBloomUI());
-				return true;
-			}
-			if (localPath == "test-dialog")
-			{
-				NonFatalProblem.Report(ModalIf.All, PassiveIf.None, "Test of bringing dialog in front of Browser.");
-				return true;
-			}
-			//enhance: something feeds back these branding logos with a weird URL, that shouldn't be.
-			if (ApiHandler.IsInvalidApiCall(localPath))
-				return false;
-
-
-			// this alias is used by the javascript preview pane
-			if (localPath.StartsWith("book-preview"))
-			{
-				if (localPath == "book-preview")
-				{
-					// if we're just working in a browser and forget that you have to have the index.htm
-					localPath = "book-preview/index.htm";
-				}
-
-				if (CurrentBook == null)
-				{
-					info.WriteCompleteOutput("");
-					return true;
-				}
-				if (localPath.EndsWith("video-placeholder.svg"))
-				{
-					Book.Book.EnsureVideoPlaceholderFile(_bookSelection.CurrentSelection);
-				}
-
-				if (localPath == "book-preview/index.htm")
+				// root of our UI from a web browser pointed at localhost:8089
+				if (localPath == "")
 				{
 					info.ResponseContentType = "text/html";
-					var html = CurrentBook.GetPreviewHtmlFileForWholeBook().getHtmlStringDisplayOnly();
-					info.WriteCompleteOutput(html);
+					info.WriteCompleteOutput(GetHtmlForRootOfBloomUI());
 					return true;
 				}
-				else if (localPath == "book-preview/defaultLangStyles.css")
+
+				if (localPath == "test-dialog")
 				{
-					// read in current defaultLangStyles.css content, add @font-face info to it if necessary.
-					var cssLangStyles = "";
-					var cssFilePath = Path.Combine(CurrentBook.FolderPath, "defaultLangStyles.css");
-					if (RobustFile.Exists(cssFilePath))
-						cssLangStyles = RobustFile.ReadAllText(cssFilePath);
-					var serve = FontServe.GetInstance();
-					var fontFaceDeclarations = serve.GetAllFontFaceDeclarations();
-					if (!cssLangStyles.Contains(fontFaceDeclarations))
+					NonFatalProblem.Report(ModalIf.All, PassiveIf.None, "Test of bringing dialog in front of Browser.");
+					return true;
+				}
+
+				//enhance: something feeds back these branding logos with a weird URL, that shouldn't be.
+				if (ApiHandler.IsInvalidApiCall(localPath))
+					return false;
+
+
+				// this alias is used by the javascript preview pane
+				if (localPath.StartsWith("book-preview"))
+				{
+					if (localPath == "book-preview")
 					{
-						info.ResponseContentType = "text/css";
-						var cssBuilder = new StringBuilder();
-						cssBuilder.Append(fontFaceDeclarations);
-						cssBuilder.Append(cssLangStyles);
-						info.WriteCompleteOutput(cssBuilder.ToString());
+						// if we're just working in a browser and forget that you have to have the index.htm
+						localPath = "book-preview/index.htm";
+					}
+
+					if (CurrentBook == null)
+					{
+						info.WriteCompleteOutput("");
 						return true;
 					}
-					localPath = localPath.Replace("book-preview", CurrentBook.FolderPath);
+
+					if (localPath.EndsWith("video-placeholder.svg"))
+					{
+						Book.Book.EnsureVideoPlaceholderFile(_bookSelection.CurrentSelection);
+					}
+
+					if (localPath == "book-preview/index.htm")
+					{
+						info.ResponseContentType = "text/html";
+						var html = CurrentBook.GetPreviewHtmlFileForWholeBook().getHtmlStringDisplayOnly();
+						info.WriteCompleteOutput(html);
+						return true;
+					}
+					else if (localPath == "book-preview/defaultLangStyles.css")
+					{
+						// read in current defaultLangStyles.css content, add @font-face info to it if necessary.
+						var cssLangStyles = "";
+						var cssFilePath = Path.Combine(CurrentBook.FolderPath, "defaultLangStyles.css");
+						if (RobustFile.Exists(cssFilePath))
+							cssLangStyles = RobustFile.ReadAllText(cssFilePath);
+						var serve = FontServe.GetInstance();
+						var fontFaceDeclarations = serve.GetAllFontFaceDeclarations();
+						if (!cssLangStyles.Contains(fontFaceDeclarations))
+						{
+							info.ResponseContentType = "text/css";
+							var cssBuilder = new StringBuilder();
+							cssBuilder.Append(fontFaceDeclarations);
+							cssBuilder.Append(cssLangStyles);
+							info.WriteCompleteOutput(cssBuilder.ToString());
+							return true;
+						}
+
+						localPath = localPath.Replace("book-preview", CurrentBook.FolderPath);
+					}
+					else
+					{
+						localPath = localPath.Replace("book-preview", CurrentBook.FolderPath);
+					}
 				}
-				else
+
+				// process request for directory index
+				if (info.RawUrl.EndsWith("/") && (Directory.Exists(localPath)))
 				{
-					localPath = localPath.Replace("book-preview", CurrentBook.FolderPath);
+					info.WriteError(403, "Directory listing denied");
+					return true;
 				}
-			}
 
-			// process request for directory index
-			if (info.RawUrl.EndsWith("/") && (Directory.Exists(localPath)))
-			{
-				info.WriteError(403, "Directory listing denied");
-				return true;
-			}
-			if (localPath.EndsWith("testconnection"))
-			{
-				info.WriteCompleteOutput("OK");
-				return true;
-			}
-
-			if (await ApiHandler.ProcessRequestAsync(info, localPath))
-				return true;
-
-			// Handle image file requests.
-			if (ProcessImageFileRequest(info))
-				return true;
-
-			if(localPath.Contains("CURRENTPAGE")) //useful when debugging. E.g. http://localhost:8089/bloom/CURRENTPAGE.htm will always show the page we're on.
-			{
-				localPath = _keyToCurrentPage;
-			}
-			if (localPath.ToLower().Contains("current-bloompub-url")) //useful when debugging. E.g. http://localhost:8089/bloom/current-bloompub-url will always show the page we're on.
-			{
-				info.ResponseContentType = "text/html";
-				info.WriteCompleteOutput($"<meta http-equiv=\"Refresh\" content=\"0; url='{PublishApi.PreviewUrl}'\" />");
-				return true;
-			}
-
-			if (localPath.Contains("writingSystemDisplayForUI.css"))
-			{
-				info.ResponseContentType = "text/css";
-				info.WriteCompleteOutput(CurrentCollectionSettings.GetWritingSystemDisplayForUICss());
-				return true;
-			}
-
-			string content;
-			bool gotSimulatedPage;
-			lock (_urlToSimulatedPageContent)
-			{
-				gotSimulatedPage = _urlToSimulatedPageContent.TryGetValue(localPath, out content);
-			}
-			if (gotSimulatedPage)
-			{
-				info.ResponseContentType = "text/html";
-				info.WriteCompleteOutput(content ?? "");
-				return true;
-			}
-
-			if (localPath.StartsWith(OriginalImageMarker))
-			{
-				// Path relative to in memory page file, and we want the file contents without modification.
-				// (Note that the in memory page file's own URL starts with this, so it's important to check
-				// for that BEFORE we do this check.)
-				// BL-11162 If we get here with the 'OriginalImageMarker' prefix and it's not an image type
-				// that can be degraded, there's no point in continuing on with the prefix!
-				localPath = localPath.Substring(OriginalImageMarker.Length + 1);
-				if (IsImageTypeThatCanBeDegraded(localPath))
+				if (localPath.EndsWith("testconnection"))
 				{
-					return ProcessAnyFileContent(info, localPath);
+					info.WriteCompleteOutput("OK");
+					return true;
 				}
-			}
 
-			if (localPath.StartsWith("localhost/", StringComparison.InvariantCulture))
-			{
-				var temp = LocalHostPathToFilePath(localPath);
-				if (RobustFile.Exists(temp))
-					localPath = temp;
-			}
-			// this is used only by the readium viewer
-			else if (localPath.StartsWith("node_modules/jquery/dist/jquery.js"))
-			{
-				localPath = BloomFileLocator.GetBrowserFile(false, "jquery.min.js");
-				// Avoid having "output/browser/" removed on Linux developer machines.
-				// GetBrowserFile adds output to the path on developer machines, but not user installs.
+				if (await ApiHandler.ProcessRequestAsync(info, localPath))
+					return true;
+
+				// Handle image file requests.
+				if (ProcessImageFileRequest(info))
+					return true;
+
+				if (localPath.Contains(
+					    "CURRENTPAGE")) //useful when debugging. E.g. http://localhost:8089/bloom/CURRENTPAGE.htm will always show the page we're on.
+				{
+					localPath = _keyToCurrentPage;
+				}
+
+				if (localPath.ToLower()
+				    .Contains(
+					    "current-bloompub-url")) //useful when debugging. E.g. http://localhost:8089/bloom/current-bloompub-url will always show the page we're on.
+				{
+					info.ResponseContentType = "text/html";
+					info.WriteCompleteOutput(
+						$"<meta http-equiv=\"Refresh\" content=\"0; url='{PublishApi.PreviewUrl}'\" />");
+					return true;
+				}
+
+				if (localPath.Contains("writingSystemDisplayForUI.css"))
+				{
+					info.ResponseContentType = "text/css";
+					info.WriteCompleteOutput(CurrentCollectionSettings.GetWritingSystemDisplayForUICss());
+					return true;
+				}
+
+				string content;
+				bool gotSimulatedPage;
+				lock (_urlToSimulatedPageContent)
+				{
+					gotSimulatedPage = _urlToSimulatedPageContent.TryGetValue(localPath, out content);
+				}
+
+				if (gotSimulatedPage)
+				{
+					info.ResponseContentType = "text/html";
+					info.WriteCompleteOutput(content ?? "");
+					return true;
+				}
+
+				if (localPath.StartsWith(OriginalImageMarker))
+				{
+					// Path relative to in memory page file, and we want the file contents without modification.
+					// (Note that the in memory page file's own URL starts with this, so it's important to check
+					// for that BEFORE we do this check.)
+					// BL-11162 If we get here with the 'OriginalImageMarker' prefix and it's not an image type
+					// that can be degraded, there's no point in continuing on with the prefix!
+					localPath = localPath.Substring(OriginalImageMarker.Length + 1);
+					if (IsImageTypeThatCanBeDegraded(localPath))
+					{
+						return ProcessAnyFileContent(info, localPath);
+					}
+				}
+
+				if (localPath.StartsWith("localhost/", StringComparison.InvariantCulture))
+				{
+					var temp = LocalHostPathToFilePath(localPath);
+					if (RobustFile.Exists(temp))
+						localPath = temp;
+				}
+				// this is used only by the readium viewer
+				else if (localPath.StartsWith("node_modules/jquery/dist/jquery.js"))
+				{
+					localPath = BloomFileLocator.GetBrowserFile(false, "jquery.min.js");
+					// Avoid having "output/browser/" removed on Linux developer machines.
+					// GetBrowserFile adds output to the path on developer machines, but not user installs.
+					return ProcessContent(info, localPath);
+				}
+
+				// As of July 2022, map files are typically found with the corresponding JS bundle files
+				// in output/debug. The browser correctly includes that part of the path to the JS file
+				// when deriving a URL for the map, and removing it prevents the map file being found
+				// and greatly complicates debugging.
+				// The only reason I'm not completely deleting this code is I don't understand why
+				// it was ever needed or what changed so that it became harmful, so PERHAPS leaving
+				// it here commented out will provide a clue if we ever again encounter the situation
+				// where it was helpful.
+				//Firefox debugger, looking for a source map, was prefixing in this unexpected
+				//way.
+				//if(localPath.EndsWith("map"))
+				//	localPath = localPath.Replace("output/browser/", "");
+
+				if (localPath == "")
+				{
+					info.ResponseContentType = "text/html";
+					info.WriteCompleteOutput(RobustFile.ReadAllText(@"D:\temp\test.htm"));
+					return true;
+				}
+
 				return ProcessContent(info, localPath);
 			}
-
-			// As of July 2022, map files are typically found with the corresponding JS bundle files
-			// in output/debug. The browser correctly includes that part of the path to the JS file
-			// when deriving a URL for the map, and removing it prevents the map file being found
-			// and greatly complicates debugging.
-			// The only reason I'm not completely deleting this code is I don't understand why
-			// it was ever needed or what changed so that it became harmful, so PERHAPS leaving
-			// it here commented out will provide a clue if we ever again encounter the situation
-			// where it was helpful.
-			//Firefox debugger, looking for a source map, was prefixing in this unexpected
-			//way.
-			//if(localPath.EndsWith("map"))
-			//	localPath = localPath.Replace("output/browser/", "");
-
-			if (localPath == "")
+			catch (Exception e)
 			{
-				info.ResponseContentType = "text/html";
-				info.WriteCompleteOutput(File.ReadAllText(@"D:\temp\test.htm"));
-				return true;
+				throw new ApplicationException("Error processing request for " + localPath, e);
 			}
-			return ProcessContent(info, localPath);
 		}
 
 		// Handle requests for image files, that is, URLs that end in one of our image extensions.

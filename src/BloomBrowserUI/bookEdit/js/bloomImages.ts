@@ -194,7 +194,12 @@ export function addImageEditingButtons(containerDiv: HTMLElement): void {
     if (!containerDiv || containerDiv.classList.contains("hoverUp")) {
         return;
     }
-    let img = getImgFromContainer(this);
+    if (containerDiv.closest(".drag-activity-try-it")) {
+        // I wish this knowledge was not here, but I don't see a better way to prevent image editing
+        // and hover effects when in test mode.
+        return;
+    }
+    let img = getImgFromContainer(containerDiv);
     if (img.length === 0)
         // This case is probably a left over from some previous Bloom where
         // we were using background images instead of <img>? But it does
@@ -462,10 +467,11 @@ function DisableImageTooltip(container: HTMLElement) {
 // Note: since this function (obviously) updates state / has side effects,
 // callers should consider the order operations are done if multiple operations happen at or near the same time
 // to ensure that the final state is the one they desire.
-function UpdateImageTooltipVisibility(container: HTMLElement) {
+export function UpdateImageTooltipVisibility(container: HTMLElement) {
     if (
         container.classList.contains("bloom-hideImageButtons") ||
-        container.classList.contains("ui-suppressImageButtons")
+        container.classList.contains("ui-suppressImageButtons") ||
+        container.closest(".drag-activity-try-it")
     ) {
         // Since the image buttons aren't visible, hide the image tooltip too
         DisableImageTooltip(container);

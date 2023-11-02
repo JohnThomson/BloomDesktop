@@ -41,6 +41,13 @@ import {
 } from "../../../react_components/color-picking/bloomPalette";
 import { OverlayKeyHints } from "./overlayKeyHints";
 import { EnableAllImageEditing } from "../../js/bloomImages";
+import {
+    OverlayImageItem,
+    OverlayItem,
+    OverlayItemRegion,
+    OverlayItemRow,
+    OverlayTextItem
+} from "./overlayItem";
 
 const OverlayToolControls: React.FunctionComponent = () => {
     const l10nPrefix = "ColorPicker.";
@@ -767,111 +774,58 @@ const OverlayToolControls: React.FunctionComponent = () => {
                         height: 100%;
                     `}
                 >
-                    <div
-                        id={"overlayToolControlShapeChooserRegion"}
-                        className={!isXmatter ? "" : "disabled"}
-                    >
-                        <Div
-                            l10nKey="EditTab.Toolbox.ComicTool.DragInstructions"
-                            className="overlayToolControlDragInstructions"
-                        >
-                            Drag any of these overlays onto the image:
-                        </Div>
-                        <div
-                            className={"shapeChooserRow"}
-                            id={"shapeChooserRow1"}
-                        >
-                            <img
-                                id="shapeChooserSpeechBubble"
-                                className="overlayToolControlDraggableBubble"
+                    <OverlayItemRegion className={!isXmatter ? "" : "disabled"}>
+                        <OverlayItemRow>
+                            <OverlayItem
                                 src="/bloom/bookEdit/toolbox/overlay/comic-icon.svg"
-                                draggable={!isBookLocked} // insufficient to prevent dragging!
-                                onDragStart={
-                                    !isBookLocked
-                                        ? ev => ondragstart(ev, "speech")
-                                        : undefined
-                                }
-                                onDragEnd={
-                                    !isBookLocked
-                                        ? ev => ondragend(ev, "speech")
-                                        : undefined
-                                }
+                                style="speech"
                             />
-                            <img
-                                id="shapeChooserImagePlaceholder"
-                                className="overlayToolControlDraggableBubble"
-                                src="/bloom/bookEdit/toolbox/overlay/image-overlay.svg"
-                                draggable={!isBookLocked}
-                                onDragStart={
-                                    !isBookLocked
-                                        ? ev => ondragstart(ev, "image")
-                                        : undefined
-                                }
-                                onDragEnd={
-                                    !isBookLocked
-                                        ? ev => ondragend(ev, "image")
-                                        : undefined
-                                }
-                            />
-                            <img
-                                id="shapeChooserVideoPlaceholder"
-                                className="overlayToolControlDraggableBubble"
+                            <OverlayImageItem style="image" />
+                            <OverlayItem
                                 src="/bloom/bookEdit/toolbox/overlay/sign-language-overlay.svg"
-                                draggable={!isBookLocked}
-                                onDragStart={
-                                    !isBookLocked
-                                        ? ev => ondragstart(ev, "video")
-                                        : undefined
-                                }
-                                onDragEnd={
-                                    !isBookLocked
-                                        ? ev => ondragend(ev, "video")
-                                        : undefined
-                                }
+                                style="video"
                             />
-                        </div>
-                        <div
-                            className={"shapeChooserRow"}
-                            id={"shapeChooserRow2"}
-                        >
-                            <Span
-                                id="shapeChooserTextBlock"
+                        </OverlayItemRow>
+                        <OverlayItemRow secondRow={true}>
+                            <OverlayTextItem
+                                css={css`
+                                    margin-left: 5px; // Match the spacing on the bubble icon above
+                                    flex-grow: 1; // Let it fill as much space as possible to the right
+                                    text-align: center; // Center the text horizontally
+
+                                    padding-top: 1em;
+                                    vertical-align: middle;
+                                    padding-bottom: 1em;
+
+                                    color: white;
+                                    border: 1px dotted white;
+                                `}
                                 l10nKey="EditTab.Toolbox.ComicTool.TextBlock"
-                                className="overlayToolControlDraggableBubble"
-                                draggable={!isBookLocked}
-                                onDragStart={
-                                    !isBookLocked
-                                        ? ev => ondragstart(ev, "none")
-                                        : undefined
-                                }
-                                onDragEnd={
-                                    !isBookLocked
-                                        ? ev => ondragend(ev, "none")
-                                        : undefined
-                                }
-                            >
-                                Text Block
-                            </Span>
-                            <Span
-                                id="shapeChooserCaption"
+                                style="none"
+                            />
+
+                            <OverlayTextItem
+                                css={css`
+                                    // Horizontal positioning / sizing of the element
+                                    margin-left: 10px;
+                                    flex-grow: 1; // Allow it to fill the entire space (but with margin-left and margin-right outside of it)
+                                    text-align: center;
+
+                                    // Vertical sizing
+                                    padding-top: 5px;
+                                    padding-bottom: 5px;
+
+                                    border: 1px solid black;
+                                    color: black;
+                                    background-color: white;
+                                    box-shadow: 3px 3px black;
+                                `}
                                 l10nKey="EditTab.Toolbox.ComicTool.Options.Style.Caption"
-                                className="overlayToolControlDraggableBubble"
-                                draggable={!isBookLocked}
-                                onDragStart={
-                                    !isBookLocked
-                                        ? ev => ondragstart(ev, "caption")
-                                        : undefined
-                                }
-                                onDragEnd={
-                                    !isBookLocked
-                                        ? ev => ondragend(ev, "caption")
-                                        : undefined
-                                }
-                            >
-                                Caption
-                            </Span>
-                        </div>
-                    </div>
+                                style="caption"
+                            />
+                        </OverlayItemRow>
+                    </OverlayItemRegion>
+
                     <div
                         id={"overlayToolControlOptionsRegion"}
                         className={bubbleType && !isXmatter ? "" : "disabled"}

@@ -44,17 +44,23 @@ namespace Bloom.Edit
 			var isSameFile = IsSameFilePath(bookFolderPath, HtmlDom.GetImageElementUrl(imgOrDivWithBackgroundImage), imageInfo);
 			var imageFileName = ImageUtils.ProcessAndSaveImageIntoFolder(imageInfo, bookFolderPath, isSameFile);
 			// Ask Javascript code to update the live version of the page.
+			UpdateImageOnPage(webSocketServer, imgIndex, imageInfo, imageFileName);
+			// It would seem more natural to use a metadata-saving method on imageInfo,
+			// but the imageInfo has the source file's path locked into it, and the API
+			// gives us no way to change it, so such a save would go to the wrong file.
+			imageInfo.Metadata.Write(Path.Combine(bookFolderPath, imageFileName));
+		}
+
+		public void UpdateImageOnPage(BloomWebSocketServer webSocketServer, int imgIndex, PalasoImage imageInfo,
+			string imageFileName)
+		{
 			dynamic messageBundle = new DynamicJson();
 			messageBundle.imgIndex = imgIndex;
 			messageBundle.src = UrlPathString.CreateFromUnencodedString(imageFileName).UrlEncoded;
 			messageBundle.copyright = imageInfo.Metadata.CopyrightNotice ?? "";
 			messageBundle.creator = imageInfo.Metadata.Creator ?? "";
 			messageBundle.license = imageInfo.Metadata.License?.ToString() ?? "";
-			EditingViewApi.SendEventAndWaitForComplete(webSocketServer,"edit", "changeImage", messageBundle);
-			// It would seem more natural to use a metadata-saving method on imageInfo,
-			// but the imageInfo has the source file's path locked into it, and the API
-			// gives us no way to change it, so such a save would go to the wrong file.
-			imageInfo.Metadata.Write(Path.Combine(bookFolderPath, imageFileName));
+			EditingViewApi.SendEventAndWaitForComplete(webSocketServer, "edit", "changeImage", messageBundle);
 		}
 
 		/// <summary>

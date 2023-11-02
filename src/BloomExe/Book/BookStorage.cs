@@ -1032,6 +1032,17 @@ namespace Bloom.Book
 			var backgroundMusicFileNames = GetBackgroundMusicFileNamesReferencedInBook();
 			usedAudioFileNames.AddRange(backgroundMusicFileNames);
 
+			var dragActivitypages = Dom.SafeSelectNodes("//div[@data-activity]");
+			foreach (XmlElement dap in dragActivitypages)
+			{
+				var correctSound = dap.Attributes["data-correct-sound"];
+				var wrongSound = dap.Attributes["data-wrong-sound"];
+				if (correctSound != null)
+					usedAudioFileNames.Add(correctSound.Value);
+				if (wrongSound != null)
+					usedAudioFileNames.Add(wrongSound.Value);
+			}
+
 			// Don't get too trigger-happy with the delete button if you're not in publish mode
 			if (!isForPublish)
 			{
