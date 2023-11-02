@@ -23,7 +23,7 @@
 }
 
 .drag-activity-correct .bloom-page:not([data-activity="word-chooser-slider"]) {
-    .bloom-textOverPicture:not(.drag-item-correct),
+    .bloom-textOverPicture:not(.drag-item-correct):not(.bloom-change-page-button),
     [data-target-of],
     .drag-item-random-sentence {
         opacity: 30%;
@@ -31,7 +31,9 @@
     }
 }
 .drag-activity-wrong .bloom-page:not([data-activity="word-chooser-slider"]) {
-    .bloom-textOverPicture:not(.drag-item-wrong),
+    // Review: we want the change-page buttons to be visible and clickable always.
+    // Should we have a distinct class for this, like bloom-all-tabs?
+    .bloom-textOverPicture:not(.drag-item-wrong):not(.bloom-change-page-button),
     [data-target-of],
     .drag-item-random-sentence {
         opacity: 30%;
@@ -47,6 +49,7 @@
     display: flex;
     flex-wrap: wrap;
     row-gap: 5px;
+    position: absolute;
 }
 
 // In the Wrong tab, or when the user has given a wrong answer.
@@ -249,6 +252,10 @@
         border-radius: 10px;
         padding: 0px 11px;
         margin-right: 5px;
+        // In bloom-player, cursor seems to be auto, which here gives us a text editing cursor.
+        // Not sure why that doesn't happen in Try-it mode in Bloom desktop.
+        // But anyway, we don't want it.
+        cursor: default;
     }
 
     [data-target-of] {
@@ -259,6 +266,20 @@
             box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1),
                 0 0 8px var(--dragable-background-color);
         }
+    }
+
+    .bloom-change-page-button {
+        background-color: var(--dragable-background-color);
+        color: var(--draggable-color);
+        border-radius: 10px;
+        padding: 3px 2px 2px 10px;
+        box-sizing: border-box;
+        // This puts it in front of other things so it can actually be clicked.
+        z-index: @textOverPictureZIndex;
+        // In bloom-player, cursor seems to be auto, which here gives us a text editing cursor.
+        // Not sure why that doesn't happen in Try-it mode in Bloom desktop.
+        // But anyway, we don't want it.
+        cursor: default;
     }
 
     // We could add another common class to these three elements, but other themes

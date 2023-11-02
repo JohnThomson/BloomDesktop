@@ -48,8 +48,16 @@ export function playAllVideo(elements: HTMLVideoElement[], then: () => void) {
     video.play();
 }
 
+let currentPlayPage: HTMLElement | null = null;
+// Unused in Bloom desktop, but in Bloom player, current page might change while a series of sounds
+// is playing. This lets us avoid starting the next sound if the page has changed in the meantime.
+export function setCurrentPage(page: HTMLElement) {
+    currentPlayPage = page;
+}
+
 export function playAllAudio(elements: HTMLElement[]): void {
     console.log("playAllAudio " + elements.length);
+    currentPlayPage = elements[0]?.closest(".bloom-page") as HTMLElement;
     const mediaPlayer = getPlayer();
     if (mediaPlayer) {
         //mediaPlayer.pause();
@@ -228,17 +236,28 @@ function updatePlayerStatus() {
 }
 
 function currentAudioUrl(id: string): string {
-    const result = urlPrefix() + id + ".mp3";
+    const result = urlPrefix() + "/audio/" + id + ".mp3";
     console.log("trying to play " + result);
     return result;
 }
 
-function urlPrefix(): string {
-    //const pageFrame = getPageFrame()!; // Note: Just fail fast if it's null.
+let playerUrlPrefix = "";
+// In bloom player, figuring the url prefix is more complicated. We pass it in.
+// In Bloom desktop, we don't call this at all. The code that would naturally do it
+// is in the wrong iframe and it's a pain to get it to the right one.
+// But there, the urlPrevix function works fine.
+export function setPlayerUrlPrefix(prefix: string) {
+    playerUrlPrefix = prefix;
+}
+
+export function urlPrefix(): string {
+    if (playerUrlPrefix) {
+        return playerUrlPrefix;
+    }
     const bookSrc = window.location.href;
     const index = bookSrc.lastIndexOf("/");
-    const bookFolderUrl = bookSrc.substring(0, index + 1);
-    return bookFolderUrl + "audio/";
+    const bookFolderUrl = bookSrc.substring(0, index);
+    return bookFolderUrl;
 }
 
 function getFirstAudioSentenceWithinElement(
@@ -383,9 +402,9 @@ let currentPlaybackMode: PlaybackMode = PlaybackMode.NewPage;
 // This is used for analytics reporting purposes
 let audioPlayCurrentStartTime: number | null = null; // milliseconds (since 1970/01/01, from new Date().getTime())
 
+// Our current notion of current page is based on the page of the list of elements that
 function getCurrentPage(): HTMLElement {
-    // Todo: may not be this simple in Bloom Player, compare how narration.ts keeps track of playerPage
-    return document.getElementsByClassName("bloom-page")[0] as HTMLElement;
+    return currentPlayPage!;
 }
 
 function canPlayAudio(current: Element): boolean {

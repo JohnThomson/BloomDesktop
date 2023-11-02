@@ -4,14 +4,27 @@ import { get } from "jquery";
 import {
     kAudioSentence,
     playAllAudio,
-    playAllVideo
+    playAllVideo,
+    urlPrefix
 } from "./dragActivityNarration";
 
 let slots: { x: number; y: number }[] = [];
 let originalPositions = new Map<HTMLElement, { x: number; y: number }>();
 let currentPage: HTMLElement | undefined;
-export function prepareActivity(page: HTMLElement) {
+let changePageAction: (next: boolean) => void | undefined;
+export function prepareActivity(
+    page: HTMLElement,
+    cpa: (next: boolean) => void
+) {
     currentPage = page;
+    changePageAction = cpa;
+    const changePageButtons = Array.from(
+        page.getElementsByClassName("bloom-change-page-button")
+    );
+    changePageButtons.forEach(b =>
+        b.addEventListener("click", changePageButtonClicked)
+    );
+
     slots = [];
     originalPositions = new Map<HTMLElement, { x: number; y: number }>();
     page.querySelectorAll("[data-bubble-id]").forEach((elt: HTMLElement) => {
@@ -26,7 +39,7 @@ export function prepareActivity(page: HTMLElement) {
         const y = target.offsetTop;
         slots.push({ x, y });
         originalPositions.set(elt, { x: elt.offsetLeft, y: elt.offsetTop });
-        elt.addEventListener("mousedown", startDrag);
+        elt.addEventListener("pointerdown", startDrag);
     });
     const checkButtons = Array.from(
         page.getElementsByClassName("check-button")
@@ -51,8 +64,9 @@ export function prepareActivity(page: HTMLElement) {
     // random word order in sentence
     Array.from(page.getElementsByClassName("drag-item-order-sentence")).forEach(
         (elt: HTMLElement) => {
-            const content = elt.getElementsByClassName("bloom-content1")[0]
-                ?.textContent;
+            const content = elt
+                .getElementsByClassName("bloom-content1")[0]
+                ?.textContent?.trim();
             if (!content) return;
             const words = content.split(" ");
             const shuffledWords = shuffle(words);
@@ -64,7 +78,7 @@ export function prepareActivity(page: HTMLElement) {
                 wordItem.classList.add("drag-item-order-word");
                 wordItem.textContent = word;
                 container.appendChild(wordItem);
-                wordItem.addEventListener("mousedown", startDragReposition);
+                wordItem.addEventListener("pointerdown", startDragReposition);
             });
             container.style.left = elt.style.left;
             container.style.top = elt.style.top;
@@ -81,6 +95,13 @@ export function prepareActivity(page: HTMLElement) {
     showARandomWord(page);
     setupSliderImageEvents(page);
     playInitialElements(page);
+}
+
+function changePageButtonClicked(e: MouseEvent) {
+    const next = (e.currentTarget as HTMLElement).classList.contains(
+        "bloom-next-page"
+    );
+    changePageAction?.(next);
 }
 
 function playInitialElements(page: HTMLElement) {
@@ -167,8 +188,15 @@ function shuffle<T>(array: T[]): T[] {
 // May also be useful to do when switching pages in player. If not, we may want to move
 // this out of this runtime file; but it's nice to keep it with prepareActivity.
 export function undoPrepareActivity(page: HTMLElement) {
+    const changePageButtons = Array.from(
+        page.getElementsByClassName("bloom-change-page-button")
+    );
+    changePageButtons.forEach(b =>
+        b.removeEventListener("click", changePageButtonClicked)
+    );
+
     page.querySelectorAll("[data-bubble-id]").forEach((elt: HTMLElement) => {
-        elt.removeEventListener("mousedown", startDrag);
+        elt.removeEventListener("pointerdown", startDrag);
     });
     const checkButtons = Array.from(
         page.getElementsByClassName("check-button")
@@ -223,7 +251,9 @@ let snapped = false;
 let originalLeft = "";
 let originalTop = "";
 
-const startDrag = (e: MouseEvent) => {
+const startDrag = (e: PointerEvent) => {
+    if (e.button !== 0) return; // only left button
+    if (e.ctrlKey) return; // ignore ctrl+click
     // get the mouse cursor position at startup:
     const target = e.currentTarget as HTMLElement;
     dragTarget = target;
@@ -233,15 +263,16 @@ const startDrag = (e: MouseEvent) => {
     originalTop = target.style.top;
     dragStartX = e.clientX / scale - target.offsetLeft;
     dragStartY = e.clientY / scale - target.offsetTop;
-    page.addEventListener("mouseup", stopDrag);
+    target.setPointerCapture(e.pointerId);
+    target.addEventListener("pointerup", stopDrag);
     // call a function whenever the cursor moves:
-    page.addEventListener("mousemove", elementDrag);
+    target.addEventListener("pointermove", elementDrag);
     const possibleElements = getPlayableDivs(target);
     const playables = getAudioSentences(possibleElements);
     playAllAudio(playables);
 };
 
-const elementDrag = (e: MouseEvent) => {
+const elementDrag = (e: PointerEvent) => {
     const page = dragTarget.closest(".bloom-page") as HTMLElement;
     const scale = page.getBoundingClientRect().width / page.offsetWidth;
     e.preventDefault();
@@ -266,15 +297,15 @@ const elementDrag = (e: MouseEvent) => {
     dragTarget.style.top = y + "px";
     dragTarget.style.left = x + "px";
 };
-const stopDrag = (e: MouseEvent) => {
+const stopDrag = (e: PointerEvent) => {
     const page = dragTarget.closest(".bloom-page") as HTMLElement;
     if (!snapped) {
         const oldPosition = originalPositions.get(dragTarget);
         dragTarget.style.top = oldPosition?.y + "px";
         dragTarget.style.left = oldPosition?.x + "px";
     }
-    page.removeEventListener("mouseup", stopDrag);
-    page.removeEventListener("mousemove", elementDrag);
+    dragTarget.removeEventListener("pointerup", stopDrag);
+    dragTarget.removeEventListener("pointermove", elementDrag);
 
     // If there was already a bubble in that slot, move it back to its original position.
     const bubbles = Array.from(page.querySelectorAll("[data-bubble-id]"));
@@ -363,11 +394,10 @@ function showCorrectOrWrongItems(page: HTMLElement, allCorrect: boolean) {
             videoElements.push(...Array.from(e.getElementsByTagName("video")));
         });
         const playables = getAudioSentences(possibleElements);
-        console.log("showCorrectOrWrongItems", playables);
         playAllVideo(videoElements, () => playAllAudio(playables));
     };
     if (soundFile) {
-        const audio = new Audio("audio/" + soundFile);
+        const audio = new Audio(urlPrefix() + "/audio/" + soundFile);
         audio.style.visibility = "hidden";
         // To my surprise, in BP storybook it works without adding the audio to any document.
         // But in Bloom proper, it does not. I think it is because this code is part of the toolbox,
@@ -426,8 +456,10 @@ function checkDraggables(page: HTMLElement) {
     return allCorrect;
 }
 
-function startDragReposition(e: MouseEvent) {
-    // get the mouse cursor position at startup:
+function startDragReposition(e: PointerEvent) {
+    if (e.button !== 0) return; // only left button
+    if (e.ctrlKey) return; // ignore ctrl+click
+    // get the pointer position at startup:
     const target = e.currentTarget as HTMLElement;
     itemBeingRepositioned = target;
     const page = target.closest(".bloom-page") as HTMLElement;
@@ -439,20 +471,34 @@ function startDragReposition(e: MouseEvent) {
     draggableReposition.classList.add("drag-item-order-word");
     draggableReposition.textContent = target.textContent;
     draggableReposition.style.position = "absolute";
-    draggableReposition.style.left = target.offsetLeft / scale + "px"; // scale?
-    draggableReposition.style.top = target.offsetTop / scale + "px";
-    page.addEventListener("mouseup", stopDragReposition);
+    draggableReposition.style.left = target.offsetLeft + "px";
+    draggableReposition.style.top = target.offsetTop + "px";
+    // It's bizarre to put the listeners and pointer capture on the target, which is NOT being dragged,
+    // rather than the draggableReposition, which is. But it doesn't work to setPointerCapture on
+    // the draggableReposition. I think it's because the draggableReposition is not the object clicked.
+    // And once the mouse events are captured by the target, all mouse events to to that, so we get
+    // them properly while dragging, and can use them to move the draggableReposition.
+    target.setPointerCapture(e.pointerId);
+    target.addEventListener("pointerup", stopDragReposition);
     // call a function whenever the cursor moves:
-    draggableReposition.addEventListener("mousemove", elementDragReposition);
+    target.addEventListener("pointermove", elementDragReposition);
+    // not sure we need this.
+    // recommended by https://www.redblobgames.com/making-of/draggable/ to prevent touch movement
+    // dragging the page behind the draggable element.
+    target.addEventListener("touchstart", preventTouchDefault);
     target.parentElement?.appendChild(draggableReposition);
 }
 
-const elementDragReposition = (e: MouseEvent) => {
+const preventTouchDefault = (e: TouchEvent) => {
+    e.preventDefault();
+};
+
+const elementDragReposition = (e: PointerEvent) => {
     const page = draggableReposition.closest(".bloom-page") as HTMLElement;
     const scale = page.getBoundingClientRect().width / page.offsetWidth;
     e.preventDefault();
-    let x = e.clientX / scale - dragStartX;
-    let y = e.clientY / scale - dragStartY;
+    const x = e.clientX / scale - dragStartX;
+    const y = e.clientY / scale - dragStartY;
     //let deltaMin = Number.MAX_VALUE;
 
     // Do we want/need any kind of snapping?
@@ -474,13 +520,22 @@ const elementDragReposition = (e: MouseEvent) => {
     draggableReposition.style.left = x + "px";
 };
 
-const stopDragReposition = (e: MouseEvent) => {
+const stopDragReposition = (e: PointerEvent) => {
     const page = draggableReposition.closest(".bloom-page") as HTMLElement;
-    page.removeEventListener("mouseup", stopDragReposition);
-    const scale = page.getBoundingClientRect().width / page.offsetWidth;
     e.preventDefault();
-    let x = e.clientX / scale;
-    let y = e.clientY / scale;
+    const x = e.clientX;
+    const y = e.clientY;
+    itemBeingRepositioned.removeEventListener("pointerup", stopDragReposition);
+    itemBeingRepositioned.removeEventListener(
+        "pointermove",
+        elementDragReposition
+    );
+    itemBeingRepositioned.releasePointerCapture(e.pointerId); // redundant I think
+    itemBeingRepositioned.removeEventListener(
+        "touchstart",
+        preventTouchDefault
+    );
+    // We're getting rid of this, so we don't need to remove the event handlers it has.
     draggableReposition.parentElement?.removeChild(draggableReposition);
     const itemDroppedOn = page.ownerDocument
         .elementFromPoint(x, y)
@@ -549,7 +604,7 @@ export function setupWordChooserSlider(page: HTMLElement) {
     // won't have fancy effects like continuing to slide if you flick it.
     // But it's also possible this is good enough. Not really expecting a lot more items
     // than will fit.
-    const moveHandler = (e: MouseEvent) => {
+    const moveHandler = (e: PointerEvent) => {
         let x = e.clientX / scale - dragStartX;
         if (Math.abs(x) > 4) {
             draggingSlider = true;
@@ -563,18 +618,24 @@ export function setupWordChooserSlider(page: HTMLElement) {
         }
         slider.style.left = x + "px";
     };
-    const upHandler = (e: MouseEvent) => {
-        slider.removeEventListener("mousemove", moveHandler);
-        page.ownerDocument.removeEventListener("mouseup", upHandler);
+    const upHandler = (e: PointerEvent) => {
+        slider.removeEventListener("pointermove", moveHandler);
+        page.ownerDocument.body.removeEventListener("pointerup", upHandler);
         setTimeout(() => {
             draggingSlider = false;
         }, 50);
     };
-    slider.addEventListener("mousedown", e => {
+    slider.addEventListener("pointerdown", e => {
+        if (e.button !== 0) return; // only left button
+        if (e.ctrlKey) return; // ignore ctrl+click
         dragStartX = e.clientX / scale - slider.offsetLeft;
-        slider.addEventListener("mousemove", moveHandler);
-        // added to the document so we catch it even if it happens outside the slider
-        page.ownerDocument.addEventListener("mouseup", upHandler);
+        slider.addEventListener("pointermove", moveHandler);
+        // We'd like to capture the pointer, and then we could put the up handler on the slider.
+        // But then a click on an image inside the slider never gets the mouse up event, so never
+        // gets a click. So we put the up handler on the body (so that it will get called even if
+        // the up happens outside the slider).
+        //slider.setPointerCapture(e.pointerId);
+        page.ownerDocument.body.addEventListener("pointerup", upHandler);
     });
 
     const imagesToPlace = shuffle(
@@ -582,20 +643,41 @@ export function setupWordChooserSlider(page: HTMLElement) {
     );
     imagesToPlace.forEach((imgTop: HTMLElement) => {
         const img = imgTop.getElementsByTagName("img")[0];
-        if (!img) {
-            return; // weird
+        let sliderImgSrc = "";
+        if (img) {
+            // An older comment said:
+            // Not just img.src: that yields a full URL, which will show the image, but will not match
+            // when we are later trying to find the corresponding original image.
+            // I'm not finding anything that works that way, and the code below finds a full URL
+            sliderImgSrc = img.getAttribute("src")!;
+        } else {
+            // In bloom-player, for a forgotten and possibly obsolete reason, we use a background image
+            // on the container. (I vaguely recall it may be important when animating the main image.)
+            const imgContainer = imgTop.getElementsByClassName(
+                "bloom-imageContainer"
+            )[0] as HTMLElement;
+            if (!imgContainer) {
+                return; // weird
+            }
+            const bgImg = imgContainer.style.backgroundImage;
+            if (!bgImg) {
+                return; // weird
+            }
+            const start = bgImg.indexOf('"');
+            const end = bgImg.lastIndexOf('"');
+            sliderImgSrc = bgImg.substring(start + 1, end);
         }
         // not using cloneNode here because I don't want to bring along any alt text that might provide a clue
-        const sliderImg = img.ownerDocument.createElement("img");
+        const sliderImg = imgTop.ownerDocument.createElement("img");
         // Not just img.src: that yields a full URL, which will show the image, but will not match
         // when we are later trying to find the corresponding original image.
-        sliderImg.src = img.getAttribute("src")!;
+        sliderImg.src = sliderImgSrc;
         sliderImg.ondragstart = () => false;
         sliderImg.setAttribute(
             "data-img",
             imgTop.getAttribute("data-img-txt")!
         );
-        const sliderItem = img.ownerDocument.createElement("div");
+        const sliderItem = imgTop.ownerDocument.createElement("div");
         sliderItem.classList.add("bloom-activity-slider-item");
         sliderItem.appendChild(sliderImg);
         slider.appendChild(sliderItem);
