@@ -3,20 +3,20 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using Bloom.Book;
 using System.Windows.Forms;
 using System.Xml;
 using Bloom.Api;
-using SIL.Reporting;
-using SIL.Xml;
+using Bloom.Book;
+using Bloom.FontProcessing;
 using Bloom.Publish.Epub;
 using Bloom.web;
 using Bloom.web.controllers;
+using Bloom.Workspace;
 using L10NSharp;
 using SIL.IO;
 using SIL.Progress;
-using Bloom.FontProcessing;
-using Bloom.Workspace;
+using SIL.Reporting;
+using SIL.Xml;
 
 namespace Bloom.Publish
 {
@@ -622,11 +622,27 @@ namespace Bloom.Publish
                 WantMusic = true
             };
             filter.CopyBookFolderFiltered(tempFolderPath);
+            var collectionStylesSource = Path.Combine(
+                Path.GetDirectoryName(bookFolderPath),
+                "customCollectionStyles.css"
+            );
+            var collectionStylesDest = Path.Combine(tempFolderPath, "customCollectionStyles.css");
+            if (RobustFile.Exists(collectionStylesSource))
+            {
+                RobustFile.Copy(collectionStylesSource, collectionStylesDest, true);
+            }
+            else
+            {
+                RobustFile.Delete(collectionStylesDest);
+            }
             // We can always save in a temp book
             var bookInfo = new BookInfo(tempFolderPath, true, new AlwaysEditSaveContext())
             {
                 UseDeviceXMatter = !isTemplateBook
             };
+            // This book has to stand alone. If it needs a customCollectionStyles.css, it will have to use the one we just
+            // copied into the actual book folder, not one in a parent folder.
+            bookInfo.AppearanceSettings.LinkToLocalCollectionStyles = true;
             var modifiedBook = bookServer.GetBookFromBookInfo(bookInfo);
             modifiedBook.WriteFontFaces = wantFontFaceDeclarations;
             modifiedBook.BringBookUpToDate(new NullProgress(), true);
@@ -640,7 +656,7 @@ namespace Bloom.Publish
                 SignLanguageApi.ProcessVideos(videoContainerElements, modifiedBook.FolderPath);
             }
             modifiedBook.Save();
-            modifiedBook.UpdateSupportFiles();
+            modifiedBook.UpdateSupportFilesInCache();
             return modifiedBook;
         }
 

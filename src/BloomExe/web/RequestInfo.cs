@@ -59,7 +59,17 @@ namespace Bloom.Api
         // Sets the Content Type of the RESPONSE
         public string ResponseContentType
         {
-            set { _actualContext.Response.ContentType = value; }
+            set
+            {
+                try
+                {
+                    _actualContext.Response.ContentType = value;
+                }
+                catch (Exception ex)
+                {
+                    throw;
+                }
+            }
         }
 
         public string HttpMethod
@@ -121,6 +131,78 @@ namespace Bloom.Api
 
         public bool HaveOutput { get; private set; }
 
+        // Captures the common code of ReplyWithFileContent and ReplyWithCachedFileContent.
+        // Returns true if we want to send the content (false if it was a HEAD request).
+        private bool SetupHeadersForPath(string path, string originalPath, long length)
+        {
+            _actualContext.Response.ContentLength64 = length;
+            _actualContext.Response.AppendHeader("PathOnDisk", HttpUtility.UrlEncode(path));
+            _actualContext.Response.AppendHeader("Access-Control-Allow-Origin", "*");
+            if (path.EndsWith(".mp4", StringComparison.InvariantCultureIgnoreCase))
+            {
+                // Apparently Chrome/WebView2 is more picky than Firefox about the need for an Accept-Ranges header if you're going to
+                // request a range in a file like a video (or perhaps audio). Without this extra header, setting the currentTime in
+                // SignLanguageTool.tsx setCurrentVideoPoint() doesn't work at all!
+                // https://stackoverflow.com/questions/36783521/why-does-setting-currenttime-of-html5-video-element-reset-time-in-chrome
+                _actualContext.Response.AppendHeader("Accept-Ranges", "bytes");
+            }
+
+            // 60000s is about a week...if someone spends longer editing one book, well, files will get loaded one more time...
+            // When we want the browser NOT to cache, we still need to specify the "no-store" value. Otherwise, the browser may
+            // impose a default that is LONGER than we want (since this is mainly to avoid stale assets during development,
+            // though we also avoid caching book folder stuff in case the user is doing something like directly editing
+            // images).
+            // For years of GeckoFx, we were not setting the Cache-Control header at all if ShouldCache() returned true.
+            // It seems we were expecting that to mean the browser wouldn't cache. Now we're not sure if we truly weren't
+            // caching (due to some setting or specific behavior of Geckofx) or if we were getting lucky with the browser default.
+            // When we moved to Webview2, in an attempt to solve some caching issues (too much caching),
+            // we started setting the Cache-Control max-age to 10 seconds.
+            // However, it was shown with several bugs (such as BL-12437, BL-12440) that this was too long for some cases.
+            // We're going back to the idea that ShouldCache() == false means we don't want the browser to cache at all.
+            // But now we're making it explicit by setting the Cache-Control header to "no-store".
+            // A possible enhancement would be to change ShouldCache to return an enum (and change its name)
+            // such that we cache for the session, a short time (1 second?), or not at all. But for now, binary is ok.
+            // (At one point, we thought we wanted a short cache time for avatar images for Team Collections, but
+            // those don't even go through the Bloom server.)
+            string cacheControl = ShouldCache(path, originalPath) ? "max-age=600000" : "no-store";
+            _actualContext.Response.AppendHeader("Cache-Control", cacheControl);
+
+            // A HEAD request (rather than a GET or POST request) is a request for just headers, and nothing can be written
+            // to the OutputStream. It is normally used to check if the contents of the file have changed without taking the
+            // time and bandwidth needed to download the full contents of the file. The 2 pieces of information being returned
+            // are the Content-Length and Last-Modified headers. The requestor can use this information to determine if the
+            // contents of the file have changed, and if they have changed the requestor can then decide if the file needs to
+            // be reloaded. It is useful when debugging with tools which automatically reload the page when something changes.
+            // If the file doesn't actually exist (this would correspond to a cached file in the book folder), we shouldn't
+            // be calling this at all, because the browser should know that nothing that is (or pretends to be) in the
+            // book folder should be cached. But just in case, sending DateTime.Now should further ensure that it doesn't
+            // try to use a cached value for such files.
+            if (_actualContext.Request.HttpMethod == "HEAD")
+            {
+                var lastModified = (
+                    File.Exists(path) ? RobustFile.GetLastWriteTimeUtc(path) : DateTime.Now
+                ).ToString("R");
+
+                // Originally we were returning the Last-Modified header with every response, but we discovered that this was
+                // causing Geckofx to cache the contents of the files. This made debugging difficult because, even if the file
+                // changed, Geckofx would use the cached file rather than requesting the updated file from the localhost.
+                _actualContext.Response.AppendHeader("Last-Modified", lastModified);
+                return false;
+            }
+
+            return true;
+        }
+
+        public void ReplyWithCachedFileContent(string path, byte[] content)
+        {
+            if (SetupHeadersForPath(path, null, content.Length))
+            {
+                _actualContext.Response.Close(content, false);
+            }
+
+            HaveOutput = true;
+        }
+
         public void ReplyWithFileContent(string path, string originalPath = null)
         {
             //Deal with BL-3153, where the file was still open in another thread
@@ -154,54 +236,9 @@ namespace Bloom.Api
 
             try
             {
-                _actualContext.Response.ContentLength64 = fs.Length;
-                _actualContext.Response.AppendHeader("PathOnDisk", HttpUtility.UrlEncode(path));
-                _actualContext.Response.AppendHeader("Access-Control-Allow-Origin", "*");
-                if (path.EndsWith(".mp4", StringComparison.InvariantCultureIgnoreCase))
+                if (!SetupHeadersForPath(path, originalPath, fs.Length))
                 {
-                    // Apparently Chrome/WebView2 is more picky than Firefox about the need for an Accept-Ranges header if you're going to
-                    // request a range in a file like a video (or perhaps audio). Without this extra header, setting the currentTime in
-                    // SignLanguageTool.tsx setCurrentVideoPoint() doesn't work at all!
-                    // https://stackoverflow.com/questions/36783521/why-does-setting-currenttime-of-html5-video-element-reset-time-in-chrome
-                    _actualContext.Response.AppendHeader("Accept-Ranges", "bytes");
-                }
-
-                // 60000s is about a week...if someone spends longer editing one book, well, files will get loaded one more time...
-                // When we want the browser NOT to cache, we still need to specify the "no-store" value. Otherwise, the browser may
-                // impose a default that is LONGER than we want (since this is mainly to avoid stale assets during development,
-                // though we also avoid caching book folder stuff in case the user is doing something like directly editing
-                // images).
-                // For years of GeckoFx, we were not setting the Cache-Control header at all if ShouldCache() returned true.
-                // It seems we were expecting that to mean the browser wouldn't cache. Now we're not sure if we truly weren't
-                // caching (due to some setting or specific behavior of Geckofx) or if we were getting lucky with the browser default.
-                // When we moved to Webview2, in an attempt to solve some caching issues (too much caching),
-                // we started setting the Cache-Control max-age to 10 seconds.
-                // However, it was shown with several bugs (such as BL-12437, BL-12440) that this was too long for some cases.
-                // We're going back to the idea that ShouldCache() == false means we don't want the browser to cache at all.
-                // But now we're making it explicit by setting the Cache-Control header to "no-store".
-                // A possible enhancement would be to change ShouldCache to return an enum (and change its name)
-                // such that we cache for the session, a short time (1 second?), or not at all. But for now, binary is ok.
-                // (At one point, we thought we wanted a short cache time for avatar images for Team Collections, but
-                // those don't even go through the Bloom server.)
-                string cacheControl = ShouldCache(path, originalPath)
-                    ? "max-age=600000"
-                    : "no-store";
-                _actualContext.Response.AppendHeader("Cache-Control", cacheControl);
-
-                // A HEAD request (rather than a GET or POST request) is a request for just headers, and nothing can be written
-                // to the OutputStream. It is normally used to check if the contents of the file have changed without taking the
-                // time and bandwidth needed to download the full contents of the file. The 2 pieces of information being returned
-                // are the Content-Length and Last-Modified headers. The requestor can use this information to determine if the
-                // contents of the file have changed, and if they have changed the requestor can then decide if the file needs to
-                // be reloaded. It is useful when debugging with tools which automatically reload the page when something changes.
-                if (_actualContext.Request.HttpMethod == "HEAD")
-                {
-                    var lastModified = RobustFile.GetLastWriteTimeUtc(path).ToString("R");
-
-                    // Originally we were returning the Last-Modified header with every response, but we discovered that this was
-                    // causing Geckofx to cache the contents of the files. This made debugging difficult because, even if the file
-                    // changed, Geckofx would use the cached file rather than requesting the updated file from the localhost.
-                    _actualContext.Response.AppendHeader("Last-Modified", lastModified);
+                    // we've done all that needs doing
                 }
                 else if (fs.Length < 2 * 1024 * 1024)
                 {
@@ -263,6 +300,31 @@ namespace Bloom.Api
             {
                 if (fs != null)
                     fs.Dispose();
+            }
+
+            HaveOutput = true;
+        }
+
+        public void ReplyWithByteArray(byte[] data, string responseType)
+        {
+            ResponseContentType = responseType;
+            _actualContext.Response.ContentLength64 = data.Length;
+            _actualContext.Response.AppendHeader("Access-Control-Allow-Origin", "*");
+            // We don't know exactly where this came from, but initial usage is simulated
+            // book folder files, which we don't want cached.
+            _actualContext.Response.AppendHeader("Cache-Control", "no-store");
+            if (_actualContext.Request.HttpMethod == "HEAD")
+            {
+                // Maybe the browser is trying to figure whether it can use a cached value, even though
+                // we say "no-store" for these requests.
+                // We have no idea when the source was modified, but saying that it was modified just now will probably cause
+                // it to try again and actually get the data.
+                var lastModified = DateTime.Now.ToString("R");
+                _actualContext.Response.AppendHeader("Last-Modified", lastModified);
+            }
+            else
+            {
+                _actualContext.Response.Close(data, false);
             }
 
             HaveOutput = true;

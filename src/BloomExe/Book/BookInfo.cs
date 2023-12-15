@@ -1,3 +1,13 @@
+using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Diagnostics;
+using System.Drawing;
+using System.IO;
+using System.Linq;
+using System.Text.RegularExpressions;
+using System.Threading;
+using System.Windows.Forms;
 using Bloom.Api;
 using Bloom.Edit;
 using Bloom.Utils;
@@ -9,16 +19,6 @@ using SIL.IO;
 using SIL.Reporting;
 using SIL.Text;
 using SIL.Windows.Forms.ClearShare;
-using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Diagnostics;
-using System.Drawing;
-using System.IO;
-using System.Linq;
-using System.Text.RegularExpressions;
-using System.Threading;
-using System.Windows.Forms;
 
 namespace Bloom.Book
 {
@@ -67,7 +67,16 @@ namespace Bloom.Book
                 );
         }
 
-        public BookInfo(string folderPath, bool isEditable, ISaveContext saveContext)
+        public BookInfo(
+            string folderPath,
+            bool isEditable,
+            ISaveContext saveContext,
+            // Pass this true when just making a temporary BookInfo object to get some value from meta.json
+            // It prevents loading data for publish and appearance settings, which saves time.
+            // Also, currently there is logic in AppearanceSettings to catch making more than one
+            // instance of it for a given book folder, which can be avoided by using this.
+            bool justMetaData = false
+        )
             : this()
         {
             Guard.AgainstNull(saveContext, "Please supply an actual saveContext");
@@ -84,14 +93,14 @@ namespace Bloom.Book
             //NB: This was coded in an unfortunate way such that touching almost any property causes a new metadata to be quietly created.
             //So It's vital that we not touch properties that could create a blank metadata, before attempting to load the existing one.
 
-            UpdateFromDisk();
+            UpdateFromDisk(justMetaData);
 
             IsEditable = isEditable;
 
             FixDefaultsIfAppropriate();
         }
 
-        public void UpdateFromDisk()
+        public void UpdateFromDisk(bool justMetaData = false)
         {
             _metadata = BookMetaData.FromFolder(FolderPath);
             if (_metadata == null)
@@ -105,8 +114,11 @@ namespace Bloom.Book
                 // otherwise leave it null, first attempt to use will create a default one
             }
 
-            PublishSettings = PublishSettings.FromFolder(FolderPath);
-            AppearanceSettings = AppearanceSettings.FromFolderOrNew(FolderPath);
+            if (!justMetaData)
+            {
+                PublishSettings = PublishSettings.FromFolder(FolderPath);
+                AppearanceSettings.UpdateFromFolder(FolderPath);
+            }
         }
 
         public enum HowToPublishImageDescriptions
@@ -692,7 +704,7 @@ namespace Bloom.Book
             // This is a temporary BookInfo that shouldn't get asked about saveability of the book.
             // But, this method should not have been called unless we already verified that we can save
             // changes legitimately.
-            var bookInfo = new BookInfo(bookFolder, true, new AlwaysEditSaveContext());
+            var bookInfo = new BookInfo(bookFolder, true, new AlwaysEditSaveContext(), true);
             return bookInfo.InstallFreshGuidInternal();
         }
 
@@ -738,9 +750,7 @@ namespace Bloom.Book
             // meta.json file and the value is the filepath.
             var idToSortedFilepathsMap = new Dictionary<string, SortedList<DateTime, string>>();
             var currentFolder = pathToDirectory;
-
             GatherInstanceIdsRecursively(currentFolder, idToSortedFilepathsMap);
-
             // All the data is gathered, now to fix any problems. We assume that the first entry in the SortedList
             // is the original and we change the guid Id in all the copies.
             foreach (var kvp in idToSortedFilepathsMap)
@@ -819,7 +829,7 @@ namespace Bloom.Book
             }
             // Leaf node; we're in a book folder
             var metaFileLastWriteTime = RobustFile.GetLastWriteTimeUtc(metaJsonPath);
-            var bi = new BookInfo(currentFolder, false);
+            var bi = new BookInfo(currentFolder, false, new NoEditSaveContext(), true);
             var id = bi.Id;
             SafelyAddToIdSet(id, metaFileLastWriteTime, currentFolder, idToSortedFilepathsMap);
         }

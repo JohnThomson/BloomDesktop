@@ -1006,6 +1006,16 @@ namespace Bloom.CollectionTab
             }
         }
 
+        public BookInfo GetBookInfoByFolderPath(string path)
+        {
+            var collectionPath = Path.GetDirectoryName(path);
+            var collection = GetBookCollections()
+                .FirstOrDefault(c => c.PathToDirectory == collectionPath);
+            if (collection == null)
+                return null;
+            return collection.GetBookInfoByFolderPath(path);
+        }
+
         public Book.Book GetBookFromBookInfo(BookInfo bookInfo, bool fullyUpdateBookFiles = false)
         {
             // If we're looking for the current book it's important to return the actual book object,

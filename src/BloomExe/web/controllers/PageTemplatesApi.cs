@@ -237,7 +237,7 @@ namespace Bloom.web.controllers
                                 );
                                 var templateBook = _bookFactory(
                                     new BookInfo(bookPath, false),
-                                    _storageFactory(bookPath)
+                                    _storageFactory(new BookInfo(bookPath, false))
                                 );
 
                                 //note: the caption is used here as a key to find the template page.
@@ -499,7 +499,7 @@ namespace Bloom.web.controllers
             var folderPath = Path.GetDirectoryName(templatePath);
             // This book info should never be asked about savability, so it doesn't matter much,
             // but it feels safer to say it can't be saved.
-            var info = new BookInfo(folderPath, true, new NoEditSaveContext());
+            var info = new BookInfo(folderPath, true, new NoEditSaveContext(), true);
             return !info.ShowThisBookAsSource();
         }
 

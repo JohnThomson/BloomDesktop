@@ -4,21 +4,21 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Text;
 using System.Windows.Forms;
+using System.Xml;
 using Amazon.Runtime;
 using Amazon.S3;
 using Bloom.Book;
 using Bloom.Collection;
 using Bloom.Publish;
+using Bloom.web;
 using DesktopAnalytics;
 using L10NSharp;
 using SIL.Extensions;
 using SIL.IO;
 using SIL.Progress;
 using SIL.Reporting;
-using System.Xml;
-using System.Text;
-using Bloom.web;
 
 namespace Bloom.WebLibraryIntegration
 {
@@ -569,7 +569,7 @@ namespace Bloom.WebLibraryIntegration
             PublishHelper.RemoveEnterpriseFeaturesIfNeeded(copiedBook, pages, warningMessages);
             PublishHelper.SendBatchedWarningMessagesToProgress(warningMessages, progress);
             copiedBook.Save();
-            copiedBook.UpdateSupportFiles();
+            copiedBook.UpdateSupportFilesInCache();
             book = copiedBook;
             return true;
         }
@@ -740,7 +740,7 @@ namespace Bloom.WebLibraryIntegration
             finally
             {
                 // Put back all the branding files which we removed above in the call to CleanupUnusedSupportFiles()
-                book.UpdateSupportFiles();
+                book.UpdateSupportFilesInCache();
 
                 // NB: alternatively, we considered refactoring CleanupUnusedSupportFiles() to give us a list of files
                 // to not upload.

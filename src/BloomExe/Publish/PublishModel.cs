@@ -1,3 +1,15 @@
+using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.ComponentModel.Composition;
+using System.ComponentModel.Composition.Hosting;
+using System.Diagnostics;
+using System.Drawing;
+using System.IO;
+using System.Linq;
+using System.Reflection;
+using System.Windows.Forms;
+using System.Xml;
 using Bloom.Api;
 using Bloom.Book;
 using Bloom.Collection;
@@ -14,18 +26,6 @@ using SIL.IO;
 using SIL.Progress;
 using SIL.Reporting;
 using SIL.Xml;
-using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.ComponentModel.Composition;
-using System.ComponentModel.Composition.Hosting;
-using System.Diagnostics;
-using System.Drawing;
-using System.IO;
-using System.Linq;
-using System.Reflection;
-using System.Windows.Forms;
-using System.Xml;
 
 namespace Bloom.Publish
 {
@@ -408,11 +408,16 @@ namespace Bloom.Publish
             var orientationChanging =
                 BookSelection.CurrentSelection.GetLayout().SizeAndOrientation.IsLandScape
                 != PageLayout.SizeAndOrientation.IsLandScape;
+            if (orientationChanging)
+            {
+                throw new ApplicationException(
+                    "We no longer support creating a PDF in a different orientation from the one set in edit mode"
+                );
+            }
             var dom = BookSelection.CurrentSelection.GetDomForPrinting(
                 BookletPortion,
                 _currentBookCollectionSelection.CurrentSelection,
                 _bookServer,
-                orientationChanging,
                 PageLayout
             );
 
@@ -897,33 +902,6 @@ namespace Bloom.Publish
                     yield return previewXmlDocumentForPage;
                 }
             }
-        }
-
-        public void GetThumbnailAsync(
-            int width,
-            int height,
-            HtmlDom dom,
-            Action<Image> onReady,
-            Action<Exception> onError
-        )
-        {
-            var thumbnailOptions = new HtmlThumbNailer.ThumbnailOptions()
-            {
-                BackgroundColor = Color.White,
-                BorderStyle = HtmlThumbNailer.ThumbnailOptions.BorderStyles.None,
-                CenterImageUsingTransparentPadding = false,
-                Height = height,
-                Width = width
-            };
-            dom.UseOriginalImages = true; // apparently these thumbnails can be big...anyway we want printable images.
-            _thumbNailer.HtmlThumbNailer.GetThumbnailAsync(
-                String.Empty,
-                string.Empty,
-                dom,
-                thumbnailOptions,
-                onReady,
-                onError
-            );
         }
 
         public void ReportAnalytics(string eventName)
