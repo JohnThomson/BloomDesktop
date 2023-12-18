@@ -32,6 +32,7 @@ using System.Xml;
 using Bloom.Utils;
 using Bloom.MiscUI;
 using Bloom.ErrorReporter;
+using Bloom.ToPalaso;
 
 namespace Bloom.Edit
 {
@@ -804,6 +805,30 @@ namespace Bloom.Edit
                 PalasoImage clipboardImage = null;
                 try
                 {
+                    var imageElement = GetImageNode(imgIndex);
+                    if (imageElement == null)
+                        return;
+                    if (ImageIsGif(imageElement))
+                    {
+                        // The only way we currently support copying and pasting a gif is through a text path.
+                        var path = PortableClipboard.GetText();
+                        if (
+                            string.IsNullOrEmpty(path)
+                            || !RobustFile.Exists(path)
+                            || Path.GetExtension(path).ToLowerInvariant() != ".gif"
+                        )
+                        {
+                            MessageBox.Show(
+                                LocalizationManager.GetString(
+                                    "EditTab.NoGifOnClipboard",
+                                    "To paste a Gif, copy a path to a Gif file, or copy from another Bloom GIF element"
+                                )
+                            );
+                            return;
+                        }
+                        SetGifImage(imgIndex, path, imageElement);
+                        return;
+                    }
                     try
                     {
                         clipboardImage = PortableClipboard.GetImageFromClipboardWithExceptions();
@@ -831,9 +856,6 @@ namespace Bloom.Edit
                         return;
                     }
 
-                    var imageElement = GetImageNode(imgIndex);
-                    if (imageElement == null)
-                        return;
                     Cursor = Cursors.WaitCursor;
 
                     //nb: Taglib# requires an extension that matches the file content type.
@@ -956,6 +978,14 @@ namespace Bloom.Edit
                 var path = Path.Combine(bookFolderPath, url.PathOnly.NotEncoded);
                 try
                 {
+                    if (ImageIsGif(imageElement))
+                    {
+                        // Haven't been able to find a way to copy the Gif itself into the clipboard.
+                        // Possibly we could also copy the first frame as an actual image.
+                        // For now, at least we can copy one GIF overlay to another, and nothing bad happens
+                        PortableClipboard.SetText(path);
+                        return true;
+                    }
                     using (var image = PalasoImage.FromFileRobustly(path))
                     {
                         PortableClipboard.CopyImageToClipboard(image);
@@ -1043,6 +1073,8 @@ namespace Bloom.Edit
             return true;
         }
 
+        private string _gifDirectory; // Todo: worth saving this as a UserPrefs? Or can/should we use the same one as for images?
+
         public void OnChangeImage(int imgIndex)
         {
             // Make sure any new image overlays on the page are saved, so our imgIndex will select the
@@ -1059,11 +1091,33 @@ namespace Bloom.Edit
 
             Cursor = Cursors.WaitCursor;
 
+            string newImagePath = null;
+            if (ImageIsGif(imageElement))
+            {
+                // We don't want to use the image toolbox for GIFs, because it will convert them to PNGs.
+                // Instead, we'll just use a file chooser
+                var dlg = new DialogAdapters.OpenFileDialogAdapter
+                {
+                    InitialDirectory =
+                        _gifDirectory ?? Environment.SpecialFolder.MyPictures.ToString(),
+                    Multiselect = false,
+                    CheckFileExists = true,
+                    Filter = "gif|*.gif",
+                };
+                var result = dlg.ShowDialog();
+                if (result != DialogResult.OK)
+                {
+                    return;
+                }
+
+                SetGifImage(imgIndex, dlg.FileName, imageElement);
+                return;
+            }
+
             var imageInfo = new PalasoImage();
             Image oldImage = null;
             var oldSize = new Size() { Height = 0, Width = 0 };
             var existingImagePath = Path.Combine(_model.CurrentBook.FolderPath, currentPath);
-            string newImagePath = null;
 
             //don't send the placeholder to the imagetoolbox... we get a better user experience if we admit we don't have an image yet.
             if (
@@ -1296,6 +1350,45 @@ namespace Bloom.Edit
             Logger.WriteMinorEvent("Emerged from ImageToolboxDialog Editor Dialog");
             Cursor = Cursors.Default;
             imageInfo.Dispose(); // ensure memory doesn't leak
+        }
+
+        private void SetGifImage(int imgIndex, string sourcePath, XmlElement imageElement)
+        {
+            var baseName = Path.GetFileNameWithoutExtension(sourcePath);
+            var destName = ImageUtils.GetUnusedFilename(
+                _model.CurrentBook.FolderPath,
+                baseName,
+                ".gif",
+                "gif"
+            );
+            var dest = Path.Combine(_model.CurrentBook.FolderPath, destName);
+            RobustFile.Copy(sourcePath, dest);
+            imageElement.SetAttribute("src", destName);
+            var gifInfo = PalasoImage.FromFileRobustly(dest);
+            var editor = new PageEditingModel();
+            // this should update it in the live page
+            editor.UpdateImageOnPage(_webSocketServer, imgIndex, gifInfo, destName);
+            // I don't understand why we need this, since we already updated both the model and the live page.
+            // But without it, the thumbnail doesn't get updated, and other weird things happen.
+            _model.SaveNow();
+            //editor.ChangePicture(_webSocketServer, _model.CurrentBook.FolderPath, imgIndex, imageElement, gifInfo, new NullProgress());
+            // Review: code on the regular image path says we need to save again for the thumbnail to be updated.
+            // But I don't want to unless it's really necessary.
+            UpdateThumbnailAsync(_model.CurrentPage);
+        }
+
+        /// <summary>
+        /// Return true if this is an image which we intend to contain GIFs.
+        /// </summary>
+        private bool ImageIsGif(XmlElement imageElement)
+        {
+            // We add this class to the TOP element rather than looking at the file extension of the img
+            // because before a GIF is set we don't know what the file extension will be (and it may well
+            // be a placeholder image that is not a GIF).
+            var overlay = imageElement.ParentWithClass("bloom-textOverPicture");
+            if (overlay == null)
+                return false;
+            return overlay.HasClass("bloom-gif");
         }
 
         /// <summary>

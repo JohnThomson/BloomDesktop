@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Diagnostics;
 using System.IO;
 using System.Threading;
@@ -72,6 +72,17 @@ namespace Bloom.Edit
                 isSameFile
             );
             // Ask Javascript code to update the live version of the page.
+            UpdateImageOnPage(webSocketServer, imgIndex, imageInfo, imageFileName);
+            ImageUtils.SaveImageMetadata(imageInfo, Path.Combine(bookFolderPath, imageFileName));
+        }
+
+        public void UpdateImageOnPage(
+            BloomWebSocketServer webSocketServer,
+            int imgIndex,
+            PalasoImage imageInfo,
+            string imageFileName
+        )
+        {
             dynamic messageBundle = new DynamicJson();
             messageBundle.imgIndex = imgIndex;
             messageBundle.src = UrlPathString.CreateFromUnencodedString(imageFileName).UrlEncoded;
@@ -84,7 +95,6 @@ namespace Bloom.Edit
                 "changeImage",
                 messageBundle
             );
-            ImageUtils.SaveImageMetadata(imageInfo, Path.Combine(bookFolderPath, imageFileName));
         }
 
         /// <summary>

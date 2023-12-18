@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -138,7 +138,7 @@ namespace Bloom.Book
         /// The specified path (starting from the book folder) should always be
         /// accepted (or always be rejected, if the second argument is false).
         /// This is useful for special cases that don't seem to fit any particular
-        /// pattern.
+        /// pattern, like passing a BloomBookOrder for upload.
         /// </summary>
         private void AddException(string path, bool accept = true)
         {
@@ -226,6 +226,7 @@ namespace Bloom.Book
                 ".png",
                 ".jpg",
                 ".jpeg",
+                ".gif",
                 ".tif",
                 ".tiff",
                 ".bmp",
@@ -309,10 +310,9 @@ namespace Bloom.Book
                     // I'm not sure whether we need includeSplitTextBoxAudio to be true.
                     // But it only makes a difference in an obsolete case, and it just might be wanted
                     // if it occurs, at least if we do further editing of the book, so it's simplest to just include it.
-                    var narrationElements = HtmlDom.SelectRealChildNarrationAudioElements(
-                        Dom.Body,
-                        true
-                    );
+                    var narrationElements = HtmlDom
+                        .SelectRealChildNarrationAudioElements(Dom.Body, true)
+                        .Cast<XmlElement>();
                     if (NarrationLanguages != null)
                     {
                         var narrationLangs = new HashSet<string>(NarrationLanguages);

@@ -1887,23 +1887,30 @@ namespace Bloom.Book
             // currently redundant, everything should work if we just copied all attributes.
             // (But, it IS imporant to DELETE any old versions of these attributes if the edited page div
             // does NOT have them.)
-            var music = edittedPageDiv.Attributes[musicAttrName]?.Value;
-            var musicVolume = edittedPageDiv.Attributes[musicVolumeName]?.Value;
-            if (music != null)
+            // Review: should we copy all attributes? All data- attributes?
+            string[] attrsToCopy = new[]
             {
-                destinationPageDiv.SetAttribute(musicAttrName, music);
-                if (musicVolume != null)
+                musicAttrName,
+                musicVolumeName,
+                "data-correct-sound",
+                "data-wrong-sound"
+            };
+            foreach (var attr in attrsToCopy)
+            {
+                var value = edittedPageDiv.Attributes[attr]?.Value;
+                if (value != null)
                 {
-                    destinationPageDiv.SetAttribute(musicVolumeName, musicVolume);
+                    destinationPageDiv.SetAttribute(attr, value);
                 }
                 else
                 {
-                    destinationPageDiv.RemoveAttribute(musicVolumeName);
+                    destinationPageDiv.RemoveAttribute(attr);
                 }
             }
-            else
+
+            // If we have no music, we don't want to save a volume.
+            if (edittedPageDiv.Attributes[musicAttrName]?.Value == null)
             {
-                destinationPageDiv.RemoveAttribute(musicAttrName);
                 destinationPageDiv.RemoveAttribute(musicVolumeName);
             }
 

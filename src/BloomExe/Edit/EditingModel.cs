@@ -426,6 +426,8 @@ namespace Bloom.Edit
             }
         }
 
+        public IPage CurrentPage => _pageSelection.CurrentSelection;
+
         public bool CanCopyPage
         {
             // Currently we don't want to allow copying xmatter pages. If we ever do, some research and non-trivial change
