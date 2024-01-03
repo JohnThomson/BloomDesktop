@@ -56,10 +56,6 @@ namespace Bloom.Book
         bool GetLooksOk();
         HtmlDom Dom { get; }
         void Save();
-        void ClearCachedData();
-        byte[] GetSupportingFile(string relativePath);
-        string GetSupportingFileString(string relativePath);
-        byte[] GetImage(string relativePath);
 
         void SaveForPageChanged(string pageId, XmlElement modifiedPage);
         HtmlDom GetRelocatableCopyOfDom();
@@ -88,11 +84,12 @@ namespace Bloom.Book
         string NormalBaseForRelativepaths { get; }
         string InitialLoadErrors { get; }
         bool ErrorAllowsReporting { get; }
-        void LoadCurrentSupportFilesIntoCache();
+        void UpdateSupportFiles();
         void Update(string fileName, string factoryPath = "");
         string Duplicate();
         IEnumerable<string> GetNarrationAudioFileNamesReferencedInBook(bool includeWav);
         IEnumerable<string> GetBackgroundMusicFileNamesReferencedInBook();
+        string GetSupportingFile(string relativePath);
         void EnsureOriginalTitle();
         bool LinkToLocalCollectionStyles { get; set; }
 
@@ -170,12 +167,6 @@ namespace Bloom.Book
         public event EventHandler FolderPathChanged;
         public event EventHandler BookTitleChanged;
 
-        // A cache of files that are typically stored in the book folder. But sometimes we need to
-        // serve an updated version of them to a browser through our BloomServer, and we don't
-        // have permission to write to the book folder. In that case, we can update the memory
-        // version, and return that. Anything dirty in here is written to disk when the book is saved.
-        private Dictionary<string, FileCache> _supportingFiles = new();
-
         // Returns any errors reported while loading the book (during 'expensive initialization').
         public string InitialLoadErrors { get; private set; }
         public bool ErrorAllowsReporting { get; private set; } // True if we want to display a Report to Bloom Support button
@@ -249,135 +240,27 @@ namespace Bloom.Book
         private string _cachedFolderPath;
         private string _cachedPathToHtml;
 
-        public void ClearCachedData()
+        public string GetSupportingFile(string relativePath)
         {
-            _supportingFiles.Clear();
-        }
-
-        public void SaveCachedSupportFiles()
-        {
-            foreach (var kvp in _supportingFiles)
-            {
-                var destPath = Path.Combine(FolderPath, kvp.Key);
-                Utils.LongPathAware.ThrowIfExceedsMaxPath(destPath); //example: BL-8284)
-                if (kvp.Value.Modified)
-                {
-                    try
-                    {
-                        if (kvp.Value.BinaryData != null)
-                            RobustFile.WriteAllBytes(destPath, kvp.Value.BinaryData);
-                        else
-                            RobustFile.Delete(destPath);
-                    }
-                    catch (UnauthorizedAccessException err)
-                    {
-                        if (kvp.Value.BinaryData == null || RobustFile.Exists(destPath))
-                        {
-                            // It's probably a minor problem if we just can't update it but already have it.
-                            // If we wanted to delete it and can't, it's definitely a minor problem
-                            ReportCantUpdateSupportFile(kvp.Value.SourcePath, destPath);
-                        }
-                        else
-                        {
-                            throw new BloomUnauthorizedAccessException(destPath, err);
-                        }
-                    }
-                }
-            }
-        }
-
-        /// <summary>
-        /// See if we have a cached image for this file. If so, return it.
-        /// For now, if we don't, just return null. It's not clear that we want
-        /// to cache all images in memory; for now, this is just for temp overrides
-        /// like branding data we can't save.
-        /// </summary>
-        /// <param name="relativePath"></param>
-        /// <returns></returns>
-        public byte[] GetImage(string relativePath)
-        {
-            if (_supportingFiles.TryGetValue(relativePath, out FileCache val))
-                return val.BinaryData;
-            return null;
-        }
-
-        public string GetSupportingFileString(string relativePath)
-        {
-            var bytes = GetSupportingFile(relativePath);
-            if (bytes == null)
-                return null;
-            return Encoding.UTF8.GetString(bytes);
-        }
-
-        public byte[] GetSupportingFile(string relativePath)
-        {
-            if (_supportingFiles.TryGetValue(relativePath, out FileCache val))
-                return val.BinaryData;
-            byte[] result = null;
-            var locaPath = Path.Combine(FolderPath, relativePath);
+            var localPath = Path.Combine(FolderPath, relativePath);
             if (BookStorage.CssFilesThatAreDynamicallyUpdated.Contains(relativePath))
             {
-                if (RobustFile.Exists(locaPath))
+                if (RobustFile.Exists(localPath))
                 {
-                    result = RobustFile.ReadAllBytes(locaPath);
+                    return localPath;
                 }
-                _supportingFiles[relativePath] = new FileCache()
+                else
                 {
-                    BinaryData = result,
-                    Modified = false
-                };
-                return result;
-            }
-
-            if (relativePath.EndsWith("XMatter.css"))
-            {
-                // There should be only one XMatter css file in the book folder, and it should have the
-                // name indicated by this function. It should be linked to by that name, but just in
-                // case it isn't, we'll cache it under the correct name so if we later save, that
-                // is what we save.
-                var xmatterPath = PathToXMatterStylesheet;
-                var key = Path.GetFileName(xmatterPath);
-                return CacheSupportingFile(key, xmatterPath);
-            }
-
-            var foundPath = _fileLocator.LocateFile(relativePath);
-            if (foundPath != null)
-            {
-                return CacheSupportingFile(relativePath, foundPath);
-            }
-
-            return null; // can't find it
-        }
-
-        private byte[] CacheSupportingFile(string relativePath, string foundPath)
-        {
-            Debug.Assert(!string.IsNullOrEmpty(relativePath), "Relative path should not be empty");
-            try
-            {
-                var locaPath = Path.Combine(FolderPath, relativePath);
-
-                var result = string.IsNullOrEmpty(foundPath)
-                    ? Array.Empty<byte>()
-                    : RobustFile.ReadAllBytes(foundPath);
-                byte[] localContent = null;
-                if (RobustFile.Exists(locaPath))
-                {
-                    localContent = RobustFile.ReadAllBytes(locaPath);
+                    return null;
                 }
+            }
 
-                var modified = localContent == null || !localContent.AreByteArraysEqual(result);
-                _supportingFiles[relativePath] = new FileCache()
-                {
-                    BinaryData = result,
-                    Modified = modified,
-                    SourcePath = foundPath
-                };
-                return result;
-            }
-            catch (Exception ex)
+            if (relativePath == Path.GetFileName(PathToXMatterStylesheet))
             {
-                throw ex; // log? Currently just so I can set a breakpoint.
+                return PathToXMatterStylesheet;
             }
+
+            return _fileLocator.LocateFile(relativePath);
         }
 
         public static void RemoveLocalOnlyFiles(string folderPath)
@@ -703,7 +586,6 @@ namespace Bloom.Book
                 "BookStorage.Saving... (eventual destination: {0})",
                 PathToExistingHtml
             );
-            SaveCachedSupportFiles();
 
             Dom.UpdateMetaElement(
                 "Generator",
@@ -2609,20 +2491,18 @@ namespace Bloom.Book
         /// Update our cache to contain all the support files, so Save will update all of them.
         /// May also note some that should be deleted when we can Save.
         /// </summary>
-        public void LoadCurrentSupportFilesIntoCache()
+        public void UpdateSupportFiles()
         {
-            _supportingFiles.Clear();
-            // Before 5.7, we had this code, but I think it left the browser looking for (e.g.) branding images
-            // that were not there. Now all this is just in memory for books we don't save, I no longer see
-            // a reason not to cache stuff for all books.
-            //if (IsStaticContent(FolderPath))
-            //	return; // don't try to update our own templates, it's a waste and they might be locked.
-            //if (IsPathReadonly(FolderPath))
-            //{
-            //	Logger.WriteEvent("Not updating files in folder {0} because the directory is read-only.", FolderPath);
-            //}
-            //else
-            //{
+            if (IsStaticContent(FolderPath))
+                return; // don't try to update our own templates, it's a waste and they might be locked.
+            if (IsPathReadonly(FolderPath))
+            {
+                Logger.WriteEvent(
+                    "Not updating files in folder {0} because the directory is read-only.",
+                    FolderPath
+                );
+                return;
+            }
 
             // We want current shipping versions of these copied into the destination folder always.
             var supportFilesToUpdate = new List<string>(
@@ -2651,7 +2531,7 @@ namespace Bloom.Book
             //
             // Also, we don't want to update branding.css here because the default update process may pull it from
             // who knows where; it doesn't come from one of the directories we search early.
-            // Instead, normally one is fetched from the right branding in LoadCurrentBrandingFilesIntoCache,
+            // Instead, normally one is fetched from the right branding in LoadCurrentBrandingFilesIntoBookFolder,
             // or if the branding is under development we generate a placeholder, or if there is no branding
             // we generate an empty placeholder.
             var cssFilesToSkipInThisPhase = new HashSet<string>();
@@ -2669,27 +2549,31 @@ namespace Bloom.Book
                 var file = Path.GetFileName(path);
                 if (cssFilesToSkipInThisPhase.Contains(file))
                     continue;
-                // arrange to clean up any unwanted Xmatter CSS files. The one we want is already skipped.
-                if (file.EndsWith("XMatter.css"))
-                    _supportingFiles[file] = new FileCache() { BinaryData = null, Modified = true };
+                // clean up any unwanted Xmatter CSS files. The one we want is already skipped.
                 // Get rid of any versions of basePage.css that aren't in cssFilesToSkipInThisPhase
-                else if (file.StartsWith("basePage"))
-                    _supportingFiles[file] = new FileCache() { BinaryData = null, Modified = true };
+                if (file.EndsWith("XMatter.css") || file.StartsWith("basePage"))
+                    RobustFile.Delete(path);
                 else
                     supportFilesToUpdate.Add(file);
             }
 
-            // This will pull them into our cache and, when relevant, determine whether they need to be updated.
+            // This will pull them into the book folder.
             foreach (var file in supportFilesToUpdate)
-                GetSupportingFile(file);
+            {
+                var sourcePath = GetSupportingFile(file);
+                var destPath = Path.Combine(FolderPath, file);
+                if (sourcePath == destPath)
+                    continue; // don't copy from ourselves
+                if (!string.IsNullOrEmpty(sourcePath) && RobustFile.Exists(sourcePath))
+                    RobustFile.Copy(sourcePath, destPath, true);
+            }
 
-            LoadCurrentBrandingFilesIntoCache();
+            LoadCurrentBrandingFilesIntoBookFolder();
         }
 
         // Brandings come with logos and such... we want them in the book folder itself so that they work
-        // apart from Bloom and in web browsing, ePUB, and BloomPUB contexts. For now just load them into
-        // our cache, in case we don't have write permission to the book folder.
-        private void LoadCurrentBrandingFilesIntoCache()
+        // apart from Bloom and in web browsing, ePUB, and BloomPUB contexts.
+        private void LoadCurrentBrandingFilesIntoBookFolder()
         {
             _brandingImageNames.Clear();
             try
@@ -2738,28 +2622,18 @@ namespace Bloom.Book
                     var fileName = Path.GetFileName(sourcePath);
                     var destPath = Path.Combine(FolderPath, fileName);
                     Utils.LongPathAware.ThrowIfExceedsMaxPath(destPath); //example: BL-8284
+                    RobustFile.Copy(sourcePath, destPath, true);
                     if (fileName.EndsWith(".css"))
                     {
-                        CacheSupportingFile(fileName, sourcePath);
                         gotBrandingCss |= fileName == "branding.css";
                     }
                     else
                     {
-                        var sourceData = RobustFile.ReadAllBytes(sourcePath);
-                        var destData = RobustFile.Exists(destPath)
-                            ? RobustFile.ReadAllBytes(destPath)
-                            : null;
-                        _supportingFiles[fileName] = new FileCache()
-                        {
-                            BinaryData = sourceData,
-                            Modified = sourceData.AreByteArraysEqual(destData),
-                            SourcePath = sourcePath
-                        };
                         _brandingImageNames.Add(fileName);
                     }
                 }
 
-                // Typically the above will copy a (virtual) branding.css into the book folder.
+                // Typically the above will copy a branding.css into the book folder.
                 // Check that, and attempt to recover if it didn't happen.
                 if (!gotBrandingCss)
                 {
@@ -2768,11 +2642,7 @@ namespace Bloom.Book
                     // and coming up with some arbitrary branding.css. At least all Bloom installations,
                     // including the evil dev one that introduced a branding without the required file,
                     // will behave the same.
-                    _supportingFiles["branding.css"] = new FileCache()
-                    {
-                        BinaryData = new byte[0],
-                        Modified = true
-                    };
+                    RobustFile.WriteAllText(Path.Combine(FolderPath, "branding.css"), "");
                 }
             }
             catch (Exception err)
@@ -3781,6 +3651,9 @@ namespace Bloom.Book
         /// Files that might contain rules that conflict with the new appearance model (currently, that is if they affect
         /// the size and position of the marginBox).
         /// In the resulting list, the first item is the file name, and the second is content.
+        /// Note that this routine must find and use the files that UpdateSupportingFiles will copy into the book.
+        /// It has to be called before UpdateSupportingFiles, because it is used to initialize the
+        /// appearanceSettings that determines which files UpdateSupportingFiles will copy.
         /// </summary>
         /// <returns></returns>
         public Tuple<string, string>[] GetCssFilesToCheckForAppearanceCompatibility(
@@ -3823,6 +3696,16 @@ namespace Bloom.Book
                 result.Add(Tuple.Create(xmatterFileName, GetSupportingFileString(xmatterFileName)));
             }
             return result.ToArray();
+        }
+
+        private string GetSupportingFileString(string file)
+        {
+            // Do the search for the file that UpdateSupportingFiles will copy into the book
+            // folder, since this is called BEFORE we do that.
+            var path = GetSupportingFile(file);
+            if (RobustFile.Exists(path))
+                return RobustFile.ReadAllText(path);
+            return null;
         }
 
         public static readonly string[] CssFilesThatAreObsolete =

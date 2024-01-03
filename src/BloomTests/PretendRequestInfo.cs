@@ -76,11 +76,6 @@ namespace Bloom.Api
             HaveOutput = true;
         }
 
-        public void ReplyWithCachedFileContent(string path, byte[] content)
-        {
-            throw new NotImplementedException();
-        }
-
         public void ReplyWithStreamContent(Stream input, string responseType)
         {
             throw new NotImplementedException();
@@ -89,11 +84,6 @@ namespace Bloom.Api
         public void ReplyWithImage(string path, string originalPath = null)
         {
             ReplyImagePath = path;
-        }
-
-        public void ReplyWithByteArray(byte[] data, string responseType)
-        {
-            throw new NotImplementedException();
         }
 
         public void WriteError(int errorCode, string errorDescription)

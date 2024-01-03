@@ -314,7 +314,7 @@ namespace Bloom.Book
 
             ClearAwayDraftText(storage.Dom.RawDom);
 
-            storage.LoadCurrentSupportFilesIntoCache(); // Copy branding files etc.
+            storage.UpdateSupportFiles(); // Copy branding files etc.
             // We need to do this before we save the book, because it Saving will write the appearance settings,
             // destroying the information we need about whether the book already had some.
             var cssFiles = storage.GetCssFilesToCheckForAppearanceCompatibility(true);

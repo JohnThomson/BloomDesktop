@@ -657,7 +657,7 @@ namespace Bloom.Publish
                 SignLanguageApi.ProcessVideos(videoContainerElements, modifiedBook.FolderPath);
             }
             modifiedBook.Save();
-            modifiedBook.UpdateSupportFilesInCache();
+            modifiedBook.UpdateSupportFiles();
             return modifiedBook;
         }
 

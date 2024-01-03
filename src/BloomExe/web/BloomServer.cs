@@ -618,15 +618,6 @@ namespace Bloom.Api
             {
                 processImage = false;
                 imageFile = imageFile.Substring((OriginalImageMarker + "/").Length);
-                var imageData = CurrentBook?.Storage?.GetImage(imageFile);
-                if (imageData != null)
-                {
-                    info.ReplyWithByteArray(
-                        imageData,
-                        GetContentType(Path.GetExtension(imageFile))
-                    );
-                    return true;
-                }
 
                 if (!RobustFileExistsWithCaseCheck(imageFile))
                 {
@@ -639,20 +630,6 @@ namespace Bloom.Api
                 return true;
             }
             // Not a case where we are forcing the use of an unmodified image in the book folder.
-            // If the book has a cached image for this, use it.
-            var isPreview = GetLocalPathRoot(imageFile) == "book-preview";
-            if (isPreview || IsInBookFolder(imageFile))
-            {
-                var imageData = CurrentBook?.Storage?.GetImage(Path.GetFileName(imageFile));
-                if (imageData != null)
-                {
-                    info.ReplyWithByteArray(
-                        imageData,
-                        GetContentType(Path.GetExtension(imageFile))
-                    );
-                    return true;
-                }
-            }
             if (!RobustFileExistsWithCaseCheck(imageFile))
             {
                 // Generally, the path we started with will only work when the HTML file is the root file of a book,
@@ -669,7 +646,7 @@ namespace Bloom.Api
                 );
                 var sourceDir = bloomRoot;
 
-                if (isPreview)
+                if (GetLocalPathRoot(imageFile) == "book-preview")
                 {
                     sourceDir = CurrentBook.FolderPath; // no way we should be making a book-preview without a current book
                     imageFile = GetLocalPathAfterRoot(imageFile);
@@ -1127,12 +1104,23 @@ namespace Bloom.Api
             var localPath = incomingPath.Replace(OriginalImageMarker + "/", "");
             if (IsInBookFolder(localPath))
             {
-                var content = CurrentBook.Storage.GetSupportingFile(
-                    localPath.Substring(CurrentBook.FolderPath.Length + 1)
-                );
-                if (content == null)
-                    return false;
-                info.ReplyWithCachedFileContent(localPath, content);
+                // Any CSS files that are in the book folder should be up to date so we'll just use them.
+                info.ResponseContentType = "text/css";
+                if (!RobustFile.Exists(localPath))
+                {
+                    // Some supporting css files, like editMode.css, are not copied to the book folder
+                    // because they are not needed for viewing or publishing.
+                    localPath = _bookSelection.CurrentSelection?.Storage.GetSupportingFile(
+                        Path.GetFileName(localPath)
+                    );
+                }
+                if (RobustFile.Exists(localPath))
+                    info.ReplyWithFileContent(localPath);
+                else
+                {
+                    info.WriteCompleteOutput("");
+                }
+
                 return true;
             }
 
@@ -1149,7 +1137,7 @@ namespace Bloom.Api
             // to override local ones. This was done so that we could send out new custom stylesheets via webpack
             // and have those used in all the books. Fine. But that is indiscriminate; it also was grabbing
             // any "customBookStyles.css" from those sources and using it instead (here) and replacing that of your book (in BookStorage).
-            // Also, we make sure in BookStorage.LoadCurrentSupportFilesIntoCache that the correct branding.css is present in the
+            // Also, we make sure in BookStorage.UpdateSupportFiles that the correct branding.css is present in the
             // book folder; searching our usual path might find an undesirable one in some other collection.
             string path = "";
 

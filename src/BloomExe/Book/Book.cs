@@ -39,21 +39,6 @@ using Enumerable = System.Linq.Enumerable;
 
 namespace Bloom.Book
 {
-    public enum BookUpToDateState
-    {
-        None, // haven't called any version of BBUD
-
-        // as up-to-date as it can be without permission to write to the book folder.
-        // This is the state reached by calling BringBookUpToDateMemory,
-        // or calling EnsureBookUpToDate() when the book is not editable.
-        // The selected book should always be at least this up-to-date.
-        InMemory,
-
-        // We've done everything, including saving.
-        // A book being edited should always be this up-to-date
-        Saved,
-    }
-
     public class Book
     {
         public delegate Book Factory(BookInfo info, IBookStorage storage); //autofac uses this
@@ -95,7 +80,7 @@ namespace Bloom.Book
         public const string BigTextDiglotGuid = "08422e7b-9406-4d11-8c71-02005b1b8095";
         public const string WidgetGuid = "3a705ac1-c1f2-45cd-8a7d-011c009cf406"; // default page type for a single widget
 
-        public BookUpToDateState UpToDateState = BookUpToDateState.None; // probably the default, but make it clear
+        public bool UpToDate = false;
 
         /// <summary>
         /// Flag whether we want to write out the @font-face lines for served fonts to defaultLangStyles.css.
@@ -966,7 +951,7 @@ namespace Bloom.Book
                 //Console.WriteLine("DEBUG GetPreviewHtmlFileForWholeBook(): using cached _previewDOM");
                 return _previewDom;
             }
-            EnsureUpToDateMemory(new NullProgress()); // Before GetBookDomWithStyleSheets, so that will be up-to-date too
+
             var previewDom = GetBookDomWithStyleSheets("previewMode.css", "origami.css");
 
             //We may have just run into an error for the first time
@@ -1062,8 +1047,7 @@ namespace Bloom.Book
         /// </summary>
         public void BringBookUpToDate(IProgress progress, bool forCopyOfUpToDateBook = false)
         {
-            UpToDateState = BookUpToDateState.None; // force a full update
-            Storage.ClearCachedData();
+            UpToDate = false; // force a full update
             EnsureUpToDate(progress, forCopyOfUpToDateBook);
         }
 
@@ -1076,10 +1060,18 @@ namespace Bloom.Book
         {
             if (progress == null)
                 progress = new NullProgress();
-            if (UpToDateState == BookUpToDateState.Saved)
+            if (UpToDate)
                 return;
-            if (UpToDateState >= BookUpToDateState.InMemory && !IsSaveable)
-                return; // We can't do more until we are allowed to Save
+            if (!IsSaveable)
+            {
+                NonFatalProblem.Report(
+                    ModalIf.Alpha,
+                    PassiveIf.All,
+                    "Bloom attempted to update a book which cannot currently be saved: "
+                        + FolderPath
+                );
+                return;
+            }
             _pagesCache = null;
             string oldMetaData = string.Empty;
 
@@ -1087,15 +1079,12 @@ namespace Bloom.Book
             // after doing anything it needs to.
             EnsureUpToDateMemory(progress);
 
-            if (IsSaveable)
-            {
-                Storage.MigrateToMediaLevel1ShrinkLargeImages();
+            Storage.MigrateToMediaLevel1ShrinkLargeImages();
 
-                Storage.CleanupUnusedSupportFiles(forCopyOfUpToDateBook);
+            Storage.CleanupUnusedSupportFiles(forCopyOfUpToDateBook);
 
-                Save();
-                UpToDateState = BookUpToDateState.Saved;
-            }
+            Save();
+            UpToDate = true;
 
             _bookRefreshEvent?.Raise(this);
         }
@@ -1621,18 +1610,23 @@ namespace Bloom.Book
         /// definitely only need doing once. Probably it would be good for more of the work done here
         /// to be moved into such methods.
         ///
-        /// This version is used when making previews and similar tasks which may be done to books not
-        /// in the editable book collection, or in that collection but not checked out, and may even
-        /// be in a folder that is read-only. Therefore, it should not attempt to write files in the
-        /// book folder. Thus it can only modify the DOM, not files in the book folder.
-        /// In some cases files we'd like to copy into the book folder are instead put in a
-        /// cache in our Storage; queries for them from a browser (through our BloomServer) will
-        /// find the updated versions there, and if we later Save the book, they will get written out.
+        /// The code here was historically used, roughly, to bring a book as far up to date as possible
+        /// without changing files in the book folder. In the course of switching to the Appearance/Theme
+        /// system, we realized that isn't really feasible. So now we either bring a book up to date or
+        /// don't, and we only bring it up to date if we can save it. This method should only be called
+        /// by the main Update method. We may inline it at some point, but for now, that would make
+        /// seeing changes more difficult.
+        ///
+        /// If we need to reinstate the ability to bring a book up to date without saving it, JohnT's fork
+        /// has a branch where we experimented with allowing our server to return updated support files
+        /// from a cache and save them only if the whole book can be saved. Currently AppearanceChange3.
         /// </summary>
         private void EnsureUpToDateMemory(IProgress progress)
         {
-            if (UpToDateState >= BookUpToDateState.InMemory)
-                return; // already done
+            Guard.Against(
+                !IsSaveable,
+                "EnsureUpToDateMemory should only now be called for Saveable books as part of the main book updating"
+            );
             string oldMetaData = "";
             if (RobustFile.Exists(BookInfo.MetaDataPath))
             {
@@ -1749,14 +1743,11 @@ namespace Bloom.Book
             OurHtmlDom.FixDivOrdering();
 
             // Make sure the appearance settings are initialized for the current state of things.
-            // This should be done before UpdateSupportFilesInCache, because those settings affect
+            // This should be done before UpdateSupportFiles, because those settings affect
             // what files are put in the cache.
             var cssFiles = this.Storage.GetCssFilesToCheckForAppearanceCompatibility();
             BookInfo.AppearanceSettings.Initialize(cssFiles);
-            // The book with pretend (to our BloomServer) that it has updated versions of various
-            // files, though they won't actually get written until we do a Save().
-            UpdateSupportFilesInCache();
-            UpToDateState = BookUpToDateState.InMemory;
+            UpdateSupportFiles();
         }
 
         private void AddLanguageAttributesToBody(HtmlDom bookDom)
@@ -5000,9 +4991,9 @@ namespace Bloom.Book
             OrderOrNumberOfPagesChanged();
         }
 
-        public void UpdateSupportFilesInCache()
+        public void UpdateSupportFiles()
         {
-            Storage.LoadCurrentSupportFilesIntoCache();
+            Storage.UpdateSupportFiles();
         }
 
         private bool IsPageProtectedFromRemoval(XmlElement pageElement)
@@ -5631,7 +5622,7 @@ namespace Bloom.Book
             // that removing it causes. If you find a reason we need it, please document thoroughly.
             //BookInfo.Save();
             // Should not be needed when deleting customBookStyles.css, but definitely when we change theme.
-            Storage.LoadCurrentSupportFilesIntoCache();
+            Storage.UpdateSupportFiles();
             // temporary while we're in transition between storing cover color in the HTML and in the bookInfo
             //SetCoverColor(BookInfo.AppearanceSettings.CoverColor);
             _pageListChangedEvent.Raise(true);
