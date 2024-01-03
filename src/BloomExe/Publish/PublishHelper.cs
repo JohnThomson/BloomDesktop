@@ -640,10 +640,11 @@ namespace Bloom.Publish
             {
                 UseDeviceXMatter = !isTemplateBook
             };
+
+            var modifiedBook = bookServer.GetBookFromBookInfo(bookInfo);
             // This book has to stand alone. If it needs a customCollectionStyles.css, it will have to use the one we just
             // copied into the actual book folder, not one in a parent folder.
-            bookInfo.AppearanceSettings.LinkToLocalCollectionStyles = true;
-            var modifiedBook = bookServer.GetBookFromBookInfo(bookInfo);
+            modifiedBook.Storage.LinkToLocalCollectionStyles = true;
             modifiedBook.WriteFontFaces = wantFontFaceDeclarations;
             modifiedBook.BringBookUpToDate(new NullProgress(), true);
             modifiedBook.RemoveNonPublishablePages(omittedPageLabels);

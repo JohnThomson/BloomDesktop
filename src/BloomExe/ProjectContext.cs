@@ -653,8 +653,8 @@ namespace Bloom
             bool result;
             if (_mapPathToIsTemplateFolder.TryGetValue(path, out result))
                 return result;
-            var info = new BookInfo(path, false, new NoEditSaveContext(), true);
-            result = info.IsSuitableForMakingShells || info.IsSuitableForMakingTemplates;
+            var metaData = BookMetaData.FromFolder(path);
+            result = metaData.IsSuitableForMakingShells || metaData.IsSuitableForMakingTemplates;
             _mapPathToIsTemplateFolder[path] = result;
             return result;
         }

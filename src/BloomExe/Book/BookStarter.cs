@@ -314,7 +314,7 @@ namespace Bloom.Book
 
             ClearAwayDraftText(storage.Dom.RawDom);
 
-            storage.UpdateSupportFilesInMemory(); // Copy branding files etc.
+            storage.LoadCurrentSupportFilesIntoCache(); // Copy branding files etc.
             // We need to do this before we save the book, because it Saving will write the appearance settings,
             // destroying the information we need about whether the book already had some.
             var cssFiles = storage.GetCssFilesToCheckForAppearanceCompatibility(true);
@@ -431,12 +431,7 @@ namespace Bloom.Book
             string lineage = null;
             if (RobustFile.Exists(Path.Combine(sourceFolderPath, BookInfo.MetaDataFileName)))
             {
-                var sourceMetaData = new BookInfo(
-                    sourceFolderPath,
-                    false,
-                    new NoEditSaveContext(),
-                    true
-                );
+                var sourceMetaData = BookMetaData.FromFolder(sourceFolderPath);
                 parentId = sourceMetaData.Id;
                 lineage = sourceMetaData.BookLineage;
             }

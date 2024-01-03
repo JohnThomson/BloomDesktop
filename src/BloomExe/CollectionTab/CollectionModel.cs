@@ -866,8 +866,9 @@ namespace Bloom.CollectionTab
                 );
                 // Since the user told us to do it, we'll do it even to books that we think are already
                 // up to date. (EnsureUpToDate would do so anyway, since these are newly created Book objects, even if they are
-                // for books we already have in memory.)
-                book.BringBookUpToDate(progress);
+                // for books we already have in memory.) But not to ones where saving is disabled (in a TC).
+                if (book.IsSaveable)
+                    book.BringBookUpToDate(progress);
             }
         }
 

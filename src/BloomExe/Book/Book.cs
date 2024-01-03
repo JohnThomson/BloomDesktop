@@ -966,7 +966,7 @@ namespace Bloom.Book
                 //Console.WriteLine("DEBUG GetPreviewHtmlFileForWholeBook(): using cached _previewDOM");
                 return _previewDom;
             }
-            BringBookUpToDateMemory(new NullProgress()); // Before GetBookDomWithStyleSheets, so that will be up-to-date too
+            EnsureUpToDateMemory(new NullProgress()); // Before GetBookDomWithStyleSheets, so that will be up-to-date too
             var previewDom = GetBookDomWithStyleSheets("previewMode.css", "origami.css");
 
             //We may have just run into an error for the first time
@@ -1071,9 +1071,6 @@ namespace Bloom.Book
         /// Make any needed changes to make a book which might have come from an old version of Bloom
         /// consistent with the current data model. Also makes sure it has the current XMatter
         /// and a folder name consistent with its title (unless folder name has been overridden).
-        /// Consider using EnsureUpToDate() unless you know for sure that the book object is new
-        /// or that something has changed which requires BBUD to happen again. Usually it only
-        /// needs doing at most once, and it is slow.
         /// </summary>
         public void EnsureUpToDate(IProgress progress = null, bool forCopyOfUpToDateBook = false)
         {
@@ -1088,7 +1085,7 @@ namespace Bloom.Book
 
             // This does its own check for whether it needs to be done, and updates the state
             // after doing anything it needs to.
-            BringBookUpToDateMemory(progress);
+            EnsureUpToDateMemory(progress);
 
             if (IsSaveable)
             {
@@ -1619,15 +1616,20 @@ namespace Bloom.Book
         /// and making older Blooms unable to read new books. But because this is run, the xmatter will be
         /// migrated to the new template.
         ///
+        /// We also have maintenanceLevel in the book metadata. This can be used (in methods like
+        /// MigrateToMediaLevel1ShrinkLargeImages, called below) to do longer-running things that
+        /// definitely only need doing once. Probably it would be good for more of the work done here
+        /// to be moved into such methods.
+        ///
         /// This version is used when making previews and similar tasks which may be done to books not
         /// in the editable book collection, or in that collection but not checked out, and may even
         /// be in a folder that is read-only. Therefore, it should not attempt to write files in the
         /// book folder. Thus it can only modify the DOM, not files in the book folder.
         /// In some cases files we'd like to copy into the book folder are instead put in a
         /// cache in our Storage; queries for them from a browser (through our BloomServer) will
-        /// find the updated versions there.
+        /// find the updated versions there, and if we later Save the book, they will get written out.
         /// </summary>
-        private void BringBookUpToDateMemory(IProgress progress)
+        private void EnsureUpToDateMemory(IProgress progress)
         {
             if (UpToDateState >= BookUpToDateState.InMemory)
                 return; // already done
@@ -1642,7 +1644,7 @@ namespace Bloom.Book
             if (Title.Contains("allowSharedUpdate"))
             {
                 // Original version of this code that suffers BL_3166
-                BringBookUpToDateUnprotected(progress);
+                EnsureUpToDateMemoryUnprotected(progress);
             }
             else
             {
@@ -1667,7 +1669,7 @@ namespace Bloom.Book
                     _domBeingUpdated = OurHtmlDom;
                     _updateStackTrace = Environment.StackTrace;
                     _doingBookUpdate = true;
-                    BringBookUpToDateUnprotected(progress);
+                    EnsureUpToDateMemoryUnprotected(progress);
                     _doingBookUpdate = false;
                     _domBeingUpdated = null;
                     _updateStackTrace = null;
@@ -1834,7 +1836,7 @@ namespace Bloom.Book
             }
         }
 
-        private void BringBookUpToDateUnprotected(IProgress progress)
+        private void EnsureUpToDateMemoryUnprotected(IProgress progress)
         {
             // With one exception, handled below, nothing in the update process should change the license info, so save what is current before we mess with
             // anything (may fix BL-3166).
@@ -5000,7 +5002,7 @@ namespace Bloom.Book
 
         public void UpdateSupportFilesInCache()
         {
-            Storage.UpdateSupportFilesInMemory();
+            Storage.LoadCurrentSupportFilesIntoCache();
         }
 
         private bool IsPageProtectedFromRemoval(XmlElement pageElement)
@@ -5629,9 +5631,10 @@ namespace Bloom.Book
             // that removing it causes. If you find a reason we need it, please document thoroughly.
             //BookInfo.Save();
             // Should not be needed when deleting customBookStyles.css, but definitely when we change theme.
-            Storage.UpdateSupportFilesInMemory();
+            Storage.LoadCurrentSupportFilesIntoCache();
             // temporary while we're in transition between storing cover color in the HTML and in the bookInfo
             //SetCoverColor(BookInfo.AppearanceSettings.CoverColor);
+            _pageListChangedEvent.Raise(true);
         }
     }
 }

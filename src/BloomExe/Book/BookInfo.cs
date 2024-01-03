@@ -67,16 +67,7 @@ namespace Bloom.Book
                 );
         }
 
-        public BookInfo(
-            string folderPath,
-            bool isEditable,
-            ISaveContext saveContext,
-            // Pass this true when just making a temporary BookInfo object to get some value from meta.json
-            // It prevents loading data for publish and appearance settings, which saves time.
-            // Also, currently there is logic in AppearanceSettings to catch making more than one
-            // instance of it for a given book folder, which can be avoided by using this.
-            bool justMetaData = false
-        )
+        public BookInfo(string folderPath, bool isEditable, ISaveContext saveContext)
             : this()
         {
             Guard.AgainstNull(saveContext, "Please supply an actual saveContext");
@@ -93,14 +84,14 @@ namespace Bloom.Book
             //NB: This was coded in an unfortunate way such that touching almost any property causes a new metadata to be quietly created.
             //So It's vital that we not touch properties that could create a blank metadata, before attempting to load the existing one.
 
-            UpdateFromDisk(justMetaData);
+            UpdateFromDisk();
 
             IsEditable = isEditable;
 
             FixDefaultsIfAppropriate();
         }
 
-        public void UpdateFromDisk(bool justMetaData = false)
+        public void UpdateFromDisk()
         {
             _metadata = BookMetaData.FromFolder(FolderPath);
             if (_metadata == null)
@@ -114,11 +105,8 @@ namespace Bloom.Book
                 // otherwise leave it null, first attempt to use will create a default one
             }
 
-            if (!justMetaData)
-            {
-                PublishSettings = PublishSettings.FromFolder(FolderPath);
-                AppearanceSettings.UpdateFromFolder(FolderPath);
-            }
+            PublishSettings = PublishSettings.FromFolder(FolderPath);
+            AppearanceSettings.UpdateFromFolder(FolderPath);
         }
 
         public enum HowToPublishImageDescriptions
@@ -658,10 +646,7 @@ namespace Bloom.Book
         /// </summary>
         internal bool ShowThisBookAsSource()
         {
-            return !IsExperimental
-                || ExperimentalFeatures.IsFeatureEnabled(
-                    ExperimentalFeatures.kExperimentalSourceBooks
-                );
+            return MetaData.ShowThisBookAsSource();
         }
 
         private static bool TagIsTopic(string tag)
@@ -701,37 +686,54 @@ namespace Bloom.Book
         /// </summary>
         public static string InstallFreshInstanceGuid(string bookFolder)
         {
-            // This is a temporary BookInfo that shouldn't get asked about saveability of the book.
-            // But, this method should not have been called unless we already verified that we can save
-            // changes legitimately.
-            var bookInfo = new BookInfo(bookFolder, true, new AlwaysEditSaveContext(), true);
-            return bookInfo.InstallFreshGuidInternal();
-        }
-
-        private string InstallFreshGuidInternal()
-        {
+            var metaData = BookMetaData.FromFolder(bookFolder) ?? new BookMetaData();
             var freshGuidString = Guid.NewGuid().ToString();
-            Id = freshGuidString;
-            try
-            {
-                Save();
-                RobustFile.Delete(BookOrderPath(FolderPath));
-                RobustFile.Delete(BookMetaData.BackupFilePath(FolderPath));
-            }
-            catch (UnauthorizedAccessException e)
-            {
-                // Don't display modal, always toast
-                NonFatalProblem.Report(
-                    ModalIf.None,
-                    PassiveIf.All,
-                    "Failed to repair duplicate id",
-                    "BookInfo.InstallFreshInstanceGuid() failed to repair duplicate id in locked meta.json file at "
-                        + FolderPath,
-                    e
-                );
-            }
+            metaData.Id = freshGuidString;
+            var count = 0;
 
-            return Id;
+            do
+            {
+                try
+                {
+                    metaData.WriteToFolder(bookFolder);
+                    RobustFile.Delete(BookOrderPath(bookFolder));
+                    RobustFile.Delete(BookMetaData.BackupFilePath(bookFolder));
+                    break;
+                }
+                catch (UnauthorizedAccessException e)
+                {
+                    // Don't display modal, always toast
+                    NonFatalProblem.Report(
+                        ModalIf.None,
+                        PassiveIf.All,
+                        "Failed to repair duplicate id",
+                        "BookInfo.InstallFreshInstanceGuid() failed to repair duplicate id in locked meta.json file at "
+                            + bookFolder,
+                        e
+                    );
+                    break; // retry is unlikely to help here, and we don't want repeated warning messages.
+                }
+                catch (IOException e)
+                {
+                    Thread.Sleep(500);
+                    count++;
+
+                    // stop trying after 5 attempts to save the file.
+                    if (count > 4)
+                    {
+                        Debug.Fail("Reproduction of BL-354 that we have taken steps to avoid");
+
+                        var msg = LocalizationManager.GetDynamicString(
+                            "Bloom",
+                            "BookEditor.ErrorSavingPage",
+                            "Bloom wasn't able to save the changes to the page."
+                        );
+                        ErrorReport.NotifyUserOfProblem(e, msg);
+                    }
+                }
+            } while (count < 5);
+
+            return freshGuidString;
         }
 
         /// <summary>
@@ -829,8 +831,7 @@ namespace Bloom.Book
             }
             // Leaf node; we're in a book folder
             var metaFileLastWriteTime = RobustFile.GetLastWriteTimeUtc(metaJsonPath);
-            var bi = new BookInfo(currentFolder, false, new NoEditSaveContext(), true);
-            var id = bi.Id;
+            var id = (BookMetaData.FromFolder(currentFolder) ?? new BookMetaData()).Id;
             SafelyAddToIdSet(id, metaFileLastWriteTime, currentFolder, idToSortedFilepathsMap);
         }
 
@@ -1193,6 +1194,18 @@ namespace Bloom.Book
         //SeeAlso: commented IsExperimental on Book
         [JsonProperty("experimental")]
         public bool IsExperimental { get; set; }
+
+        /// <summary>
+        /// Check whether this book (or its pages) should be shown as a source.  If it is not experimental, the answer
+        /// is always "yes".  If it is experimental, then show it only if the user wants experimental sources.
+        /// </summary>
+        internal bool ShowThisBookAsSource()
+        {
+            return !IsExperimental
+                || ExperimentalFeatures.IsFeatureEnabled(
+                    ExperimentalFeatures.kExperimentalSourceBooks
+                );
+        }
 
         [JsonProperty("brandingProjectName")]
         public string BrandingProjectName { get; set; }

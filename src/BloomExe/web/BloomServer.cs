@@ -1149,7 +1149,7 @@ namespace Bloom.Api
             // to override local ones. This was done so that we could send out new custom stylesheets via webpack
             // and have those used in all the books. Fine. But that is indiscriminate; it also was grabbing
             // any "customBookStyles.css" from those sources and using it instead (here) and replacing that of your book (in BookStorage).
-            // Also, we make sure in BookStorage.UpdateSupportFilesInMemory that the correct branding.css is present in the
+            // Also, we make sure in BookStorage.LoadCurrentSupportFilesIntoCache that the correct branding.css is present in the
             // book folder; searching our usual path might find an undesirable one in some other collection.
             string path = "";
 

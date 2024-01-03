@@ -88,12 +88,13 @@ namespace Bloom.Book
         string NormalBaseForRelativepaths { get; }
         string InitialLoadErrors { get; }
         bool ErrorAllowsReporting { get; }
-        void UpdateSupportFilesInMemory();
+        void LoadCurrentSupportFilesIntoCache();
         void Update(string fileName, string factoryPath = "");
         string Duplicate();
         IEnumerable<string> GetNarrationAudioFileNamesReferencedInBook(bool includeWav);
         IEnumerable<string> GetBackgroundMusicFileNamesReferencedInBook();
         void EnsureOriginalTitle();
+        bool LinkToLocalCollectionStyles { get; set; }
 
         IEnumerable<string> GetActivityFolderNamesReferencedInBook();
         void MigrateMaintenanceLevels();
@@ -2608,7 +2609,7 @@ namespace Bloom.Book
         /// Update our cache to contain all the support files, so Save will update all of them.
         /// May also note some that should be deleted when we can Save.
         /// </summary>
-        public void UpdateSupportFilesInMemory()
+        public void LoadCurrentSupportFilesIntoCache()
         {
             _supportingFiles.Clear();
             // Before 5.7, we had this code, but I think it left the browser looking for (e.g.) branding images
@@ -2650,7 +2651,7 @@ namespace Bloom.Book
             //
             // Also, we don't want to update branding.css here because the default update process may pull it from
             // who knows where; it doesn't come from one of the directories we search early.
-            // Instead, normally one is fetched from the right branding in CopyBrandingFilesToCache,
+            // Instead, normally one is fetched from the right branding in LoadCurrentBrandingFilesIntoCache,
             // or if the branding is under development we generate a placeholder, or if there is no branding
             // we generate an empty placeholder.
             var cssFilesToSkipInThisPhase = new HashSet<string>();
@@ -2682,12 +2683,13 @@ namespace Bloom.Book
             foreach (var file in supportFilesToUpdate)
                 GetSupportingFile(file);
 
-            CopyBrandingFilesToCache();
+            LoadCurrentBrandingFilesIntoCache();
         }
 
         // Brandings come with logos and such... we want them in the book folder itself so that they work
-        // apart from Bloom and in web browsing, ePUB, and BloomPUB contexts.
-        private void CopyBrandingFilesToCache()
+        // apart from Bloom and in web browsing, ePUB, and BloomPUB contexts. For now just load them into
+        // our cache, in case we don't have write permission to the book folder.
+        private void LoadCurrentBrandingFilesIntoCache()
         {
             _brandingImageNames.Clear();
             try
@@ -3058,30 +3060,18 @@ namespace Bloom.Book
             {
                 EnsureHasLinkToStyleSheet(dom, x);
             });
-            var appearanceRelatedCssFiles = BookInfo.AppearanceSettings.AppearanceRelatedCssFiles;
+            var appearanceRelatedCssFiles = BookInfo.AppearanceSettings.AppearanceRelatedCssFiles(
+                LinkToLocalCollectionStyles
+            );
             appearanceRelatedCssFiles.ForEach(x =>
             {
                 EnsureHasLinkToStyleSheet(dom, x);
             });
 
             // If we're not supposed to have these links, make sure we don't.
-            foreach (
-                var file in new string[]
-                {
-                    "appearance.css",
-                    "customBookStyles.css",
-                    "customBookStyles2.css",
-                    "customCollectionStyles.css",
-                    "basePage.css",
-                    "basePage-legacy-5-6.css"
-                }
-            )
-            {
-                if (!appearanceRelatedCssFiles.Contains(file))
-                {
-                    EnsureDoesntHaveLinkToStyleSheet(dom, file);
-                }
-            }
+            AppearanceSettings.PossibleAppearanceRelatedCssFiles
+                .Except(appearanceRelatedCssFiles)
+                .ForEach(file => EnsureDoesNotHaveLinkToStyleSheet(dom, file));
 
             dom.SortStyleSheetLinks();
         }
@@ -3093,7 +3083,7 @@ namespace Bloom.Book
             if (currentXmatterName != nameOfXMatterPack)
             {
                 const string xmatterSuffix = "-XMatter.css";
-                EnsureDoesntHaveLinkToStyleSheet(dom, nameOfXMatterPack + xmatterSuffix);
+                EnsureDoesNotHaveLinkToStyleSheet(dom, nameOfXMatterPack + xmatterSuffix);
                 EnsureHasLinkToStyleSheet(dom, nameOfXMatterPack + xmatterSuffix);
                 // Since HtmlDom.GetMetaValue() is always called with the collection's xmatter pack as default,
                 // we can just remove this wrong meta element.
@@ -3102,7 +3092,7 @@ namespace Bloom.Book
             return currentXmatterName;
         }
 
-        private void EnsureDoesntHaveLinkToStyleSheet(HtmlDom dom, string path)
+        private void EnsureDoesNotHaveLinkToStyleSheet(HtmlDom dom, string path)
         {
             foreach (XmlElement link in dom.SafeSelectNodes("//link[@rel='stylesheet']"))
             {
@@ -3146,7 +3136,11 @@ namespace Bloom.Book
         {
             return new[] { "previewMode.css" }
                 .Concat(CssFilesThatAreAlwaysWanted)
-                .Concat(this.BookInfo.AppearanceSettings.AppearanceRelatedCssFiles)
+                .Concat(
+                    this.BookInfo.AppearanceSettings.AppearanceRelatedCssFiles(
+                        LinkToLocalCollectionStyles
+                    )
+                )
                 .ToArray();
         }
 
@@ -3777,6 +3771,13 @@ namespace Bloom.Book
         }
 
         /// <summary>
+        /// Should we look for customCollectionStyles.css in the book folder itself, or in the parent folder?
+        /// Normally we look in the parent folder, but if we are making a bloomPub or similar copy,
+        /// we copy it into the book folder itself, and that's where we should look.
+        /// </summary>
+        public bool LinkToLocalCollectionStyles { get; set; }
+
+        /// <summary>
         /// Files that might contain rules that conflict with the new appearance model (currently, that is if they affect
         /// the size and position of the marginBox).
         /// In the resulting list, the first item is the file name, and the second is content.
@@ -3798,7 +3799,7 @@ namespace Bloom.Book
             // this is sometimes copied into the book folder, but that's not reliable except in BloomPubs.
             // A flag in AppearanceSettings allows it to tell us which of them we should use for this book.
             var customCollectionStylesPath = FolderPath.CombineForPath(
-                BookInfo.AppearanceSettings.RelativePathToCollectionStyles
+                RelativePathToCollectionStyles(LinkToLocalCollectionStyles)
             );
             var customCollectionCss = RobustFile.Exists(customCollectionStylesPath)
                 ? RobustFile.ReadAllText(customCollectionStylesPath)
@@ -3850,5 +3851,15 @@ namespace Bloom.Book
             "customBookStyles2.css",
             "customBookStyles.css"
         };
+
+        /// <summary>
+        /// Relative to the book folder, where should we find the customCollectionStyles.css file?
+        /// Normally we look in the parent folder, but if we are making a bloomPub or similar copy,
+        /// we copy it into the book folder itself, and that's where we should look.
+        /// </summary>
+        public static string RelativePathToCollectionStyles(bool useLocalCollectionStyles)
+        {
+            return (useLocalCollectionStyles ? "" : "../") + "customCollectionStyles.css";
+        }
     }
 }

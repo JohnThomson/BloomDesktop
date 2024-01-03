@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Windows.Navigation;
 using Amazon.Auth.AccessControlPolicy;
 using Bloom;
 using Bloom.Book;
@@ -137,7 +138,6 @@ public class AppearanceSettings
     private bool _customBookStylesExists;
     private bool _customBookStyles2Exists;
     private bool _customCollectionStylesExists;
-    private bool _linkToLocalCollectionStyles;
 
     /// <summary>
     /// Considering all factors, should the book have a link to a customBookStyles.css file?
@@ -189,31 +189,41 @@ public class AppearanceSettings
     /// </summary>
     public bool ShouldUseAppearanceCss => !UsingLegacy;
 
-    public List<string> AppearanceRelatedCssFiles
+    public List<string> AppearanceRelatedCssFiles(bool useLocalCollectionStyles)
     {
-        get
-        {
-            var result = new List<string>();
-            if (ShouldUseAppearanceCss)
-                result.Add("appearance.css");
-            if (ShouldUseCustomBookStyles)
-                result.Add("customBookStyles.css");
-            if (ShouldUseCustomBookStyles2)
-                result.Add("customBookStyles2.css");
-            if (ShouldUseCustomCollectionStyles)
-                result.Add(RelativePathToCollectionStyles);
-            result.Add(BasePageCssName);
-            return result;
-        }
+        var result = new List<string>();
+        if (ShouldUseAppearanceCss)
+            result.Add("appearance.css");
+        if (ShouldUseCustomBookStyles)
+            result.Add("customBookStyles.css");
+        if (ShouldUseCustomBookStyles2)
+            result.Add("customBookStyles2.css");
+        if (ShouldUseCustomCollectionStyles)
+            result.Add(BookStorage.RelativePathToCollectionStyles(useLocalCollectionStyles));
+        result.Add(BasePageCssName);
+        return result;
     }
 
     /// <summary>
-    /// Relative to the book folder, where should we find the customCollectionStyles.css file?
-    /// Normally we look in the parent folder, but if we are making a bloomPub or similar copy,
-    /// we copy it into the book folder itself, and that's where we should look.
+    /// List all the CSS files that AppearanceRelatedCssFiles might ever return
+    /// (for use in deleting the ones that it does not currently return).
     /// </summary>
-    public string RelativePathToCollectionStyles =>
-        (LinkToLocalCollectionStyles ? "" : "../") + "customCollectionStyles.css";
+    public static string[] PossibleAppearanceRelatedCssFiles
+    {
+        get
+        {
+            return new[]
+            {
+                "appearance.css",
+                "customBookStyles.css",
+                "customBookStyles2.css",
+                "customCollectionStyles.css",
+                "../customCollectionStyles.cs",
+                "basePage.css",
+                "basePage-legacy-5-6.css"
+            };
+        }
+    }
 
     /// <summary>
     /// Given a list of CSS files from a new book, typically customBookStyles.css and customCollectionStyles.css,
@@ -285,17 +295,6 @@ public class AppearanceSettings
                 BloomFileLocator.GetFolderContainingAppearanceThemeFiles(),
                 $"appearance-theme-{substituteTheme}.css"
             );
-    }
-
-    /// <summary>
-    /// Should we look for customCollectionStyles.css in the book folder itself, or in the parent folder?
-    /// Normally we look in the parent folder, but if we are making a bloomPub or similar copy,
-    /// we copy it into the book folder itself, and that's where we should look.
-    /// </summary>
-    public bool LinkToLocalCollectionStyles
-    {
-        get { return _linkToLocalCollectionStyles; }
-        set { _linkToLocalCollectionStyles = value; }
     }
 
     /// <summary>
