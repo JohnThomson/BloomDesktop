@@ -17,7 +17,10 @@
         "statusBar.background": "#75416E",
         "statusBar.debuggingBackground": "#75416E",
         "statusBar.noFolderBackground": "#75416E",
-        "statussBar.prominentBackground": "#D65649"
+        "statussBar.prominentBackground": "#D65649",
+        "activityBar.background": "#34127E",
+        "titleBar.activeBackground": "#4919B1",
+        "titleBar.activeForeground": "#FBFAFE"
     },
 
     "cSpell.words": [
