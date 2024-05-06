@@ -1508,7 +1508,7 @@ namespace Bloom.Edit
                 //if (typeof(editTabBundle) !=='undefined' && typeof(editTabBundle.getEditablePageBundleExports()) !=='undefined')
                 //	editTabBundle.getEditablePageBundleExports().getBodyContentForSavePage() + '<SPLIT-DATA>' + editTabBundle.getEditablePageBundleExports().userStylesheetContent();";
                 @"editTabBundle.getEditablePageBundleExports().pageSelectionChanging();";
-            var combinedData = _browser1.RunJavascriptWithStringResult(script);
+            var combinedData = _browser1.RunJavascriptThatPostsStringResultSync(script);
             string bodyHtml = null;
             string userCssContent = null;
             if (combinedData != null)
