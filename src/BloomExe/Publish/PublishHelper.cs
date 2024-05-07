@@ -47,6 +47,7 @@ namespace Bloom.Publish
         public static bool InPublishTab { get; set; }
 
         private Browser _browser;
+        Form _browserForm;
         public Browser BrowserForPageChecks
         {
             get
@@ -58,15 +59,25 @@ namespace Bloom.Publish
                             || Program.RunningUnitTests
                             || Program.RunningOnUiThread
                     );
+                    var makeBrowserAction = (Action)(
+                        () =>
+                        {
+                            _browser = BrowserMaker.MakeBrowser();
+                            _browserForm = new Form();
+                            _browser.Dock = DockStyle.Fill;
+                            _browserForm.Controls.Add(_browser);
+                            //_browserForm.Size = new System.Drawing.Size(1, 1);
+                            //_browserForm.Location = new System.Drawing.Point(-1000, -1000);
+                            _browserForm.Show(Shell.GetShellOrOtherOpenForm());
+                        }
+                    );
                     if (ControlForInvoke != null && ControlForInvoke.InvokeRequired)
                     {
-                        ControlForInvoke.Invoke(
-                            (Action)(() => _browser = BrowserMaker.MakeBrowser())
-                        );
+                        ControlForInvoke.Invoke(makeBrowserAction);
                     }
                     else
                     {
-                        _browser = BrowserMaker.MakeBrowser();
+                        makeBrowserAction();
                     }
                 }
                 return _browser;
@@ -132,23 +143,32 @@ namespace Bloom.Publish
         /// Running this script and getting the results for the whole page is much faster than running
         /// two trivial scripts for each element in WebView2. See BL-12402.
         /// </remarks>
-        public const string GetElementDisplayAndFontInfoJavascript =
-            @"(() =>
-{
-	const elementsInfo = [];
-	const elementsWithId = document.querySelectorAll(""[id]"");
-	elementsWithId.forEach(elt => {
-		const style = getComputedStyle(elt, null);
-		if (style) {
-			elementsInfo.push({
-				id: elt.id,
-				display: style.display,
-				fontFamily: style.getPropertyValue(""font-family"")
-			});
-		}
-	});
-	return { results: elementsInfo };
-})();";
+        public string GetElementDisplayAndFontInfoJavascript =>
+            @"
+const elementsInfo = [];
+const elementsWithId = document.querySelectorAll(""[id]"");
+elementsWithId.forEach(elt => {
+	const style = getComputedStyle(elt, null);
+	if (style) {
+		elementsInfo.push({
+			id: elt.id,
+			display: style.display,
+			fontFamily: style.getPropertyValue(""font-family"")
+		});
+	}
+});
+const result = JSON.stringify({ results: elementsInfo });
+console.log(""got json"");
+fetch("""
+            + BloomServer.ServerUrlWithBloomPrefixEndingInSlash
+            + @"api/common/javascriptResult"", {
+      method: ""POST"",
+      body: result,
+      headers: {
+        ""Content-type"": ""text/plain; charset=UTF-8""
+      }
+    })
+";
 
         /// <summary>
         /// Store the display and font information for all the elements returned as JSON
@@ -351,7 +371,7 @@ namespace Bloom.Publish
                 return;
 
             // Get and store the display and font information for each element in the DOM.
-            var elementsInfo = BrowserForPageChecks.RunJavascriptWithStringResult_Sync_Dangerous(
+            var elementsInfo = BrowserForPageChecks.RunJavascriptThatPostsStringResultSync(
                 GetElementDisplayAndFontInfoJavascript
             );
             var rawInfo = Newtonsoft.Json.JsonConvert.DeserializeObject<ElementInfoArray>(
@@ -667,6 +687,14 @@ namespace Bloom.Publish
 
         protected virtual void Dispose(bool disposing)
         {
+            var disposeAction = (Action)(
+                () =>
+                {
+                    _browserForm.Close();
+                    _browser.Dispose();
+                    _browserForm.Dispose();
+                }
+            );
             if (!_isDisposed)
             {
                 if (disposing)
@@ -678,18 +706,18 @@ namespace Bloom.Publish
                             // Seems safest of all to invoke using the thing we use for all other invokes.
                             // Also, seems our WebView2Browser may not actually get a handle, yet its
                             // embedded WebView2 still needs to be disposed on the right thread.
-                            ControlForInvoke.Invoke((Action)(() => _browser.Dispose()));
+                            ControlForInvoke.Invoke(disposeAction);
                         }
                         else if (_browser.IsHandleCreated)
                         {
-                            _browser.Invoke((Action)(() => _browser.Dispose()));
+                            _browser.Invoke(disposeAction);
                         }
                         else
                         {
                             // We can't invoke if it doesn't have a handle...and we certainly don't want
                             // to waste time getting it one...hopefully we can just dispose it on this
                             // thread.
-                            _browser.Dispose();
+                            disposeAction();
                         }
                     }
 

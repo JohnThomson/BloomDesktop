@@ -1274,6 +1274,13 @@ export function pageSelectionChanging() {
     const content = getBodyContentForSavePage();
     const userStylesheet = userStylesheetContent();
     disconnectForGarbageCollection();
+    // fetch("http://localhost:8089/bloom/api/common/javascriptResult", {
+    //     method: "POST",
+    //     body: content + "<SPLIT-DATA>" + userStylesheet,
+    //     headers: {
+    //         "Content-type": "text/plain; charset=UTF-8"
+    //     }
+    // });
     postString(
         "common/javascriptResult",
         content + "<SPLIT-DATA>" + userStylesheet
