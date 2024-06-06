@@ -423,7 +423,7 @@ namespace Bloom.Publish
             );
 
             AddStylesheetClasses(dom.RawDom);
-            HtmlDom.AddClassToBody(dom.RawDom, "pdfPublishMode");
+            dom.RawDom.AddClassToBody("pdfPublishMode");
 
             PageLayout.UpdatePageSplitMode(dom.RawDom);
             if (_currentlyLoadedBook.FullBleed && !GetPrintingWithFullBleed())
@@ -460,15 +460,15 @@ namespace Bloom.Publish
             }
         }
 
-        private void AddStylesheetClasses(XmlDocument dom)
+        private void AddStylesheetClasses(SafeXmlDocument dom)
         {
             if (this.GetPrintingWithFullBleed())
             {
-                HtmlDom.AddClassToBody(dom, "publishingWithFullBleed");
+                dom.AddClassToBody("publishingWithFullBleed");
             }
             else
             {
-                HtmlDom.AddClassToBody(dom, "publishingWithoutFullBleed");
+                dom.AddClassToBody("publishingWithoutFullBleed");
             }
             HtmlDom.AddPublishClassToBody(dom);
 

@@ -7,6 +7,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Xml;
 using Bloom.Collection;
+using Bloom.ToPalaso;
 using L10NSharp;
 using SIL.Extensions;
 using SIL.IO;
@@ -368,13 +369,13 @@ namespace Bloom.Book
         private void StripBloomEnterpriseClassFromComicPages(BookStorage storage)
         {
             foreach (
-                XmlElement pageDiv in storage.Dom.RawDom.SafeSelectNodes(
+                SafeXmlElement pageDiv in storage.Dom.RawDom.SafeSelectNodes(
                     "//div[contains(@class,'bloom-page')]"
                 )
             )
             {
                 if (HtmlDom.HasClass(pageDiv, "comic"))
-                    HtmlDom.RemoveClass(pageDiv, "enterprise-only");
+                    pageDiv.RemoveClass("enterprise-only");
             }
         }
 

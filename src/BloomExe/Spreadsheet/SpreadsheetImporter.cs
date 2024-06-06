@@ -20,6 +20,7 @@ using Bloom.web;
 using Bloom.Collection;
 using Bloom.History;
 using Bloom.ImageProcessing;
+using Bloom.ToPalaso;
 using Bloom.web.controllers;
 using Bloom.Utils;
 
@@ -550,7 +551,7 @@ namespace Bloom.Spreadsheet
             }
         }
 
-        private void PutRowInVideo(ContentRow currentRow, XmlElement videoContainer)
+        private void PutRowInVideo(ContentRow currentRow, SafeXmlElement videoContainer)
         {
             var source = currentRow.GetCell(InternalSpreadsheet.VideoSourceColumnLabel).Text;
             Debug.Assert(
@@ -631,10 +632,10 @@ namespace Bloom.Spreadsheet
                 "src",
                 UrlPathString.CreateFromUnencodedString("video/" + videoFile).UrlEncoded
             );
-            HtmlDom.RemoveClass(videoContainer, "bloom-noVideoSelected");
+            videoContainer.RemoveClass("bloom-noVideoSelected");
         }
 
-        private void PutRowInWidget(ContentRow currentRow, XmlElement widgetContainer)
+        private void PutRowInWidget(ContentRow currentRow, SafeXmlElement widgetContainer)
         {
             var source = currentRow.GetCell(InternalSpreadsheet.WidgetSourceColumnLabel).Text;
             Debug.Assert(
@@ -680,7 +681,7 @@ namespace Bloom.Spreadsheet
                 "src",
                 UrlPathString.CreateFromUnencodedString(source).UrlEncodedForHttpPath
             );
-            HtmlDom.RemoveClass(widgetContainer, "bloom-noWidgetSelected");
+            widgetContainer.RemoveClass("bloom-noWidgetSelected");
 
             if (_pathToSpreadsheetFolder != null)
             {
@@ -1201,7 +1202,7 @@ namespace Bloom.Spreadsheet
             _currentPage = newPage;
         }
 
-        private void ClearPageContent(XmlElement page)
+        private void ClearPageContent(SafeXmlElement page)
         {
             // clear everything: this is useful in case it has slots we won't use.
             // They might have content either from the original last page, or from the
@@ -1264,7 +1265,7 @@ namespace Bloom.Spreadsheet
                     .ToList()
             )
             {
-                HtmlDom.AddClass(w.ParentNode as XmlElement, "bloom-noWidgetSelected");
+                HtmlDom.AddClass(w.ParentNode as SafeXmlElement, "bloom-noWidgetSelected");
                 w.ParentNode.RemoveChild(w);
             }
 
@@ -1272,11 +1273,11 @@ namespace Bloom.Spreadsheet
             {
                 // No answer should be marked correct unless a row specifies it
                 foreach (
-                    XmlElement tg in page.SafeSelectNodes(
+                    SafeXmlElement tg in page.SafeSelectNodes(
                         ".//div[contains(@class, 'correct-answer')]"
                     )
                 )
-                    HtmlDom.RemoveClass(tg, "correct-answer");
+                    tg.RemoveClass("correct-answer");
                 // All the answers are, for the moment, empty, so mark them accordingly.
                 foreach (
                     XmlElement tg in page.SafeSelectNodes(
@@ -1716,11 +1717,11 @@ namespace Bloom.Spreadsheet
         /// </summary>
         /// <param name="row"></param>
         /// <param name="group"></param>
-        private async Task PutRowInGroupAsync(ContentRow row, XmlElement group)
+        private async Task PutRowInGroupAsync(ContentRow row, SafeXmlElement group)
         {
-            if (group.Attributes["class"].Value.Contains("QuizAnswer-style"))
+            if (group.GetAttribute("class").Contains("QuizAnswer-style"))
             {
-                HtmlDom.RemoveClass(group.ParentNode as XmlElement, "empty");
+                (group.ParentNode as SafeXmlElement).RemoveClass("empty");
             }
             var attributeData = row.GetCell(InternalSpreadsheet.AttributeColumnLabel)?.Content;
             if (!string.IsNullOrEmpty(attributeData))
@@ -1729,7 +1730,7 @@ namespace Bloom.Spreadsheet
                 if (attributeData.StartsWith("../"))
                 {
                     attributeData = attributeData.Substring(3);
-                    target = (XmlElement)group.ParentNode;
+                    target = (SafeXmlElement)group.ParentNode;
                 }
                 var parts = attributeData.Split('=');
                 if (parts.Length == 2)
@@ -1836,16 +1837,16 @@ namespace Bloom.Spreadsheet
         /// <param name="editable"></param>
         /// <param name="lang"></param>
         /// <param name="row"></param>
-        private async Task AddAudioAsync(XmlElement editable, string lang, ContentRow row)
+        private async Task AddAudioAsync(SafeXmlElement editable, string lang, ContentRow row)
         {
             // in case we're importing into an existing page, remove any existing audio-related stuff first.
             // We want to do this even if there isn't any new audio stuff.
             editable.RemoveAttribute("data-duration");
             editable.RemoveAttribute("data-audiorecordingendtimes");
             editable.RemoveAttribute("recordingmd5");
-            HtmlDom.RemoveClass(editable, "bloom-postAudioSplit");
+            editable.RemoveClass("bloom-postAudioSplit");
             editable.RemoveAttribute("data-audiorecordingmode");
-            HtmlDom.RemoveClass(editable, "audio-sentence");
+            editable.RemoveClass("audio-sentence");
             foreach (
                 var span in editable.SafeSelectNodes("span[@class]").Cast<XmlElement>().ToArray()
             )

@@ -9,6 +9,7 @@ using Bloom.Api;
 using Bloom.Book;
 using Bloom.FontProcessing;
 using Bloom.Publish.Epub;
+using Bloom.ToPalaso;
 using Bloom.web;
 using Bloom.web.controllers;
 using Bloom.Workspace;
@@ -711,7 +712,7 @@ namespace Bloom.Publish
         /// it might be null).
         /// </summary>
         public static void CollectPageLabel(
-            XmlElement pageElement,
+            SafeXmlElement pageElement,
             Dictionary<string, int> omittedPageLabels
         )
         {

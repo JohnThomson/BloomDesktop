@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Xml;
+using Bloom.ToPalaso;
 using L10NSharp;
 using SIL.Reporting;
 using SIL.WritingSystems;
@@ -817,10 +818,10 @@ namespace Bloom.Book
         /// on, then immediate character formatting cannot turn it off anywhere in a text box that
         /// uses that style.  See https://silbloom.myjetbrains.com/youtrack/issue/BL-6282.
         /// </summary>
-        private static void FixGroupStyleSettings(XmlNode pageDiv)
+        private static void FixGroupStyleSettings(SafeXmlNode pageDiv)
         {
             foreach (
-                XmlElement groupElement in pageDiv.SafeSelectNodes(
+                SafeXmlElement groupElement in pageDiv.SafeSelectNodes(
                     "descendant-or-self::*[contains(@class,'bloom-translationGroup')]"
                 )
             )
@@ -832,7 +833,7 @@ namespace Bloom.Book
                 // Then remove the group style if it does have any child divs with the bloom-editable class.
                 bool hasInternalEditableDiv = false;
                 foreach (
-                    XmlElement element in groupElement.SafeSelectNodes(
+                    SafeXmlElement element in groupElement.SafeSelectNodes(
                         "child::div[contains(@class, 'bloom-editable')]"
                     )
                 )
@@ -843,7 +844,7 @@ namespace Bloom.Book
                     hasInternalEditableDiv = true;
                 }
                 if (hasInternalEditableDiv)
-                    HtmlDom.RemoveClass(groupElement, groupStyle);
+                    groupElement.RemoveClass(groupStyle);
             }
         }
 
@@ -921,7 +922,7 @@ namespace Bloom.Book
                 // don't have this class.
                 // Also, if audio recording markup is done using one audio-sentence span per sentence, we won't copy it.  (Because we strip all out the text underneath this node)
                 // So, it's more consistent to treat all scenarios the same way (don't copy the audio-sentence markup)
-                HtmlDom.RemoveClass(newElementInThisLanguage, "audio-sentence");
+                newElementInThisLanguage.RemoveClass("audio-sentence");
 
                 // Nor any need to copy over other audio markup
                 // We want to clear up all the audio markup so it's not left in an inconsistent state
@@ -929,7 +930,7 @@ namespace Bloom.Book
                 // See BL-8215
                 newElementInThisLanguage.RemoveAttribute("data-audiorecordingmode");
                 newElementInThisLanguage.RemoveAttribute("data-audiorecordingendtimes");
-                HtmlDom.RemoveClass(newElementInThisLanguage, "bloom-postAudioSplit");
+                newElementInThisLanguage.RemoveClass("bloom-postAudioSplit");
 
                 //OK, now any text in there will belong to the prototype language, so remove it, while retaining everything else
                 StripOutText(newElementInThisLanguage);

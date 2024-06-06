@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
 using System.Xml;
+using Bloom.ToPalaso;
 using SIL.Code;
 
 namespace Bloom.Book
@@ -13,7 +14,7 @@ namespace Bloom.Book
         string Caption { get; }
         string CaptionI18nId { get; }
         string XPathToDiv { get; }
-        XmlElement GetDivNodeForThisPage();
+        SafeXmlElement GetDivNodeForThisPage();
         bool Required { get; }
         bool CanRelocate { get; }
         Book Book { get; set; }
@@ -28,7 +29,7 @@ namespace Bloom.Book
     public class Page : IPage
     {
         private readonly string _id;
-        private readonly Func<IPage, XmlElement> _getDivNodeForThisPageMethod;
+        private readonly Func<IPage, SafeXmlElement> _getDivNodeForThisPageMethod;
         private List<string> _classes;
         private List<string> _tags;
         private string[] _pageLineage;
@@ -38,7 +39,7 @@ namespace Bloom.Book
             XmlElement sourcePage,
             string caption,
             string captionI18nId,
-            Func<IPage, XmlElement> getDivNodeForThisPageMethod
+            Func<IPage, SafeXmlElement> getDivNodeForThisPageMethod
         )
         {
             sourcePage = EnsureID(sourcePage);

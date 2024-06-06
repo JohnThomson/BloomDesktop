@@ -3004,11 +3004,11 @@ namespace Bloom.Book
 
         private void EnsureDoesNotHaveLinkToStyleSheet(HtmlDom dom, string path)
         {
-            foreach (XmlElement link in dom.SafeSelectNodes("//link[@rel='stylesheet']"))
+            foreach (SafeXmlElement link in dom.SafeSelectNodes("//link[@rel='stylesheet']"))
             {
-                var fileName = link.GetStringAttribute("href");
+                var fileName = link.GetAttribute("href");
                 if (fileName == path)
-                    dom.RemoveStyleSheetIfFound(path);
+                    dom.RawDom.RemoveStyleSheetIfFound(path);
             }
         }
 
@@ -3962,9 +3962,10 @@ namespace Bloom.Book
         // the marginBox are inside it.
         static bool HasMessedUpMarginBox(XmlElement page)
         {
-			// Flyleaf pages are intentionally empty; they have no marginBox.
-			// See XMatterHelper.InjectFlyleafIfNeeded().
-			if (HtmlDom.IsFlyleafPage(page)) return false;
+            // Flyleaf pages are intentionally empty; they have no marginBox.
+            // See XMatterHelper.InjectFlyleafIfNeeded().
+            if (HtmlDom.IsFlyleafPage(page))
+                return false;
 
             var marginBox = GetMarginBox(page);
             if (marginBox == null)

@@ -901,7 +901,7 @@ namespace Bloom.Book
 
         public virtual HtmlDom OurHtmlDom => Storage.Dom;
 
-        public virtual XmlDocument RawDom => OurHtmlDom.RawDom;
+        public virtual SafeXmlDocument RawDom => OurHtmlDom.RawDom;
 
         // Tests can run without ever setting Storage.  This check is currently enough for them to work.
         public virtual string FolderPath => Storage?.FolderPath;
@@ -1496,7 +1496,7 @@ namespace Bloom.Book
         /// based on Custom Page (so they can actually be customized).
         /// </summary>
         /// <param name="page"></param>
-        public void BringPageUpToDate(XmlElement page)
+        public void BringPageUpToDate(SafeXmlElement page)
         {
             var lineageAttr = page.Attributes["data-pagelineage"];
             if (lineageAttr == null)
@@ -1525,9 +1525,9 @@ namespace Bloom.Book
             };
             HtmlDom.MergeClassesIntoNewPage(page, newPage, classesToDrop);
             SizeAndOrientation.UpdatePageSizeAndOrientationClasses(newPage, layoutOfThisBook);
-            foreach (XmlAttribute attr in page.Attributes)
+            foreach (var name in page.AttributeNames)
             {
-                if (newPage.HasAttribute(attr.Name))
+                if (newPage.HasAttribute(name))
                 {
                     // don't overwrite things specified in template, typically class, id, data-page
                     // Otherwise copy everything, even things we don't know about at the time of writing this
@@ -1536,12 +1536,12 @@ namespace Bloom.Book
                     continue;
                 }
 
-                newPage.SetAttribute(attr.Name, attr.Value);
+                newPage.SetAttribute(name, page.GetAttribute(name));
             }
             bool dummy;
             OurHtmlDom.MigrateEditableData(
                 page,
-                newPage,
+                SafeXmlElement.FakeWrap(newPage),
                 lineage.Replace(originalTemplateGuid, updateTo.Guid),
                 true,
                 out dummy
@@ -1647,14 +1647,14 @@ namespace Bloom.Book
             if (IsTemplateBook)
             {
                 // this will turn on rules in previewMode.css that show the structure of the template and names of pages
-                HtmlDom.AddClassToBody(OurHtmlDom.RawDom, "template");
+                OurHtmlDom.RawDom.AddClassToBody("template");
             }
             else
             {
                 // It might be there when not appropriate, because this is a new book created from a template,
                 // or one that was created from a template in an earlier version of Bloom without this fix!
                 // Make sure it's not.
-                HtmlDom.RemoveClassFromBody(OurHtmlDom.RawDom, "template");
+                OurHtmlDom.RawDom.RemoveClassFromBody("template");
             }
 
             // Following code (roughly) was in the main BBUD but we were doing it when the book gets selected.
@@ -2296,15 +2296,15 @@ namespace Bloom.Book
             {
                 var coverColorIsDark = ColorUtils.IsDark(coverColor);
                 foreach (
-                    var page in bookDOM
-                        .SafeSelectNodes("//div[contains(@class,'coverColor')]")
-                        .Cast<XmlElement>()
+                    SafeXmlElement page in bookDOM.SafeSelectNodes(
+                        "//div[contains(@class,'coverColor')]"
+                    )
                 )
                 {
                     if (coverColorIsDark)
-                        HtmlDom.AddClass(page, "darkCoverColor");
+                        page.AddClass("darkCoverColor");
                     else
-                        HtmlDom.RemoveClass(page, "darkCoverColor");
+                        page.RemoveClass("darkCoverColor");
                 }
             }
         }
@@ -2949,8 +2949,8 @@ namespace Bloom.Book
                         spanOrDiv.RemoveAttribute("data-audiorecordingmode");
                         spanOrDiv.RemoveAttribute("data-audiorecordingendtimes");
                         spanOrDiv.RemoveAttribute("data-duration");
-                        HtmlDom.RemoveClass(spanOrDiv, "audio-sentence");
-                        HtmlDom.RemoveClass(spanOrDiv, "bloom-postAudioSplit");
+                        spanOrDiv.RemoveClass("audio-sentence");
+                        spanOrDiv.RemoveClass("bloom-postAudioSplit");
                         foreach (
                             var span in spanOrDiv
                                 .SafeSelectNodes(".//span[@class='bloom-highlightSegment']")
@@ -3172,7 +3172,7 @@ namespace Bloom.Book
         {
             var colorValue = ColorTranslator.ToHtml(coverColor);
             //            var colorValue = String.Format("#{0:X2}{1:X2}{2:X2}", coverColor.R, coverColor.G, coverColor.B);
-            XmlElement colorStyle = dom.RawDom.CreateElement("style");
+            var colorStyle = dom.RawDom.CreateElement("style");
             colorStyle.SetAttribute("type", "text/css");
             colorStyle.InnerXml = @"
 				DIV.bloom-page.coverColor	{		background-color: colorValue !important;	}
@@ -3186,9 +3186,9 @@ namespace Bloom.Book
             return GetCoverColorFromDom(RawDom);
         }
 
-        public static String GetCoverColorFromDom(XmlDocument dom)
+        public static String GetCoverColorFromDom(SafeXmlDocument dom)
         {
-            foreach (XmlElement stylesheet in dom.SafeSelectNodes("//style"))
+            foreach (SafeXmlElement stylesheet in dom.SafeSelectNodes("//style"))
             {
                 var content = stylesheet.InnerText;
                 // Our XML representation of an HTML DOM doesn't seem to have any object structure we can
@@ -3403,7 +3403,15 @@ namespace Bloom.Book
         {
             //review: could move to page
             var pageElement = OurHtmlDom.RawDom.SelectSingleNodeHonoringDefaultNS(page.XPathToDiv);
+            if (pageElement == null)
+            {
+                throw new ApplicationException("FindPageDiv(): pageElement is null");
+            }
+            var outer = pageElement.OuterXml;
+            var oldInner = pageElement.InnerXml;
             Require.That(pageElement != null, "Page could not be found: " + page.XPathToDiv);
+
+            pageElement.InnerXml = XmlHtmlConverter.RemoveEmptySelfClosingTags(oldInner);
 
             return pageElement as XmlElement;
         }
@@ -4083,7 +4091,7 @@ namespace Bloom.Book
             InvokeContentsChanged(null);
         }
 
-        internal XmlNodeList GetPageElements()
+        internal SafeXmlNode[] GetPageElements()
         {
             return OurHtmlDom.SafeSelectNodes("/html/body//div[contains(@class,'bloom-page')]");
         }

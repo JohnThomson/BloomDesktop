@@ -407,13 +407,13 @@ namespace Bloom.Publish.Epub
 
             FixInternalHyperlinks(progress);
 
-            var nsManager = new XmlNamespaceManager(Book.RawDom.NameTable);
+            var nsManager = Book.RawDom.GetNewNamespaceManager();
             nsManager.AddNamespace("svg", "http://www.w3.org/2000/svg");
 
             var imageSettings = Book.BookInfo.PublishSettings.BloomPub.ImageSettings;
 
             var pageLabelProgress = progress.WithL10NPrefix("TemplateBooks.PageLabel.");
-            foreach (XmlElement pageElement in Book.GetPageElements())
+            foreach (SafeXmlElement pageElement in Book.GetPageElements())
             {
                 var pageLabelEnglish = HtmlDom.GetNumberOrLabelOfPageWhereElementLives(pageElement);
 
@@ -1549,7 +1549,7 @@ namespace Bloom.Publish.Epub
 
         private void CopyStyleSheets(HtmlDom pageDom)
         {
-            foreach (XmlElement link in pageDom.SafeSelectNodes("//link[@rel='stylesheet']"))
+            foreach (SafeXmlElement link in pageDom.SafeSelectNodes("//link[@rel='stylesheet']"))
             {
                 var href = Path.Combine(Book.FolderPath, link.GetAttribute("href"));
                 var name = Path.GetFileName(href);
@@ -1628,7 +1628,9 @@ namespace Bloom.Publish.Epub
                 if (key == "body")
                     continue;
                 var dir = _directionSettings[key];
-                foreach (XmlElement div in pageDom.SafeSelectNodes("//div[@lang='" + key + "']"))
+                foreach (
+                    SafeXmlElement div in pageDom.SafeSelectNodes("//div[@lang='" + key + "']")
+                )
                     div.SetAttribute("dir", dir);
             }
         }
@@ -1641,7 +1643,7 @@ namespace Bloom.Publish.Epub
         /// See http://issues.bloomlibrary.org/youtrack/issue/BL-4288 for discussion of blank pages.
         /// </remarks>
         private bool MakePageFile(
-            XmlElement pageElement,
+            SafeXmlElement pageElement,
             ISet<string> warningMessages,
             ImagePublishSettings imageSettings
         )
@@ -1652,11 +1654,8 @@ namespace Bloom.Publish.Epub
             // javascript, so even if the player supports all those things perfectly, they're not likely
             // to work properly.
             if (
-                (pageElement.Attributes["class"]?.Value?.Contains("bloom-nonprinting") ?? false)
-                || (
-                    pageElement.Attributes["class"]?.Value?.Contains("bloom-interactive-page")
-                    ?? false
-                )
+                (pageElement.GetAttribute("class").Contains("bloom-nonprinting"))
+                || (pageElement.GetAttribute("class").Contains("bloom-interactive-page"))
             )
             {
                 PublishHelper.CollectPageLabel(pageElement, _omittedPageLabels);
@@ -1890,14 +1889,14 @@ namespace Bloom.Publish.Epub
             }
         }
 
-        public static bool IsBranding(XmlElement element)
+        public static bool IsBranding(SafeXmlElement element)
         {
             if (element == null)
             {
                 return false;
             }
 
-            if (PublishHelper.HasClass(element, "branding"))
+            if (element.HasClass("branding"))
             {
                 return true;
             }
@@ -1912,10 +1911,10 @@ namespace Bloom.Publish.Epub
                 }
                 else
                 {
-                    XmlNode parentNode = element.ParentNode; // Might be an XmlDocument up the chain
-                    if (parentNode is XmlElement)
+                    var parentNode = element.ParentNode; // Might be an XmlDocument up the chain
+                    if (parentNode is SafeXmlElement)
                     {
-                        element = (XmlElement)parentNode;
+                        element = (SafeXmlElement)parentNode;
                     }
                     else
                     {
@@ -1931,9 +1930,9 @@ namespace Bloom.Publish.Epub
         private void HandleImageDescriptions(HtmlDom bookDom)
         {
             // Set img alt attributes to the description, or erase them if no description (BL-6035)
-            foreach (var img in bookDom.Body.SelectNodes("//img[@src]").Cast<XmlElement>())
+            foreach (SafeXmlElement img in bookDom.Body.SafeSelectNodes("//img[@src]"))
             {
-                bool isLicense = PublishHelper.HasClass(img, "licenseImage");
+                bool isLicense = img.HasClass("licenseImage");
                 bool isBranding = IsBranding(img);
                 if (isLicense || isBranding)
                 {
@@ -3583,7 +3582,7 @@ namespace Bloom.Publish.Epub
             dom.RemoveDirectorySpecificationFromStyleSheetLinks();
         }
 
-        private HtmlDom GetEpubFriendlyHtmlDomForPage(XmlElement page)
+        private HtmlDom GetEpubFriendlyHtmlDomForPage(SafeXmlElement page)
         {
             var headXml = Storage.Dom.SelectSingleNodeHonoringDefaultNS("/html/head").OuterXml;
             var dom = new HtmlDom(@"<html>" + headXml + "<body></body></html>");

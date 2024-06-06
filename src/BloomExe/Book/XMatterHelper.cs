@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Xml;
 using Bloom.Collection;
+using Bloom.ToPalaso;
 using L10NSharp;
 using SIL.Extensions;
 using SIL.IO;
@@ -500,13 +501,13 @@ namespace Bloom.Book
         //			}
         //		}
 
-        public static bool IsFrontMatterPage(XmlElement pageDiv)
+        public static bool IsFrontMatterPage(SafeXmlElement pageDiv)
         {
             return pageDiv.SelectSingleNode("self::div[contains(@class, 'bloom-frontMatter')]")
                 != null;
         }
 
-        public static bool IsBackMatterPage(XmlElement pageDiv)
+        public static bool IsBackMatterPage(SafeXmlElement pageDiv)
         {
             return pageDiv.SelectSingleNode("self::div[contains(@class, 'bloom-backMatter')]")
                 != null;
@@ -519,7 +520,7 @@ namespace Bloom.Book
                 ) != null;
         }
 
-        public static bool IsCoverPage(XmlElement pageDiv)
+        public static bool IsCoverPage(SafeXmlElement pageDiv)
         {
             return pageDiv.SelectSingleNode("self::div[contains(@class, 'cover')]") != null;
         }
