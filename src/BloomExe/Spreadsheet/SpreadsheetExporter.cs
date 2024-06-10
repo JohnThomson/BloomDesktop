@@ -156,7 +156,7 @@ namespace Bloom.Spreadsheet
             var imageContainers = GetImageContainers(page);
             var allGroups = TranslationGroupManager.SortedGroupsOnPage(page, true);
             var groups = allGroups
-                .Where(x => !x.Attributes["class"].Value.Contains("bloom-imageDescription"))
+                .Where(x => !x.GetAttribute("class").Contains("bloom-imageDescription"))
                 .ToList();
             var videoContainers = page.SafeSelectNodes(
                     ".//*[contains(@class,'bloom-videoContainer')]"
@@ -215,7 +215,7 @@ namespace Bloom.Spreadsheet
                     var descriptions = imageContainer
                         .GetElementsByTagName("div")
                         .Cast<XmlElement>()
-                        .Where(e => e.Attributes["class"].Value.Contains("bloom-imageDescription"));
+                        .Where(e => e.GetAttribute("class").Contains("bloom-imageDescription"));
                     foreach (var description in descriptions) // typically at most one
                     {
                         var descriptionRow = new ContentRow(_spreadsheet);
@@ -461,7 +461,7 @@ namespace Bloom.Spreadsheet
             // of figuring out what it should be if the text is edited. It seems better
             // to assume that any recordings provided on import are current, and set the
             // recordingmd5 to the appropriate value for the imported text.
-            var lang = editable.Attributes["lang"].Value;
+            var lang = editable.GetAttribute("lang");
             if (HtmlDom.HasClass(editable, "audio-sentence"))
             {
                 var path = HandleAudioFile(editable, bookFolderPath);

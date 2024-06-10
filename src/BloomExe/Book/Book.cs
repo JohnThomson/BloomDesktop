@@ -602,7 +602,7 @@ namespace Bloom.Book
             return GetHtmlDomWithJustOnePage(divNodeForThisPage);
         }
 
-        public HtmlDom GetHtmlDomWithJustOnePage(XmlElement divNodeForThisPage)
+        public HtmlDom GetHtmlDomWithJustOnePage(SafeXmlElement divNodeForThisPage)
         {
             var headXml = Storage.Dom.SelectSingleNodeHonoringDefaultNS("/html/head").OuterXml;
             var originalBody = Storage.Dom.SelectSingleNodeHonoringDefaultNS("/html/body");
@@ -616,19 +616,16 @@ namespace Bloom.Book
             dom = Storage.MakeDomRelocatable(dom);
             // Don't let spaces between <strong>, <em>, or <u> elements be removed. (BL-2484)
             dom.RawDom.PreserveWhitespace = true;
-            var newBody = dom.RawDom.SelectSingleNodeHonoringDefaultNS("/html/body") as XmlElement;
+            var newBody = dom.RawDom.SelectSingleNodeHonoringDefaultNS("/html/body");
 
             // copy over any attributes on body (we store a form of the book feature flags there so that css can get at them)
-            foreach (XmlAttribute attr in originalBody.Attributes)
+            foreach (var attr in originalBody.AttributePairs)
             {
                 newBody.SetAttribute(attr.Name, attr.Value);
             }
 
             var pageDom = dom.RawDom.ImportNode(divNodeForThisPage, true);
             newBody.AppendChild(pageDom);
-
-            //                BookStorage.HideAllTextAreasThatShouldNotShow(dom, langTagToLeaveVisible, Page.GetPageSelectorXPath(dom));
-
             return dom;
         }
 
@@ -637,7 +634,7 @@ namespace Bloom.Book
             var headNode = Storage.Dom.SelectSingleNodeHonoringDefaultNS("/html/head");
             var inputHead = inputDom.SelectSingleNodeHonoringDefaultNS("/html/head");
             var insertBefore = inputHead.FirstChild; // Enhance: handle case where there is no existing child
-            foreach (XmlNode child in headNode.ChildNodes)
+            foreach (var child in headNode.ChildNodes)
             {
                 inputHead.InsertBefore(inputDom.RawDom.ImportNode(child, true), insertBefore);
             }
@@ -698,16 +695,18 @@ namespace Bloom.Book
             return bookDom;
         }
 
-        private static void HideEverythingButFirstPageAndRemoveScripts(XmlDocument bookDom)
+        private static void HideEverythingButFirstPageAndRemoveScripts(SafeXmlDocument bookDom)
         {
             bool onFirst = true;
             foreach (
-                XmlElement node in bookDom.SafeSelectNodes("//div[contains(@class, 'bloom-page')]")
+                SafeXmlElement elt in bookDom.SafeSelectNodes(
+                    "//div[contains(@class, 'bloom-page')]"
+                )
             )
             {
                 if (!onFirst)
                 {
-                    node.SetAttribute("style", "", "display:none");
+                    elt.SetAttribute("style", "", "display:none");
                 }
                 onFirst = false;
             }
@@ -1087,7 +1086,7 @@ namespace Bloom.Book
         {
             // Fix bug reported in BL-6923: duplicate language div elements inside translationGroup divs.
             foreach (
-                XmlElement groupElement in bookDOM.Body.SafeSelectNodes(
+                SafeXmlElement groupElement in bookDOM.Body.SafeSelectNodes(
                     "descendant::*[contains(@class,'bloom-translationGroup')]"
                 )
             )
@@ -1498,10 +1497,9 @@ namespace Bloom.Book
         /// <param name="page"></param>
         public void BringPageUpToDate(SafeXmlElement page)
         {
-            var lineageAttr = page.Attributes["data-pagelineage"];
-            if (lineageAttr == null)
+            var lineage = page.GetAttribute("data-pagelineage");
+            if (string.IsNullOrEmpty(lineage))
                 return;
-            var lineage = lineageAttr.Value;
             var originalTemplateGuid = lineage;
             int index = lineage.IndexOf(";", StringComparison.InvariantCulture);
             if (index >= 0)
@@ -1512,8 +1510,9 @@ namespace Bloom.Book
             var layoutOfThisBook = GetLayout();
             var bookPath = BloomFileLocator.GetFactoryBookTemplateDirectory(updateTo.Path);
             var templateDoc = XmlHtmlConverter.GetXmlDomFromHtmlFile(bookPath, false);
-            var newPage = (XmlElement)
-                templateDoc.SafeSelectNodes("//div[@id='" + updateTo.Guid + "']")[0];
+            var newPage = SafeXmlElement.FakeWrap(
+                (XmlElement)templateDoc.SafeSelectNodes("//div[@id='" + updateTo.Guid + "']")[0]
+            );
             var classesToDrop = new[]
             {
                 "imageWholePage",
@@ -1541,7 +1540,7 @@ namespace Bloom.Book
             bool dummy;
             OurHtmlDom.MigrateEditableData(
                 page,
-                SafeXmlElement.FakeWrap(newPage),
+                newPage,
                 lineage.Replace(originalTemplateGuid, updateTo.Guid),
                 true,
                 out dummy
@@ -1662,7 +1661,7 @@ namespace Bloom.Book
             // that doesn't involve writing files here.
             progress.WriteStatus("Updating pages...");
             foreach (
-                XmlElement pageDiv in OurHtmlDom.SafeSelectNodes(
+                SafeXmlElement pageDiv in OurHtmlDom.SafeSelectNodes(
                     "//body/div[contains(@class, 'bloom-page')]"
                 )
             )
@@ -1934,9 +1933,9 @@ namespace Bloom.Book
         /// </remarks>
         private void UpdateCollectionRelatedStylesAndSettings(HtmlDom bookDom)
         {
-            foreach (XmlElement link in bookDom.SafeSelectNodes("//link[@rel='stylesheet']"))
+            foreach (SafeXmlElement link in bookDom.SafeSelectNodes("//link[@rel='stylesheet']"))
             {
-                var fileName = link.GetStringAttribute("href");
+                var fileName = link.GetAttribute("href");
                 if (
                     fileName == kOldCollectionStyles
                     || fileName == "../" + kOldCollectionStyles
@@ -2092,16 +2091,13 @@ namespace Bloom.Book
             if (bookDOM?.Body == null)
                 return; // must be a test running...
 
-            var nonPrintingPages = bookDOM.Body.SelectNodes(
+            var nonPrintingPages = bookDOM.Body.SafeSelectNodes(
                 "//div[contains(@class,'nonprinting')]"
             );
-            foreach (XmlElement nonPrintingPageElement in nonPrintingPages)
+            foreach (SafeXmlElement nonPrintingPageElement in nonPrintingPages)
             {
-                nonPrintingPageElement.Attributes["class"].InnerText = HtmlDom.RemoveClass(
-                    "nonprinting",
-                    nonPrintingPageElement.Attributes["class"].InnerText
-                );
-                HtmlDom.AddClass(nonPrintingPageElement, "bloom-nonprinting");
+                nonPrintingPageElement.RemoveClass("nonprinting");
+                nonPrintingPageElement.AddClass("bloom-nonprinting");
             }
         }
 
@@ -2120,10 +2116,12 @@ namespace Bloom.Book
             const string classNoStyleMods = "bloom-userCannotModifyStyles";
             const string classNoAudio = "bloom-noAudio";
 
-            var questionNodes = bookDOM.Body.SelectNodes("//div[contains(@class,'quizContents')]");
-            foreach (XmlElement quizContentsElement in questionNodes)
+            var questionNodes = bookDOM.Body.SafeSelectNodes(
+                "//div[contains(@class,'quizContents')]"
+            );
+            foreach (SafeXmlElement quizContentsElement in questionNodes)
             {
-                if (!HtmlDom.HasClass(quizContentsElement, "bloom-noAudio")) // Needs migration
+                if (!quizContentsElement.HasClass("bloom-noAudio")) // Needs migration
                 {
                     HtmlDom.AddClass(quizContentsElement, classNoStyleMods);
                     HtmlDom.AddClass(quizContentsElement, classNoAudio);
@@ -2155,8 +2153,8 @@ namespace Bloom.Book
             const string i18nAttr = "data-i18n";
             var prefixLength = i18nPrefix.Length;
 
-            var pageLabelNodes = bookDOM.Body.SelectNodes("//div[@id]/div[@class='pageLabel']");
-            foreach (XmlElement pageLabelElt in pageLabelNodes)
+            var pageLabelNodes = bookDOM.Body.SafeSelectNodes("//div[@id]/div[@class='pageLabel']");
+            foreach (SafeXmlElement pageLabelElt in pageLabelNodes)
             {
                 // If we already have a data-i18n attribute with the right contents, skip this one.
                 var i18nValue = pageLabelElt.GetOptionalStringAttribute(i18nAttr, i18nPrefix);
@@ -2192,10 +2190,10 @@ namespace Bloom.Book
             );
             if (badSmallCoverDiv != null)
             {
-                var divs = badSmallCoverDiv.SelectNodes("div[@lang!='']");
-                foreach (XmlNode div in divs)
+                var divs = badSmallCoverDiv.SafeSelectNodes("div[@lang!='']");
+                foreach (var div in divs)
                 {
-                    var lang = div.GetStringAttribute("lang");
+                    var lang = div.GetAttribute("lang");
                     Debug.Assert(lang != "*");
                     var existingDiv = dataDiv.SelectSingleNode(
                         "div[@data-book='smallCoverCredits' and @lang='" + lang + "']"
@@ -2224,18 +2222,17 @@ namespace Bloom.Book
             // filename in the img src attribute.
             const string dataDivImgXpath = "//div[@id='bloomDataDiv']/div[@data-book='coverImage']";
             var elementsToCheck = bookDom.SafeSelectNodes(dataDivImgXpath);
-            foreach (XmlNode coverImageElement in elementsToCheck)
+            foreach (SafeXmlNode coverImageElement in elementsToCheck)
             {
                 var imgNodes = coverImageElement.SafeSelectNodes("img");
-                if (imgNodes.Count == 0)
+                if (imgNodes.Length == 0)
                 {
                     continue;
                 }
                 var imgNode = imgNodes[0];
+                var src = imgNode.GetAttribute("src");
                 coverImageElement.InnerText =
-                    (imgNode.Attributes == null || imgNode.Attributes["src"] == null)
-                        ? string.Empty
-                        : HttpUtility.UrlDecode(imgNode.Attributes["src"].Value);
+                    (string.IsNullOrEmpty(src)) ? string.Empty : HttpUtility.UrlDecode(src);
             }
         }
 
@@ -2257,22 +2254,21 @@ namespace Bloom.Book
             if (coverImageDiv == null)
                 return; // nothing to fix
             foreach (
-                XmlElement coverImageDescription in dataDiv
-                    .SafeSelectNodes("div[@data-book='coverImageDescription']")
-                    .Cast<XmlElement>()
-                    .ToList()
+                SafeXmlElement coverImageDescription in dataDiv.SafeSelectNodes(
+                    "div[@data-book='coverImageDescription']"
+                )
             )
             {
                 var lang = coverImageDescription.GetAttribute("lang");
                 if (lang == "*")
                 {
                     foreach (
-                        XmlNode descriptionDiv in coverImageDescription.SafeSelectNodes(
+                        SafeXmlNode descriptionDiv in coverImageDescription.SafeSelectNodes(
                             "div[contains(@class,'bloom-editable')]"
                         )
                     )
                     {
-                        var innerLang = descriptionDiv.Attributes["lang"]?.Value;
+                        var innerLang = descriptionDiv.GetAttribute("lang");
                         if (String.IsNullOrEmpty(innerLang) || innerLang == "z")
                             continue;
                         var newDescriptionDiv = dataDiv.OwnerDocument.CreateElement("div");
@@ -2376,7 +2372,7 @@ namespace Bloom.Book
             var texts = OurHtmlDom.SafeSelectNodes(
                 "//*[contains(@class,'bloom-requiresParagraphs')]/div[contains(@class,'bloom-editable') and br]"
             );
-            foreach (XmlElement text in texts)
+            foreach (SafeXmlElement text in texts)
             {
                 string s = "";
                 foreach (
@@ -2402,7 +2398,7 @@ namespace Bloom.Book
             var preserve = bookDOM.RawDom.PreserveWhitespace;
             bookDOM.RawDom.PreserveWhitespace = true;
             var paragraphs = bookDOM.SafeSelectNodes("//div[contains(@class,'bloom-editable')]/p");
-            foreach (XmlElement para in paragraphs)
+            foreach (SafeXmlElement para in paragraphs)
             {
                 string inner = para.InnerXml;
                 if (String.IsNullOrEmpty(inner) || !inner.Contains("<"))
@@ -2611,7 +2607,7 @@ namespace Bloom.Book
                 var x = OurHtmlDom.SafeSelectNodes(
                     "//div[contains(@id, 'bloomDataDiv')]/div[contains(@data-book, 'originalCopyright') and string-length(translate(normalize-space(text()), ' ', '')) > 0]"
                 );
-                return x.Count > 0;
+                return x.Length > 0;
             }
         }
 
@@ -2782,18 +2778,18 @@ namespace Bloom.Book
         )
         {
             var result = new Dictionary<string, bool>();
-            var parents = new HashSet<XmlElement>(); // of interesting non-empty children
+            var parents = new HashSet<SafeXmlElement>(); // of interesting non-empty children
             var langDivs = OurHtmlDom.GetLanguageDivs(includeLangsOccurringOnlyInXmatter).ToArray();
 
             // First pass: fill in the dictionary with languages which have non-empty content in relevant divs
             foreach (var div in langDivs)
             {
-                var lang = div.Attributes["lang"].Value;
+                var lang = div.GetAttribute("lang");
                 if (HtmlDom.DivHasContent(div))
                 {
                     result[lang] = true; // may be set repeatedly, but no harm.
                     // Add each parent only once, but add every parent for divs with any text.
-                    var parent = (XmlElement)div.ParentNode;
+                    var parent = (SafeXmlElement)div.ParentNode;
                     if (!parents.Contains(parent))
                         parents.Add(parent);
                 }
@@ -2836,7 +2832,7 @@ namespace Bloom.Book
             return result;
         }
 
-        internal static bool ElementIsInXMatter(XmlElement element)
+        internal static bool ElementIsInXMatter(SafeXmlElement element)
         {
             if (element == null)
                 return false;
@@ -2847,7 +2843,7 @@ namespace Bloom.Book
                     || element.ParentWithClass("bloom-backMatter") != null
                 )
                     return true;
-                element = element.ParentNode as XmlElement;
+                element = element.ParentNode as SafeXmlElement;
             }
 
             return false;
@@ -2860,7 +2856,7 @@ namespace Bloom.Book
         /// attribute rather than the new appearance system. It will need enhancement if we ever need to use it for xmatter,
         /// or for that matter if the appearance system is used to control visibility of something on content pages.
         /// </summary>
-        private bool IsLanguageWantedInContent(XmlElement parent, string lang)
+        private bool IsLanguageWantedInContent(SafeXmlElement parent, string lang)
         {
             var defaultLangs = parent.GetAttribute("data-default-languages");
             if (String.IsNullOrEmpty(defaultLangs) || defaultLangs == "auto")
@@ -2899,16 +2895,12 @@ namespace Bloom.Book
             return false;
         }
 
-        private static bool HasContentInLang(XmlElement parent, string lang)
+        private static bool HasContentInLang(SafeXmlElement parent, string lang)
         {
             foreach (var node in parent.ChildNodes)
             {
-                var div = node as XmlElement;
-                if (
-                    div?.Attributes["lang"] == null
-                    || div.Attributes["lang"].Value != lang
-                    || div.Name == "label"
-                )
+                var div = node as SafeXmlElement;
+                if (div?.GetAttribute("lang") != lang || div.Name == "label")
                     continue;
                 return !string.IsNullOrWhiteSpace(div.InnerText); // this one settles it: success if non-empty
             }
@@ -2932,11 +2924,11 @@ namespace Bloom.Book
             foreach (
                 var spanOrDiv in HtmlDom
                     .SelectAudioSentenceElements(RawDom.DocumentElement)
-                    .Cast<XmlElement>()
+                    .Cast<SafeXmlElement>()
                     .ToList()
             )
             {
-                if (!doesFileExist(Storage.FolderPath, spanOrDiv.Attributes["id"]?.Value))
+                if (!doesFileExist(Storage.FolderPath, spanOrDiv.GetAttribute("id")))
                 {
                     if (spanOrDiv.Name == "span")
                     {
@@ -2954,7 +2946,7 @@ namespace Bloom.Book
                         foreach (
                             var span in spanOrDiv
                                 .SafeSelectNodes(".//span[@class='bloom-highlightSegment']")
-                                .Cast<XmlElement>()
+                                .Cast<SafeXmlElement>()
                                 .ToList()
                         )
                         {
@@ -3015,7 +3007,7 @@ namespace Bloom.Book
                 {
                     if (!HtmlDom.HasClass(div, "bloom-editable"))
                         continue;
-                    var lang = div.GetStringAttribute("lang");
+                    var lang = div.GetAttribute("lang");
                     if (lang != Language1Tag)
                         continue; // this won't go into the book -- it's a different language.
                     // TODO: Ensure handles image descriptions once those get implemented.
@@ -3034,7 +3026,7 @@ namespace Bloom.Book
                             string.IsNullOrEmpty(id)
                             || !AudioProcessor.DoesAudioExistForSegment(
                                 Storage.FolderPath,
-                                audioSentenceChildNode.Attributes["id"].Value
+                                audioSentenceChildNode.GetAttribute("id")
                             )
                         )
                             return false; // missing audio file
@@ -3060,15 +3052,15 @@ namespace Bloom.Book
         {
             return RawDom
                     .SafeSelectNodes("//img[@src]")
-                    .Cast<XmlElement>()
+                    .Cast<SafeXmlElement>()
                     .Any(NonTrivialImageFileExists)
                 || RawDom
                     .SafeSelectNodes("//div[@style]")
-                    .Cast<XmlElement>()
+                    .Cast<SafeXmlElement>()
                     .Any(NonTrivialImageFileExists);
         }
 
-        private bool NonTrivialImageFileExists(XmlElement image)
+        private bool NonTrivialImageFileExists(SafeXmlElement image)
         {
             if (image.Name == "img")
             {
@@ -3079,7 +3071,7 @@ namespace Bloom.Book
             var file = imageUrl.PathOnly.NotEncoded;
             if (string.IsNullOrEmpty(file))
                 return false;
-            if (file == "placeHolder.png" && image.Attributes["data-license"] == null)
+            if (file == "placeHolder.png" && !image.HasAttribute("data-license"))
                 return false;
             return RobustFile.Exists(Path.Combine(Storage.FolderPath, file));
         }
@@ -3092,7 +3084,7 @@ namespace Bloom.Book
         {
             return OurHtmlDom
                 .SelectVideoSources()
-                .Cast<XmlElement>()
+                .Cast<SafeXmlElement>()
                 .Any(NonTrivialVideoFileExists);
         }
 
@@ -3105,13 +3097,13 @@ namespace Bloom.Book
             return HasVideos();
         }
 
-        private bool NonTrivialVideoFileExists(XmlElement vidSource)
+        private bool NonTrivialVideoFileExists(SafeXmlElement vidSource)
         {
             Debug.Assert(vidSource.Name == "source");
             // In case future books have video branding...
             if (
                 HtmlDom.HasClass(vidSource, "branding")
-                || HtmlDom.HasClass(vidSource.ParentNode as XmlElement, "branding")
+                || HtmlDom.HasClass(vidSource.ParentNode as SafeXmlElement, "branding")
             )
                 return false;
             // video reference HTML structure is:
@@ -3124,7 +3116,7 @@ namespace Bloom.Book
             if (vidNode == null)
                 return false;
             // HtmlDom.GetVideoElementUrl() takes the .bloom-videoContainer node as a parameter.
-            var videoUrl = HtmlDom.GetVideoElementUrl(vidNode.ParentNode as XmlElement);
+            var videoUrl = HtmlDom.GetVideoElementUrl(vidNode.ParentNode as SafeXmlElement);
             var file = videoUrl.PathOnly.NotEncoded;
             return !string.IsNullOrEmpty(file)
                 && RobustFile.Exists(Path.Combine(Storage.FolderPath, file));
@@ -3227,7 +3219,7 @@ namespace Bloom.Book
         /// <returns>true if a change was made</returns>
         internal bool SetCoverColorInternal(string color)
         {
-            foreach (XmlElement stylesheet in RawDom.SafeSelectNodes("//style"))
+            foreach (SafeXmlElement stylesheet in RawDom.SafeSelectNodes("//style"))
             {
                 string content = stylesheet.InnerXml;
                 var regex = new Regex(
@@ -3271,10 +3263,10 @@ namespace Bloom.Book
         {
             var videos = dom.SelectVideoSources();
 
-            for (int i = 0; i < (videos?.Count ?? 0); ++i)
+            for (int i = 0; i < (videos?.Length ?? 0); ++i)
             {
                 var videoSrc = videos[i];
-                var videoTag = videoSrc.ParentNode as XmlElement;
+                var videoTag = videoSrc.ParentNode as SafeXmlElement;
                 videoTag?.SetAttribute("preload", "none");
             }
         }
@@ -3290,10 +3282,10 @@ namespace Bloom.Book
             var imageContainerList = dom.Body.SafeSelectNodes(
                 "//div[contains(@class,'bloom-imageContainer')]"
             );
-            foreach (XmlElement imageContainer in imageContainerList)
+            foreach (SafeXmlElement imageContainer in imageContainerList)
             {
                 imageContainer.RemoveAttribute("title");
-                foreach (XmlElement img in imageContainer.SafeSelectNodes("img"))
+                foreach (SafeXmlElement img in imageContainer.SafeSelectNodes("img"))
                 {
                     var src = img.GetAttribute("src");
                     var alt = img.GetAttribute("alt");
@@ -3336,7 +3328,7 @@ namespace Bloom.Book
             _pagesCache = new List<IPage>();
 
             foreach (
-                XmlElement pageNode in OurHtmlDom.SafeSelectNodes(
+                SafeXmlElement pageNode in OurHtmlDom.SafeSelectNodes(
                     "//div[contains(@class,'bloom-page')]"
                 )
             )
@@ -3362,7 +3354,7 @@ namespace Bloom.Book
             var result = new Dictionary<string, IPage>();
 
             foreach (
-                XmlElement pageNode in OurHtmlDom.SafeSelectNodes(
+                SafeXmlElement pageNode in OurHtmlDom.SafeSelectNodes(
                     "//div[contains(@class,'bloom-page') and not(contains(@data-page, 'singleton'))]"
                 )
             )
@@ -3377,24 +3369,26 @@ namespace Bloom.Book
             return result;
         }
 
-        private static string GetPageIdFromDiv(XmlElement pageNode)
+        private static string GetPageIdFromDiv(SafeXmlElement pageNode)
         {
             return pageNode.GetAttribute("id");
         }
 
-        private static string GetPageLabelFromDiv(XmlElement pageNode, out string captionI18nId)
+        private static string GetPageLabelFromDiv(SafeXmlElement pageNode, out string captionI18nId)
         {
             var englishDiv = pageNode.SelectSingleNode(
                 "div[contains(@class,'pageLabel') and @lang='en']"
             );
             var caption = (englishDiv == null) ? String.Empty : englishDiv.InnerText;
-            captionI18nId = null;
-            if (englishDiv != null && englishDiv.Attributes["data-i18n"] != null)
-                captionI18nId = englishDiv.Attributes["data-i18n"].Value;
+            captionI18nId = englishDiv?.GetAttribute("data-i18n");
             return caption;
         }
 
-        private IPage CreatePageDecriptor(XmlElement pageNode, string caption, string captionI18nId) //, Action<Image> thumbNailReadyCallback)
+        private IPage CreatePageDecriptor(
+            SafeXmlElement pageNode,
+            string caption,
+            string captionI18nId
+        ) //, Action<Image> thumbNailReadyCallback)
         {
             return new Page(this, pageNode, caption, captionI18nId, (page => FindPageDiv(page)));
         }
@@ -3695,7 +3689,7 @@ namespace Bloom.Book
                     .ToList()
             )
             {
-                var oldId = audioElement.GetStringAttribute("id");
+                var oldId = audioElement.GetAttribute("id");
                 var id = HtmlDom.SetNewHtmlIdValue(audioElement);
                 if (string.IsNullOrEmpty(oldId))
                     continue;
@@ -3833,7 +3827,7 @@ namespace Bloom.Book
 
         public BookData BookData => _bookData;
 
-        public void InsertFullBleedMarkup(XmlElement body)
+        public void InsertFullBleedMarkup(SafeXmlElement body)
         {
             if (FullBleed)
             {
@@ -3994,13 +3988,13 @@ namespace Bloom.Book
         /// <summary>
         /// The <style title='userModifiedStyles'/> element is where we keep our user-modifiable style information
         /// </summary>
-        internal XmlElement GetOrCreateUserModifiedStyleElementFromStorage()
+        internal SafeXmlElement GetOrCreateUserModifiedStyleElementFromStorage()
         {
             return GetOrCreateUserModifiedStyleElementFromStorage(OurHtmlDom.Head);
         }
 
-        public static XmlElement GetOrCreateUserModifiedStyleElementFromStorage(
-            XmlElement headElement
+        public static SafeXmlElement GetOrCreateUserModifiedStyleElementFromStorage(
+            SafeXmlElement headElement
         )
         {
             var userStyleElement = HtmlDom.GetUserModifiedStyleElement(headElement);
@@ -4584,7 +4578,7 @@ namespace Bloom.Book
                 if (
                     !AudioProcessor.DoesAudioExistForSegment(
                         Storage.FolderPath,
-                        span.GetStringAttribute("id")
+                        span.GetAttribute("id")
                     )
                 )
                     span.RemoveAttribute("data-duration"); // file no longer exists, shouldn't have any duration setting
@@ -5036,7 +5030,7 @@ namespace Bloom.Book
             foreach (XmlElement div in page.SafeSelectNodes(".//div[@lang]"))
             {
                 if (
-                    languagesToLookFor.Contains(div.GetStringAttribute("lang"))
+                    languagesToLookFor.Contains(div.GetAttribute("lang"))
                     && !string.IsNullOrWhiteSpace(div.InnerText)
                     // page labels are deleted in most scenarios; even when kept, they are not a reason
                     // to keep otherwise blank pages.
@@ -5106,7 +5100,7 @@ namespace Bloom.Book
                     )
                     {
                         double.TryParse(
-                            span.Attributes["data-duration"].Value,
+                            span.GetAttribute("data-duration"),
                             NumberStyles.AllowDecimalPoint,
                             CultureInfo.InvariantCulture,
                             out var time

@@ -36,17 +36,16 @@ namespace Bloom.Book
 
         public Page(
             Book book,
-            XmlElement sourcePage,
+            SafeXmlElement sourcePage,
             string caption,
             string captionI18nId,
             Func<IPage, SafeXmlElement> getDivNodeForThisPageMethod
         )
         {
             sourcePage = EnsureID(sourcePage);
-            _id = FixPageId(sourcePage.Attributes["id"].Value);
-            var lineage = sourcePage.Attributes["data-pagelineage"];
-            _pageLineage =
-                lineage == null ? new string[] { } : lineage.Value.Split(new[] { ',', ';' });
+            _id = FixPageId(sourcePage.GetAttribute("id"));
+            var lineage = sourcePage.GetAttribute("data-pagelineage");
+            _pageLineage = lineage.Split(new[] { ',', ';' });
 
             Guard.AgainstNull(book, "Book");
             Book = book;
@@ -57,7 +56,7 @@ namespace Bloom.Book
             ReadPageTags(sourcePage);
         }
 
-        private XmlElement EnsureID(XmlElement sourcePage)
+        private SafeXmlElement EnsureID(SafeXmlElement sourcePage)
         {
             if (!sourcePage.HasAttribute("id"))
             {
@@ -93,19 +92,12 @@ namespace Bloom.Book
 
         //    	protected string PageLabel { get; set; }
 
-        private void ReadClasses(XmlElement sourcePage)
+        private void ReadClasses(SafeXmlElement sourcePage)
         {
-            _classes = new List<string>();
-            var classesString = sourcePage.GetAttribute("class");
-            if (!string.IsNullOrEmpty(classesString))
-            {
-                _classes.AddRange(
-                    classesString.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries)
-                );
-            }
+            _classes = sourcePage.GetClasses().ToList(); // Enhance: can we just make it an array?
         }
 
-        private void ReadPageTags(XmlElement sourcePage)
+        private void ReadPageTags(SafeXmlElement sourcePage)
         {
             _tags = new List<string>();
             var tags = sourcePage.GetAttribute("data-page");
@@ -207,16 +199,9 @@ namespace Bloom.Book
             get { return "/html/body/div[@id='" + _id + "']"; }
         }
 
-        public XmlElement GetDivNodeForThisPage()
+        public SafeXmlElement GetDivNodeForThisPage()
         {
             return _getDivNodeForThisPageMethod(this);
-        }
-
-        public static string GetPageSelectorXPath(XmlDocument pageDom)
-        {
-            //    		var id = pageDom.SelectSingleNodeHonoringDefaultNS("/html/body/div").Attributes["id"].Value;
-            var id = pageDom.SelectSingleNode("/html/body/div").Attributes["id"].Value;
-            return string.Format("/html/body/div[@id='{0}']", id);
         }
 
         /// <summary>

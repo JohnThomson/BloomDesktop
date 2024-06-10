@@ -1109,11 +1109,11 @@ namespace BloomTests.Spreadsheet
                 );
             // This is the ID for the standard "Just a picture" page
             Assert.That(
-                _contentPages[n].Attributes["data-pagelineage"].Value,
+                _contentPages[n].GetAttribute("data-pagelineage"),
                 Does.Contain(Bloom.Book.Book.JustPictureGuid)
             );
             Assert.That(
-                _contentPages[n].Attributes["id"].Value,
+                _contentPages[n].GetAttribute("id"),
                 Is.Not.EqualTo(Bloom.Book.Book.JustPictureGuid)
             );
         }
@@ -1147,11 +1147,11 @@ namespace BloomTests.Spreadsheet
                 );
             // This is the ID for the standard "Basic text and picture" page
             Assert.That(
-                _contentPages[n].Attributes["data-pagelineage"].Value,
+                _contentPages[n].GetAttribute("data-pagelineage"),
                 Does.Contain("adcd48df-e9ab-4a07-afd4-6a24d0398382")
             );
             Assert.That(
-                _contentPages[n].Attributes["id"].Value,
+                _contentPages[n].GetAttribute("id"),
                 Is.Not.EqualTo("adcd48df-e9ab-4a07-afd4-6a24d0398382")
             );
             var imgElt = _contentPages[n].SelectSingleNode(".//img");
@@ -1171,11 +1171,11 @@ namespace BloomTests.Spreadsheet
                 );
             // This is the ID for the standard "Just text" page
             Assert.That(
-                _contentPages[n].Attributes["data-pagelineage"].Value,
+                _contentPages[n].GetAttribute("data-pagelineage"),
                 Does.Contain(Bloom.Book.Book.JustTextGuid)
             );
             Assert.That(
-                _contentPages[n].Attributes["id"].Value,
+                _contentPages[n].GetAttribute("id"),
                 Is.Not.EqualTo(Bloom.Book.Book.JustTextGuid)
             );
         }
@@ -1397,14 +1397,14 @@ namespace BloomTests.Spreadsheet
                 );
             // This is the ID for the standard "Just a picture" page
             Assert.That(
-                _contentPages[n].Attributes["data-pagelineage"].Value,
+                _contentPages[n].GetAttribute("data-pagelineage"),
                 Does.Contain(Bloom.Book.Book.JustPictureGuid)
             );
             Assert.That(
-                _contentPages[n].Attributes["id"].Value,
+                _contentPages[n].GetAttribute("id"),
                 Is.Not.EqualTo(Bloom.Book.Book.JustPictureGuid)
             );
-            Assert.That(_contentPages[n].Attributes["class"].Value, Does.Contain("A4Landscape"));
+            Assert.That(_contentPages[n].GetAttribute("class"), Does.Contain("A4Landscape"));
         }
 
         [TestCase(1, "this is page 2", "lady24b.png")]
@@ -1424,14 +1424,14 @@ namespace BloomTests.Spreadsheet
                 );
             // This is the ID for the standard "Basic text and picture" page
             Assert.That(
-                _contentPages[n].Attributes["data-pagelineage"].Value,
+                _contentPages[n].GetAttribute("data-pagelineage"),
                 Does.Contain(Bloom.Book.Book.PictureOnLeftGuid)
             );
             Assert.That(
-                _contentPages[n].Attributes["id"].Value,
+                _contentPages[n].GetAttribute("id"),
                 Is.Not.EqualTo(Bloom.Book.Book.PictureOnLeftGuid)
             );
-            Assert.That(_contentPages[n].Attributes["class"].Value, Does.Contain("A4Landscape"));
+            Assert.That(_contentPages[n].GetAttribute("class"), Does.Contain("A4Landscape"));
         }
 
         [TestCase(0, "this is page 1")]
@@ -1445,14 +1445,14 @@ namespace BloomTests.Spreadsheet
                 );
             // This is the ID for the standard "Just text" page
             Assert.That(
-                _contentPages[n].Attributes["data-pagelineage"].Value,
+                _contentPages[n].GetAttribute("data-pagelineage"),
                 Does.Contain(Bloom.Book.Book.JustTextGuid)
             );
             Assert.That(
-                _contentPages[n].Attributes["id"].Value,
+                _contentPages[n].GetAttribute("id"),
                 Is.Not.EqualTo(Bloom.Book.Book.JustTextGuid)
             );
-            Assert.That(_contentPages[n].Attributes["class"].Value, Does.Contain("A4Landscape"));
+            Assert.That(_contentPages[n].GetAttribute("class"), Does.Contain("A4Landscape"));
         }
 
         [Test]
@@ -1806,8 +1806,8 @@ namespace BloomTests.Spreadsheet
         [Test]
         public void CoverPagesSurvive()
         {
-            Assert.That(_lastPage.Attributes["class"].Value, Does.Match("outsideBackCover"));
-            Assert.That(_secondLastPage.Attributes["class"].Value, Does.Match("insideBackCover"));
+            Assert.That(_lastPage.GetAttribute("class"), Does.Match("outsideBackCover"));
+            Assert.That(_secondLastPage.GetAttribute("class"), Does.Match("insideBackCover"));
         }
 
         [TestCase(0, "tg1", "this is page 1")]

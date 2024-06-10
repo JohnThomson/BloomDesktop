@@ -88,6 +88,17 @@ namespace Bloom.ToPalaso
                 return new SafeXmlElement(Doc.CreateElement(name), this);
         }
 
+        /// <summary>
+        /// Review: do we need a locked wrapper for these?
+        /// </summary>
+        /// <param name="text"></param>
+        /// <returns></returns>
+        public SafeXmlText CreateTextNode(string text)
+        {
+            lock (Lock)
+                return new SafeXmlText(Doc.CreateTextNode(text), this);
+        }
+
         #region Addional Methods
 
         public SafeXmlElement GetOrCreateElement(string parentPath, string name)

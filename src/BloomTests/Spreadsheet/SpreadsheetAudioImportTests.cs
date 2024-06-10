@@ -465,7 +465,7 @@ namespace BloomTests.Spreadsheet
             );
             Assert.That(duration, Is.EqualTo(expectedDuration).Within(0.01));
             Assert.That(times.Substring(0, index + 1).Trim(), Is.EqualTo(otherSplits));
-            Assert.That(target.Attributes["class"].Value, Does.Contain("bloom-postAudioSplit"));
+            Assert.That(target.GetAttribute("class"), Does.Contain("bloom-postAudioSplit"));
         }
 
         [TestCase(2)] // Page 3 is an unsplit TextBox
@@ -576,7 +576,7 @@ namespace BloomTests.Spreadsheet
                 .First();
             Assert.That(titleDiv, Is.Not.Null);
             Assert.That(
-                titleDiv.Attributes["id"].Value,
+                titleDiv.GetAttribute("id"),
                 Is.EqualTo("i9c7f4e02-4685-48fc-8653-71d88f218706t")
             );
         }
@@ -622,7 +622,7 @@ namespace BloomTests.Spreadsheet
                 .SafeSelectNodes(".//div[contains(@class, bloom-editable) and @lang='fr']")
                 .Cast<XmlElement>()
                 .First();
-            var id = target.Attributes["id"].Value;
+            var id = target.GetAttribute("id");
             Assert.That(id, Is.EqualTo("abadproblematicname")); // name corrected to something valid
             var path = Path.Combine(_bookFolder.FolderPath, "audio", id + ".mp3");
             Assert.That(RobustFile.Exists(path));
@@ -641,7 +641,7 @@ namespace BloomTests.Spreadsheet
                 .SafeSelectNodes(".//div[contains(@class, bloom-editable) and @lang='fr']")
                 .Cast<XmlElement>()
                 .First();
-            var id = target.Attributes["id"].Value;
+            var id = target.GetAttribute("id");
             Assert.That(id, Is.Not.EqualTo("abadproblematicname")); // the ID we'd expect but for the duplication
             var path = Path.Combine(_bookFolder.FolderPath, "audio", id + ".mp3");
             Assert.That(RobustFile.Exists(path));

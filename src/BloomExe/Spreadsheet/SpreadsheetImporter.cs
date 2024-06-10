@@ -822,7 +822,7 @@ namespace Bloom.Spreadsheet
                     .GetElementsByTagName("div")
                     .Cast<XmlElement>()
                     .FirstOrDefault(
-                        e => e.Attributes["class"].Value.Contains("bloom-imageDescription")
+                        e => e.GetAttribute("class").Contains("bloom-imageDescription")
                     );
                 if (group == null)
                 {
@@ -1220,7 +1220,7 @@ namespace Bloom.Spreadsheet
                         x =>
                             x != e
                             && x is XmlElement y
-                            && y.Attributes["class"].Value.Contains("bloom-editable")
+                            && y.GetAttribute("class").Contains("bloom-editable")
                     );
                 if (allInGroup.Any())
                     e.ParentNode.RemoveChild(e);
@@ -1619,7 +1619,7 @@ namespace Bloom.Spreadsheet
             // They are handled by special extra rows inserted after the row that has the image.
             var allGroups = TranslationGroupManager.SortedGroupsOnPage(_currentPage, true);
             blocksOnPageCollector[translationGroupIndex] = allGroups
-                .Where(x => !x.Attributes["class"].Value.Contains("bloom-imageDescription"))
+                .Where(x => !x.GetAttribute("class").Contains("bloom-imageDescription"))
                 .ToList();
             blocksOnPageCollector[videoContainerIndex] = GetVideoContainers(_currentPage);
             blocksOnPageCollector[widgetContainerIndex] = GetWidgetContainers(_currentPage);
@@ -1851,7 +1851,7 @@ namespace Bloom.Spreadsheet
                 var span in editable.SafeSelectNodes("span[@class]").Cast<XmlElement>().ToArray()
             )
             {
-                var className = span.Attributes["class"].Value;
+                var className = span.GetAttribute("class");
                 if (className == "audio-sentence" || className == "bloom-highlightSegment")
                 {
                     // remove these spans, keeping content

@@ -61,6 +61,12 @@ namespace Bloom.ToPalaso
                 Element.SetAttribute(name, value);
         }
 
+        public void SetAttribute(string name, string ns, string value)
+        {
+            lock (_doc.Lock)
+                Element.SetAttribute(name, ns, value);
+        }
+
         public SafeXmlNode[] SafeSelectNodes(string xpath)
         {
             lock (_doc.Lock)
@@ -127,7 +133,7 @@ namespace Bloom.ToPalaso
         public bool HasClass(string className)
         {
             lock (_doc.Lock)
-                return HtmlDom.HasClass(Element, className);
+                return GetClasses().Contains(className);
         }
 
         public void AddClass(string className)
@@ -203,6 +209,37 @@ namespace Bloom.ToPalaso
         public static SafeXmlElement FakeWrap(XmlElement elt)
         {
             return (SafeXmlElement)SafeXmlNode.FakeWrap(elt);
+        }
+
+        /// <summary>
+        /// Find the closest parent of the recipient that has the indicated class.
+        /// Will not match if the targetClass is a substring of a parent class.
+        /// Will not return the recipient, even if it has the class.
+        /// Returns null if there is no such parent.
+        /// </summary>
+        /// <param name="start"></param>
+        /// <param name="targetClass"></param>
+        /// <returns></returns>
+        public SafeXmlElement ParentWithClass(string targetClass)
+        {
+            return (ParentNode as SafeXmlElement).ParentOrSelfWithClass(targetClass);
+        }
+
+        public SafeXmlElement ParentOrSelfWithClass(string targetClass)
+        {
+            var current = this;
+            while (
+                current != null
+                && !(" " + current.GetAttribute("class") + " ").Contains(" " + targetClass + " ")
+            )
+                current = current.ParentNode as SafeXmlElement;
+            return current;
+        }
+
+        public SafeXmlElement GetChildWithName(string name)
+        {
+            return ChildNodes.FirstOrDefault(n => n.Name.ToLowerInvariant() == name)
+                as SafeXmlElement;
         }
         #endregion
     }

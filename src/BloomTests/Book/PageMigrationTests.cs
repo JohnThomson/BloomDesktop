@@ -629,12 +629,12 @@ namespace BloomTests.Book
 
             var newPage = (XmlElement)dom.SafeSelectNodes(".//div[@id='thePage']")[0];
             Assert.That(
-                newPage.Attributes["class"].Value,
+                newPage.GetAttribute("class"),
                 Is.EqualTo(
                     "DeviceLandscape bloom-page numberedPage customPage bloom-combinedPage side-left bloom-monolingual"
                 )
             );
-            Assert.That(newPage.Attributes["data-pagelineage"].Value, Is.EqualTo("newTemplate"));
+            Assert.That(newPage.GetAttribute("data-pagelineage"), Is.EqualTo("newTemplate"));
             // We kept the image
             AssertThatXmlIn
                 .Dom(dom)
@@ -801,10 +801,10 @@ namespace BloomTests.Book
         {
             foreach (XmlElement div in editDivs)
             {
-                if (div.Attributes["lang"].Value != item.Lang)
+                if (div.GetAttribute("lang") != item.Lang)
                     continue;
                 Assert.That(div.InnerText.Trim(), Is.EqualTo(item.Content.Trim()));
-                Assert.That(div.Attributes["class"].Value, Does.Contain(style));
+                Assert.That(div.GetAttribute("class"), Does.Contain(style));
                 return;
             }
             Assert.Fail("no matching div found for " + item.Lang);
@@ -828,10 +828,10 @@ namespace BloomTests.Book
                 "should only be one image in an image container"
             );
             var img = (XmlElement)images[0];
-            Assert.That(img.Attributes["src"].Value, Is.EqualTo(imageName));
-            Assert.That(img.Attributes["alt"].Value, Does.Contain(imageName));
-            Assert.That(img.Attributes["width"].Value, Is.EqualTo(width.ToString()));
-            Assert.That(img.Attributes["height"].Value, Is.EqualTo(height.ToString()));
+            Assert.That(img.GetAttribute("src"), Is.EqualTo(imageName));
+            Assert.That(img.GetAttribute("alt"), Does.Contain(imageName));
+            Assert.That(img.GetAttribute("width"), Is.EqualTo(width.ToString()));
+            Assert.That(img.GetAttribute("height"), Is.EqualTo(height.ToString()));
         }
 
         class DivContent
@@ -946,7 +946,7 @@ namespace BloomTests.Book
         // some attempt at verifying that it updated the page structure
         private void CheckPageIsCustomizable(XmlElement newPage)
         {
-            Assert.That(newPage.Attributes["class"].Value, Does.Contain("customPage"));
+            Assert.That(newPage.GetAttribute("class"), Does.Contain("customPage"));
         }
 
         private void CheckPageLineage(
@@ -956,8 +956,8 @@ namespace BloomTests.Book
             string newGuid
         )
         {
-            var oldLineage = oldPage.Attributes["data-pagelineage"].Value;
-            var newLineage = newPage.Attributes["data-pagelineage"].Value;
+            var oldLineage = oldPage.GetAttribute("data-pagelineage");
+            var newLineage = newPage.GetAttribute("data-pagelineage");
             Assert.That(newLineage, Is.EqualTo(oldLineage.Replace(oldGuid, newGuid)));
         }
 

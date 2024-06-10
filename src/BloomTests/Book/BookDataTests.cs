@@ -2412,7 +2412,7 @@ namespace BloomTests.Book
             // I can't figure out how to make that happen in a test, but the cause of it getting the wrong lang attribute
             // and multiple copies was the same.
             Assert.That(dataDivLanguagesOfBookNodes.Count, Is.EqualTo(1));
-            Assert.That(dataDivLanguagesOfBookNodes[0].GetStringAttribute("lang"), Is.EqualTo("*"));
+            Assert.That(dataDivLanguagesOfBookNodes[0].GetAttribute("lang"), Is.EqualTo("*"));
             Assert.AreEqual("English", dataDivLanguagesOfBookNodes[0].InnerText);
         }
 

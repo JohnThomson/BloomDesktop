@@ -104,24 +104,24 @@ namespace Bloom.Publish.Epub
             var itemDict = new Dictionary<string, XmlElement>();
             foreach (XmlElement item in itemElts)
             {
-                itemDict[item.Attributes["id"].Value] = item;
+                itemDict[item.GetAttribute("id")] = item;
             }
 
             var spineElts = _opfDoc.SafeSelectNodes("//spine/itemref").Cast<XmlElement>();
             _manifest.readingOrder = spineElts
                 .Select(spineElt =>
                 {
-                    var spineManifestItem = itemDict[spineElt.Attributes["idref"].Value];
+                    var spineManifestItem = itemDict[spineElt.GetAttribute("idref")];
                     var roItem = new ReadiumItem()
                     {
                         type = "application/xhtml+xml",
-                        href = "content/" + spineManifestItem.Attributes["href"].Value
+                        href = "content/" + spineManifestItem.GetAttribute("href")
                     };
                     var mediaOverlayId = spineManifestItem.Attributes["media-overlay"]?.Value;
                     if (!string.IsNullOrEmpty(mediaOverlayId))
                     {
                         var overlayElt = itemDict[mediaOverlayId];
-                        var overlayFileName = overlayElt.Attributes["href"].Value;
+                        var overlayFileName = overlayElt.GetAttribute("href");
                         var overlayPath = Path.Combine(_contentPath, overlayFileName);
                         // Typically, something like 2_overlay.smil becomes "2".
                         var namePrefix = Path.GetFileNameWithoutExtension(overlayFileName)
@@ -163,9 +163,9 @@ namespace Bloom.Publish.Epub
                                 .GetElementsByTagName("audio")
                                 .Cast<XmlElement>()
                                 .First();
-                            var clipEnd = TimeToDecimal(audioElt.Attributes["clipEnd"].Value);
+                            var clipEnd = TimeToDecimal(audioElt.GetAttribute("clipEnd"));
                             maxClipEnd = Math.Max(maxClipEnd, clipEnd);
-                            var clipStart = TimeToDecimal(audioElt.Attributes["clipBegin"].Value);
+                            var clipStart = TimeToDecimal(audioElt.GetAttribute("clipBegin"));
                             narrations[i] = new ReadiumInnerNarrationBlock()
                             {
                                 text =

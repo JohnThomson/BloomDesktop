@@ -1203,7 +1203,7 @@ namespace Bloom.Publish.Epub
                 x =>
                     AudioProcessor.GetOrCreateCompressedAudio(
                         Storage.FolderPath,
-                        x.Attributes["id"].Value
+                        x.GetAttribute("id")
                     ) != null
             );
             if (!audioSentenceElementsWithRecordedAudio.Any())
@@ -1235,7 +1235,7 @@ namespace Bloom.Publish.Epub
             foreach (var audioSentenceElement in sortedElements)
             {
                 // These are going to be the same regardless of whether this audio sentence has sub-elements to highlight.
-                var audioId = audioSentenceElement.Attributes["id"].Value;
+                var audioId = audioSentenceElement.GetAttribute("id");
                 var path = AudioProcessor.GetOrCreateCompressedAudio(Storage.FolderPath, audioId);
                 string epubPath = mergedAudioPath ?? CopyFileToEpub(path, subfolder: kAudioFolder);
                 var newSrc = epubPath.Substring(_contentFolder.Length + 1).Replace('\\', '/');
@@ -1826,7 +1826,7 @@ namespace Bloom.Publish.Epub
                     .ToArray()
             )
             {
-                var classes = div.Attributes["class"].Value;
+                var classes = div.GetAttribute("class");
                 var regex = new Regex(@"\bHeading([0-9])\b");
                 var match = regex.Match(classes);
                 if (!match.Success)
@@ -2031,9 +2031,7 @@ namespace Bloom.Publish.Epub
                                 "data-audiorecordingmode",
                                 null
                             ) == "TextBox"
-                            && activeDescription
-                                .GetStringAttribute("class")
-                                .Contains("audio-sentence")
+                            && activeDescription.GetAttribute("class").Contains("audio-sentence")
                         )
                         {
                             var duration = activeDescription.GetOptionalStringAttribute(
@@ -2277,7 +2275,7 @@ namespace Bloom.Publish.Epub
         {
             var body = pageDom.Body;
             var div = body.FirstChild;
-            var divClass = div.GetStringAttribute("class");
+            var divClass = div.GetAttribute("class");
             var classes = divClass.Split(' ');
             System.Diagnostics.Debug.Assert(classes.Contains("bloom-page"));
             var page = String.Empty;
@@ -2285,7 +2283,7 @@ namespace Bloom.Publish.Epub
             if (classes.Contains("numberedPage"))
             {
                 // This page number value is not localized.
-                page = div.GetStringAttribute("data-page-number");
+                page = div.GetAttribute("data-page-number");
             }
             else if (div.GetOptionalStringAttribute("data-page", "") == "required singleton")
             {
@@ -2945,8 +2943,7 @@ namespace Bloom.Publish.Epub
                     continue; // or return? marginBox should be child of page!
                 if (firstTime)
                 {
-                    var pageClass = HtmlDom
-                        .GetAttributeValue(page, "class")
+                    var pageClass = page.GetAttribute("class")
                         .Split()
                         .FirstOrDefault(c => c.Contains("Portrait") || c.Contains("Landscape"));
                     // This calculation unfortunately duplicates information from basePage.less.
@@ -3012,7 +3009,7 @@ namespace Bloom.Publish.Epub
                     }
                     firstTime = false;
                 }
-                var imgStyle = HtmlDom.GetAttributeValue(img, "style");
+                var imgStyle = img.GetAttribute("style");
                 // We want to take something like 'width:334px; height:220px; margin-left: 34px; margin-top: 0px;'
                 // and change it to something like 'width:75%; height:auto; margin-left: 10%; margin-top: 0px;'
                 // This first pass deals with width.
@@ -3337,9 +3334,9 @@ namespace Bloom.Publish.Epub
         {
             // Xpath results are things that have an id attribute, so MUST be XmlElements (though the signature
             // of SafeSelectNodes allows other XmlNode types).
-            foreach (XmlElement elt in pageDom.RawDom.SafeSelectNodes("//*[@id]"))
+            foreach (SafeXmlElement elt in pageDom.RawDom.SafeSelectNodes("//*[@id]"))
             {
-                var id = elt.Attributes["id"].Value;
+                var id = elt.GetAttribute("id");
                 var first = id[0];
                 if (first >= '0' && first <= '9')
                     elt.SetAttribute("id", "i" + id);

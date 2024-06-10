@@ -528,12 +528,12 @@ namespace Bloom.Book
             e.AddClass(className); // Enhance: change all 37 callers to use the SafeXmlElement method directly?
         }
 
-        public static void AddRtlDir(XmlElement e)
+        public static void AddRtlDir(SafeXmlElement e)
         {
             e.SetAttribute("dir", "rtl");
         }
 
-        public static void RemoveRtlDir(XmlElement e)
+        public static void RemoveRtlDir(SafeXmlElement e)
         {
             e.RemoveAttribute("dir");
         }
@@ -1203,14 +1203,14 @@ namespace Bloom.Book
             return result;
         }
 
-        public static bool DivHasContent(XmlElement div)
+        public static bool DivHasContent(SafeXmlElement div)
         {
             var divClone = div.CloneNode(true);
 
             // Don't count a language if it only has text in a label.
             // For some xmatter fields, the label is outside the editables.
             // But for back cover, at least, it is inside.
-            var labels = divClone.SafeSelectNodes("label").Cast<XmlElement>();
+            var labels = divClone.SafeSelectNodes("label").Cast<SafeXmlElement>();
             foreach (var label in labels)
                 divClone.RemoveChild(label);
 
@@ -1803,7 +1803,7 @@ namespace Bloom.Book
         public const string musicVolumeName = musicAttrName + "volume";
 
         public static void ProcessPageAfterEditing(
-            XmlElement destinationPageDiv,
+            SafeXmlElement destinationPageDiv,
             XmlElement edittedPageDiv
         )
         {
@@ -1882,7 +1882,7 @@ namespace Bloom.Book
 
             // Upon save, make sure we are not in layout mode.  Otherwise we show the sliders.
             foreach (
-                var node in destinationPageDiv
+                XmlElement node in destinationPageDiv
                     .SafeSelectNodes(
                         ".//*[contains(concat(' ', @class, ' '), ' origami-layout-mode ')]"
                     )
@@ -1890,8 +1890,8 @@ namespace Bloom.Book
                     .ToArray()
             )
             {
-                string currentValue = node.Attributes["class"].Value;
-                node.Attributes["class"].Value = currentValue.Replace("origami-layout-mode", "");
+                string currentValue = node.GetAttribute("class");
+                node.SetAttribute("class", currentValue.Replace("origami-layout-mode", ""));
             }
 
             // Remove any empty <a> elements left by editing.  These cause trouble when the book/page is reopened.
@@ -1904,7 +1904,7 @@ namespace Bloom.Book
         /// Also remove the gratuitous data-cke-saved-href attribute added by ckeditor.  (It may have been involved
         /// with the troublesome behavior noticed by the programmer.  It's certainly not needed.)
         /// </summary>
-        public static void CleanupAnchorElements(XmlElement topElement)
+        public static void CleanupAnchorElements(SafeXmlElement topElement)
         {
             foreach (var element in topElement.SafeSelectNodes(".//a").Cast<XmlElement>().ToArray())
             {
@@ -2059,14 +2059,14 @@ namespace Bloom.Book
         }
 
         internal static void StripUnwantedTagsPreservingText(
-            XmlDocument dom,
-            XmlNode element,
+            SafeXmlDocument dom,
+            SafeXmlNode element,
             string[] tagsToPreserve
         )
         {
             if (element.HasChildNodes)
             {
-                var countOfChildren = element.ChildNodes.Count;
+                var countOfChildren = element.ChildNodes.Length;
                 for (var i = 0; i < countOfChildren; i++)
                 {
                     var childNode = element.ChildNodes[i];
@@ -2117,19 +2117,11 @@ namespace Bloom.Book
                 var elt = node as XmlElement;
                 if (elt == null)
                     continue;
-                var eltClass = " " + GetAttributeValue(elt, "class") + " ";
+                var eltClass = " " + elt.GetAttribute("class") + " ";
                 if (eltClass.Contains(" " + classVal + " "))
                     return elt;
             }
             return null;
-        }
-
-        public static string GetAttributeValue(XmlElement elt, string name)
-        {
-            var attr = elt.Attributes[name];
-            if (attr == null)
-                return "";
-            return attr.Value;
         }
 
         /// <summary>
@@ -2294,7 +2286,7 @@ namespace Bloom.Book
         /// Gets the url for the image, either from an img element or any other element that has
         /// an inline style with background-image set.
         /// </summary>
-        public static UrlPathString GetImageElementUrl(XmlElement imgOrDivWithBackgroundImage)
+        public static UrlPathString GetImageElementUrl(SafeXmlElement imgOrDivWithBackgroundImage)
         {
             if (imgOrDivWithBackgroundImage.Name.ToLower() == "img")
             {
@@ -2326,7 +2318,7 @@ namespace Bloom.Book
         /// <summary>
         /// Gets the url for a video, starting from a parent div which may or may not contain a video element.
         /// </summary>
-        public static UrlPathString GetVideoElementUrl(XmlElement videoContainer)
+        public static UrlPathString GetVideoElementUrl(SafeXmlElement videoContainer)
         {
             var videoElt = videoContainer.GetChildWithName("video");
             // we choose to return an empty path for failure instead of null to reduce errors created by things like
@@ -2495,9 +2487,9 @@ namespace Bloom.Book
         /// <summary>
         /// Move the content of the element to its parent, then remove the now-empty element.
         /// </summary>
-        public static void RemoveElementLayer(XmlElement element)
+        public static void RemoveElementLayer(SafeXmlElement element)
         {
-            foreach (var node in element.ChildNodes.Cast<XmlNode>().ToList())
+            foreach (var node in element.ChildNodes)
             {
                 element.RemoveChild(node);
                 element.ParentNode.InsertBefore(node, element);
@@ -3254,7 +3246,7 @@ namespace Bloom.Book
         /// <param name="styleToSet"></param>
         public static void SetInlineStyle(XmlElement element, string styleToSet)
         {
-            var styleString = GetAttributeValue(element, "style");
+            var styleString = element.GetAttribute("style");
             if (!String.IsNullOrWhiteSpace(styleString))
                 styleString += " ";
             styleString += styleToSet;
@@ -3411,7 +3403,7 @@ namespace Bloom.Book
                 // In an ideal world, the page size class would be on the body, and style rules for
                 // the media box could simply use it. As it is, the page size class is on the page,
                 // and to write style rules that use it, we need to copy it to the new container.
-                var pageSizeClass = page.Attributes["class"].Value
+                var pageSizeClass = page.GetAttribute("class")
                     .Split(' ')
                     .First(x => x.EndsWith("Portrait") || x.EndsWith("Landscape"));
                 mediaBoxDiv.SetAttribute("class", $"bloom-mediaBox {pageSizeClass}");

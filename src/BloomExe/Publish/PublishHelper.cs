@@ -491,7 +491,7 @@ namespace Bloom.Publish
 
         private bool IsDisplayed(XmlElement elt, bool throwOnFailure)
         {
-            var id = elt.Attributes["id"].Value;
+            var id = elt.GetAttribute("id");
             if (!_mapIdToDisplay.TryGetValue(id, out var display))
             {
                 Debug.WriteLine("element not found in IsDisplayed()");
@@ -521,7 +521,7 @@ namespace Bloom.Publish
         /// </remarks>
         private void StoreFontUsed(XmlElement elt)
         {
-            var id = elt.Attributes["id"].Value;
+            var id = elt.GetAttribute("id");
             if (!_mapIdToFontFamily.TryGetValue(id, out var fontFamily))
                 return; // Shouldn't happen, but ignore if it does.
             // we actually can get a comma-separated list with fallback font options: split into an array so we can use just the first one
@@ -581,8 +581,7 @@ namespace Bloom.Publish
             foreach (XmlElement elt in pageElt.SafeSelectNodes(kSelectThingsThatCanBeHidden))
             {
                 if (
-                    elt.Attributes["id"] != null
-                    && elt.Attributes["id"].Value.StartsWith(kTempIdMarker)
+                    elt.Attributes["id"] != null && elt.GetAttribute("id").StartsWith(kTempIdMarker)
                 )
                     elt.RemoveAttribute("id");
             }

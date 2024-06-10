@@ -129,7 +129,7 @@ namespace Bloom.Book
             var langs = xmlDocument
                 .SafeSelectNodes("//*[@lang]")
                 .Cast<XmlElement>()
-                .Select(e => e.Attributes["lang"].Value)
+                .Select(e => e.GetAttribute("lang"))
                 .Distinct()
                 .Where(lang => !mapOriginalToLocalized.ContainsKey(lang))
                 .ToList();

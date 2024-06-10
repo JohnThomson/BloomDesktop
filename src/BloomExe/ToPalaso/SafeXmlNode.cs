@@ -110,6 +110,20 @@ namespace Bloom.ToPalaso
             }
         }
 
+        public string InnerXml
+        {
+            get
+            {
+                lock (_doc.Lock)
+                    return _node.InnerXml;
+            }
+            set
+            {
+                lock (_doc.Lock)
+                    _node.InnerXml = value;
+            }
+        }
+
         public SafeXmlNode[] ChildNodes
         {
             get
@@ -138,6 +152,18 @@ namespace Bloom.ToPalaso
         }
 
         public SafeXmlDocument OwnerDocument => _doc;
+
+        public SafeXmlNode Clone()
+        {
+            lock (_doc.Lock)
+                return WrapNode(_node.Clone(), _doc);
+        }
+
+        public SafeXmlNode CloneNode(bool deep)
+        {
+            lock (_doc.Lock)
+                return WrapNode(_node.CloneNode(deep), _doc);
+        }
 
         #region Addional Methods
 
@@ -184,6 +210,8 @@ namespace Bloom.ToPalaso
                 return null;
             if (node is XmlElement elt)
                 return new SafeXmlElement(elt, doc);
+            else if (node is XmlText txt)
+                return new SafeXmlText(txt, doc);
             // Enhance: if we use more subtypes add more cases
 
             Guard.Against(

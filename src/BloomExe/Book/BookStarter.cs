@@ -153,12 +153,12 @@ namespace Bloom.Book
             return Regex.IsMatch(Path.GetFileName(path), "^ReadMe-[a-z]{2,3}(-[A-Z]{2})?\\.htm$");
         }
 
-        private string GetMetaValue(XmlDocument Dom, string name, string defaultValue)
+        private string GetMetaValue(SafeXmlDocument Dom, string name, string defaultValue)
         {
             var nameSuggestion = Dom.SafeSelectNodes("//head/meta[@name='" + name + "']");
-            if (nameSuggestion.Count > 0)
+            if (nameSuggestion.Length > 0)
             {
-                return ((XmlElement)nameSuggestion[0]).GetAttribute("content");
+                return (nameSuggestion[0]).GetAttribute("content");
             }
             return defaultValue;
         }
@@ -213,7 +213,7 @@ namespace Bloom.Book
                     var initialPageDivs = storage.Dom.SafeSelectNodes(
                         "/html/body/div[contains(@data-page,'extra')]"
                     );
-                    initialPageDivs.Count > 0;
+                    initialPageDivs.Length > 0;
                     initialPageDivs = storage.Dom.SafeSelectNodes(
                             "/html/body/div[contains(@data-page,'extra')]"
                         )
@@ -303,7 +303,7 @@ namespace Bloom.Book
 
             //If this is a shell book, make elements to hold the vernacular
             foreach (
-                XmlElement div in storage.Dom.RawDom.SafeSelectNodes(
+                SafeXmlElement div in storage.Dom.RawDom.SafeSelectNodes(
                     "//div[contains(@class,'bloom-page')]"
                 )
             )
@@ -356,7 +356,7 @@ namespace Bloom.Book
                 var dataBookEl = translationGroup.SelectSingleNode(
                     "div[@data-book and contains(@class,'bloom-editable')]"
                 );
-                var dataBookKey = dataBookEl?.GetStringAttribute("data-book");
+                var dataBookKey = dataBookEl?.GetAttribute("data-book");
                 if (dataBookKey != null)
                 {
                     bookData.RemoveAllForms(dataBookKey);
@@ -478,7 +478,7 @@ namespace Bloom.Book
         /// When building on templates, we usually want to have some sample text, but don't let them bleed through to what the user sees
         /// </summary>
         /// <param name="element"></param>
-        private static void ClearAwayDraftText(XmlNode element)
+        private static void ClearAwayDraftText(SafeXmlNode element)
         {
             //clear away everything done in language "x"
             var nodesInLangX = new List<XmlNode>();
@@ -507,7 +507,7 @@ namespace Bloom.Book
         /// it's still an alphabet chart. This is a judgment call, which is worse.
         /// I'm judging that it's worse to have an out-of-date description than a missing one.
         /// </remarks>
-        private static void ClearAwayPageDescription(XmlNode pageDiv)
+        private static void ClearAwayPageDescription(SafeXmlNode pageDiv)
         {
             //clear away all pageDescription divs except the English one
             var nonEnglishDescriptions = new List<XmlNode>();
@@ -613,17 +613,6 @@ namespace Bloom.Book
             }
         }
 
-        private void RemoveDataDivElement(XmlNode dom, string key)
-        {
-            var dataDiv = HtmlDom.GetOrCreateDataDiv(dom);
-            foreach (
-                XmlNode e in dataDiv.SafeSelectNodes(string.Format("div[@data-book='{0}']", key))
-            )
-            {
-                dataDiv.RemoveChild(e);
-            }
-        }
-
         private void UpdateEditabilityMetadata(BookStorage storage)
         {
             storage.BookInfo.IsSuitableForMakingShells = storage
@@ -638,7 +627,7 @@ namespace Bloom.Book
             storage.BookInfo.FileNameLocked = false;
         }
 
-        public static void SetupPage(XmlElement pageDiv, BookData bookData) //, bool inShellMode)
+        public static void SetupPage(SafeXmlElement pageDiv, BookData bookData) //, bool inShellMode)
         {
             TranslationGroupManager.PrepareElementsInPageOrDocument(pageDiv, bookData);
 
@@ -663,14 +652,14 @@ namespace Bloom.Book
         /// bloom-translationGroup elements.
         /// </remarks>
         public static void SetLanguageForElementsWithMetaLanguage(
-            XmlNode elementOrDom,
+            SafeXmlNode elementOrDom,
             BookData bookData
         )
         {
             //			foreach (XmlElement element in elementOrDom.SafeSelectNodes(".//*[@data-metalanguage]"))
             //			{
             //				string lang = "";
-            //				string metaLanguage = element.GetStringAttribute("data-metalanguage").Trim();
+            //				string metaLanguage = element.GetAttribute("data-metalanguage").Trim();
             //				switch (metaLanguage)
             //				{
             //					case "V":
@@ -697,7 +686,10 @@ namespace Bloom.Book
             //			}
         }
 
-        public static void SetupIdAndLineage(XmlElement parentPageDiv, XmlElement childPageDiv)
+        public static void SetupIdAndLineage(
+            SafeXmlElement parentPageDiv,
+            SafeXmlElement childPageDiv
+        )
         {
             //NB: this works even if the parent and child are the same, which is the case when making a new book
             //but not when we're adding an individual template page. (Later: Huh?)
@@ -840,12 +832,12 @@ namespace Bloom.Book
             );
         }
 
-        internal static void UniqueifyIds(XmlElement pageDiv)
+        internal static void UniqueifyIds(SafeXmlElement pageDiv)
         {
             // find any img.id attributes and replace them with new ids, because we cannot have two elements with the same id in a book
             // we might want to do this for other elements as well, but audio file names may be tied to the id, and would have already
             // been uniquified by the time we get here.
-            foreach (XmlElement element in pageDiv.SafeSelectNodes(".//img[@id]"))
+            foreach (SafeXmlElement element in pageDiv.SafeSelectNodes(".//img[@id]"))
             {
                 element.SetAttribute("id", Guid.NewGuid().ToString());
             }

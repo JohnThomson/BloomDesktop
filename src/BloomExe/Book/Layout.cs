@@ -185,7 +185,7 @@ namespace Bloom.Book
 
         public static Layout FromPage(XmlElement page, Layout layout)
         {
-            foreach (var part in page.GetStringAttribute("class").SplitTrimmed(' '))
+            foreach (var part in page.GetAttribute("class").SplitTrimmed(' '))
             {
                 if (
                     part.ToLowerInvariant().Contains("portrait")

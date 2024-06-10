@@ -455,7 +455,7 @@ namespace BloomTests.Spreadsheet
                 .ToArray();
             Assert.That(bloomEditables.Length, Is.EqualTo(1));
             Assert.That(bloomEditables[0].InnerText.Trim(), Is.EqualTo(""));
-            Assert.That(bloomEditables[0].Attributes["lang"].Value, Is.EqualTo("z"));
+            Assert.That(bloomEditables[0].GetAttribute("lang"), Is.EqualTo("z"));
         }
 
         [TestCase(1, "this is block 1 on page 2")]
@@ -487,7 +487,7 @@ namespace BloomTests.Spreadsheet
         [TestCase(12, Bloom.Book.Book.JustTextGuid)] // page 14 should be inserted just-text
         public void PageType(int n, string guid)
         {
-            Assert.That(_contentPages[n].Attributes["data-pagelineage"].Value, Does.Contain(guid));
+            Assert.That(_contentPages[n].GetAttribute("data-pagelineage"), Does.Contain(guid));
         }
 
         [Test]

@@ -351,7 +351,7 @@ namespace Bloom.Api
                 .Cast<XmlElement>()
                 .Where(p =>
                 {
-                    var cls = " " + p.Attributes["class"].Value + " ";
+                    var cls = " " + p.GetAttribute("class") + " ";
                     // We want only printing content pages as a first cut.  See https://issues.bloomlibrary.org/youtrack/issue/BL-9876.
                     return !cls.Contains(" bloom-frontMatter ")
                         && !cls.Contains(" bloom-backMatter ")

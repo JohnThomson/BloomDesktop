@@ -172,7 +172,7 @@ namespace BloomTests.Book
             var pageImage = dom.SelectSingleNodeHonoringDefaultNS(
                 "//div[contains(@class,'bloom-imageContainer')]/img[@data-book='coverImage']"
             );
-            Assert.IsTrue(pageImage.Attributes["src"].Value.Equals("myImage.png"));
+            Assert.IsTrue(pageImage.GetAttribute("src").Equals("myImage.png"));
         }
 
         [Test]
@@ -231,7 +231,7 @@ namespace BloomTests.Book
             var pageImage = dom.SelectSingleNodeHonoringDefaultNS(
                 "//div[contains(@class,'bloom-imageContainer')]/img[@data-book='coverImage']"
             );
-            Assert.IsTrue(pageImage.Attributes["src"].Value.Equals(placeHolderFile));
+            Assert.IsTrue(pageImage.GetAttribute("src").Equals(placeHolderFile));
         }
 
         // Unless it's part of an image container that has an image description, an image
@@ -275,11 +275,11 @@ namespace BloomTests.Book
                 Assert.That(img.Attributes["alt"], Is.Not.Null);
 
                 string expectedAltText = "";
-                if (img.Attributes["src"].Value == "imageWithCustomAlt.svg")
+                if (img.GetAttribute("src") == "imageWithCustomAlt.svg")
                 {
                     expectedAltText = "Custom Alt";
                 }
-                Assert.That(img.Attributes["alt"].Value, Is.EqualTo(expectedAltText));
+                Assert.That(img.GetAttribute("alt"), Is.EqualTo(expectedAltText));
             }
         }
 
@@ -309,7 +309,7 @@ namespace BloomTests.Book
             var img = dom.SelectSingleNode(
                 "//div[@class='bloom-imageContainer']/img[@src='aor_1B-E1.png']"
             );
-            Assert.That(img.Attributes["alt"].Value, Is.EqualTo("Bird with wings stretched wide"));
+            Assert.That(img.GetAttribute("alt"), Is.EqualTo("Bird with wings stretched wide"));
         }
 
         [Test]
@@ -421,7 +421,7 @@ namespace BloomTests.Book
             var pageImage = dom.SelectSingleNodeHonoringDefaultNS(
                 "//div[contains(@class,'bloom-imageContainer')]/img[@data-book='coverImage']"
             );
-            Assert.IsTrue(pageImage.Attributes["src"].Value.Equals(noPlusEncodedName));
+            Assert.IsTrue(pageImage.GetAttribute("src").Equals(noPlusEncodedName));
 
             // Test that obsolete img attributes are gone.
             Assert.IsNull(pageImage.GetOptionalStringAttribute("style", null));
@@ -950,7 +950,7 @@ namespace BloomTests.Book
             book.InsertPageAfter(existingPage, templatePage.Object);
             Assert.IsTrue(
                 GetPageFromBookDom(book, 1)
-                    .GetStringAttribute("class")
+                    .GetAttribute("class")
                     .Contains("bloom-page bloom-monolingual A5Portrait")
             );
         }
@@ -963,10 +963,7 @@ namespace BloomTests.Book
             Mock<IPage> templatePage = CreateTemplatePage("<div class='bloom-page'>hello</div>");
             book.IsSuitableForMakingShells = true;
             book.InsertPageAfter(existingPage, templatePage.Object);
-            Assert.That(
-                GetPageFromBookDom(book, 1).GetStringAttribute("data-page"),
-                Is.EqualTo("extra")
-            );
+            Assert.That(GetPageFromBookDom(book, 1).GetAttribute("data-page"), Is.EqualTo("extra"));
         }
 
         [Test]
@@ -1292,7 +1289,7 @@ namespace BloomTests.Book
             AssertPageCount(book, 4);
             Assert.IsTrue(
                 GetPageFromBookDom(book, 1)
-                    .GetStringAttribute("class")
+                    .GetAttribute("class")
                     .Contains("bloom-page somekind bloom-monolingual A5Portrait")
             );
         }
@@ -1331,7 +1328,7 @@ namespace BloomTests.Book
 
             var styleNodes = book.OurHtmlDom.Head.SafeSelectNodes("./style");
             Assert.AreEqual(2, styleNodes.Count);
-            Assert.AreEqual("userModifiedStyles", styleNodes[0].Attributes["title"].Value);
+            Assert.AreEqual("userModifiedStyles", styleNodes[0].GetAttribute("title"));
             Assert.AreEqual(string.Empty, styleNodes[0].InnerText);
             // verify that the 'coverColor' rules are still there
             Assert.IsTrue(styleNodes[1].InnerText.Contains("coverColor"));
@@ -1357,7 +1354,7 @@ namespace BloomTests.Book
 
             var styleNodes = book.OurHtmlDom.Head.SafeSelectNodes("./style");
             Assert.AreEqual(2, styleNodes.Count);
-            Assert.AreEqual("userModifiedStyles", styleNodes[0].Attributes["title"].Value);
+            Assert.AreEqual("userModifiedStyles", styleNodes[0].GetAttribute("title"));
             Assert.IsTrue(
                 styleNodes[0].InnerText.Contains(
                     ".normal-style[lang='fr'] { font-size: 9pt ! important; }"
@@ -1376,7 +1373,7 @@ namespace BloomTests.Book
 
             var styleNodes = book.OurHtmlDom.Head.SafeSelectNodes("./style");
             Assert.AreEqual(2, styleNodes.Count); // also gets a new 'coverColor' style element
-            Assert.AreEqual("userModifiedStyles", styleNodes[0].Attributes["title"].Value);
+            Assert.AreEqual("userModifiedStyles", styleNodes[0].GetAttribute("title"));
             Assert.AreEqual(string.Empty, styleNodes[0].InnerText);
             Assert.IsTrue(styleNodes[1].InnerText.Contains("coverColor"));
         }
@@ -1401,7 +1398,7 @@ namespace BloomTests.Book
 
             var styleNodes = book.OurHtmlDom.Head.SafeSelectNodes("./style");
             Assert.AreEqual(2, styleNodes.Count);
-            Assert.AreEqual("userModifiedStyles", styleNodes[0].Attributes["title"].Value);
+            Assert.AreEqual("userModifiedStyles", styleNodes[0].GetAttribute("title"));
             Assert.IsTrue(
                 styleNodes[0].InnerText.Contains(
                     ".normal-style[lang='fr'] { font-size: 9pt ! important; }"
@@ -1426,17 +1423,11 @@ namespace BloomTests.Book
             var existingDivNode = existingPage.GetDivNodeForThisPage();
             var newDivNode = newPage.GetDivNodeForThisPage();
 
-            Assert.AreEqual(existingPage.Id, newDivNode.Attributes["data-pagelineage"].Value);
+            Assert.AreEqual(existingPage.Id, newDivNode.GetAttribute("data-pagelineage"));
             Assert.AreEqual(existingDivNode.InnerXml, newDivNode.InnerXml);
 
-            Assert.AreEqual(
-                original.ToString(),
-                existingDivNode.Attributes["data-page-number"].Value
-            );
-            Assert.AreEqual(
-                (original + 1).ToString(),
-                newDivNode.Attributes["data-page-number"].Value
-            );
+            Assert.AreEqual(original.ToString(), existingDivNode.GetAttribute("data-page-number"));
+            Assert.AreEqual((original + 1).ToString(), newDivNode.GetAttribute("data-page-number"));
         }
 
         [Test]
@@ -1895,7 +1886,7 @@ namespace BloomTests.Book
             AssertPageCount(book, original - 1);
             var newFirstPage = book.GetPages().First();
             var newFirstDiv = newFirstPage.GetDivNodeForThisPage();
-            Assert.AreEqual("1", newFirstDiv.Attributes["data-page-number"].Value);
+            Assert.AreEqual("1", newFirstDiv.GetAttribute("data-page-number"));
         }
 
         [Test]
@@ -2748,7 +2739,7 @@ namespace BloomTests.Book
             HashSet<string> uniqueIds = new HashSet<string>();
             foreach (var node in audioNodes)
             {
-                var id = node.GetStringAttribute("id");
+                var id = node.GetAttribute("id");
                 uniqueIds.Add(id);
             }
             Assert.That(audioNodes.Count, Is.EqualTo(uniqueIds.Count + 1)); // NB: bookTitle occurs twice
@@ -2940,7 +2931,7 @@ namespace BloomTests.Book
             HashSet<string> uniqueIds = new HashSet<string>();
             foreach (var node in audioNodes)
             {
-                var id = node.GetStringAttribute("id");
+                var id = node.GetAttribute("id");
                 uniqueIds.Add(id);
             }
             Assert.That(audioNodes.Count, Is.EqualTo(uniqueIds.Count + 1)); // NB: bookTitle occurs twice in xMatter pages
@@ -3192,7 +3183,7 @@ namespace BloomTests.Book
             HashSet<string> uniqueIds = new HashSet<string>();
             foreach (var node in audioNodes)
             {
-                var id = node.GetStringAttribute("id");
+                var id = node.GetAttribute("id");
                 uniqueIds.Add(id);
             }
             Assert.That(audioNodes.Count, Is.EqualTo(uniqueIds.Count));
@@ -3419,7 +3410,7 @@ namespace BloomTests.Book
             var uniqueIds = new HashSet<string>();
             foreach (var node in audioNodes)
             {
-                var id = node.GetStringAttribute("id");
+                var id = node.GetAttribute("id");
                 uniqueIds.Add(id);
             }
             Assert.That(audioNodes.Count, Is.EqualTo(uniqueIds.Count + 1)); // bookTitle shared by two xMatter pages
@@ -3434,7 +3425,7 @@ namespace BloomTests.Book
             uniqueIds.Clear();
             foreach (var node in audioNodes)
             {
-                var id = node.GetStringAttribute("id");
+                var id = node.GetAttribute("id");
                 uniqueIds.Add(id);
             }
             Assert.That(audioNodes.Count, Is.EqualTo(uniqueIds.Count));
@@ -4790,7 +4781,7 @@ namespace BloomTests.Book
                         .SelectSingleNode(
                             "//div[@id='guid1']/div[contains(@class,'bloom-imageContainer')]"
                         )
-                        .Attributes["data-duration"].Value,
+                        .GetAttribute("data-duration"),
                     CultureInfo.InvariantCulture
                 ),
                 0.001,
@@ -4803,7 +4794,7 @@ namespace BloomTests.Book
                         .SelectSingleNode(
                             "//div[@id='guid3']/div[contains(@class,'bloom-imageContainer')]"
                         )
-                        .Attributes["data-duration"].Value,
+                        .GetAttribute("data-duration"),
                     CultureInfo.InvariantCulture
                 ),
                 0,
@@ -4859,7 +4850,7 @@ namespace BloomTests.Book
                         .SelectSingleNode(
                             "//div[@id='guid1']/div[contains(@class,'bloom-imageContainer')]"
                         )
-                        .Attributes["data-duration"].Value,
+                        .GetAttribute("data-duration"),
                     CultureInfo.InvariantCulture
                 ),
                 0.001,
@@ -4872,7 +4863,7 @@ namespace BloomTests.Book
                         .SelectSingleNode(
                             "//div[@id='guid3']/div[contains(@class,'bloom-imageContainer')]"
                         )
-                        .Attributes["data-duration"].Value,
+                        .GetAttribute("data-duration"),
                     CultureInfo.InvariantCulture
                 ),
                 0,
@@ -4885,7 +4876,7 @@ namespace BloomTests.Book
                         .SelectSingleNode(
                             "//div[@id='guid5']/div[contains(@class,'bloom-imageContainer')]"
                         )
-                        .Attributes["data-duration"].Value,
+                        .GetAttribute("data-duration"),
                     CultureInfo.InvariantCulture
                 ),
                 0.001,

@@ -436,7 +436,7 @@ namespace BloomTests.Book
                 targetNode,
                 classesToDrop
             );
-            return targetNode.GetStringAttribute("class");
+            return targetNode.GetAttribute("class");
         }
 
         [Test]
@@ -2127,10 +2127,7 @@ p {
                 );
                 Assert.AreEqual(
                     "textbox2",
-                    resultEnumerable
-                        .Where(node => node.Name == "div")
-                        .First()
-                        .GetStringAttribute("id")
+                    resultEnumerable.Where(node => node.Name == "div").First().GetAttribute("id")
                 );
                 Assert.AreEqual(3, result.Count, "The result had too many elements.");
             }
@@ -2178,7 +2175,7 @@ p {
                     includeSplitTextBoxAudio
                 );
 
-                if (element.GetStringAttribute("id") == "textbox2")
+                if (element.GetAttribute("id") == "textbox2")
                 {
                     if (includeSplitTextBoxAudio)
                     {

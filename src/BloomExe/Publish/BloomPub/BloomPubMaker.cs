@@ -286,7 +286,7 @@ namespace Bloom.Publish.BloomPub
                 if (!String.IsNullOrEmpty(style) && style.Contains(kBackgroundImage))
                 {
                     System.Diagnostics.Debug.Assert(
-                        div.GetStringAttribute("class").Contains("bloom-backgroundImage")
+                        div.GetAttribute("class").Contains("bloom-backgroundImage")
                     );
                     // extract filename from the background-image style
                     transparentImageFiles.Add(ExtractFilenameFromBackgroundImageStyleUrl(style));
@@ -297,7 +297,7 @@ namespace Bloom.Publish.BloomPub
                     var img = div.SelectSingleNode("//img[@src]");
                     if (img != null)
                         transparentImageFiles.Add(
-                            System.Web.HttpUtility.UrlDecode(img.GetStringAttribute("src"))
+                            System.Web.HttpUtility.UrlDecode(img.GetAttribute("src"))
                         );
                 }
             }
@@ -318,7 +318,7 @@ namespace Bloom.Publish.BloomPub
                 if (!string.IsNullOrEmpty(style) && style.Contains(kBackgroundImage))
                 {
                     System.Diagnostics.Debug.Assert(
-                        div.GetStringAttribute("class").Contains("bloom-backgroundImage")
+                        div.GetAttribute("class").Contains("bloom-backgroundImage")
                     );
                     preservedImages.Add(ExtractFilenameFromBackgroundImageStyleUrl(style));
                 }
@@ -330,9 +330,7 @@ namespace Bloom.Publish.BloomPub
                     .Cast<XmlElement>()
             )
             {
-                preservedImages.Add(
-                    System.Web.HttpUtility.UrlDecode(img.GetStringAttribute("src"))
-                );
+                preservedImages.Add(System.Web.HttpUtility.UrlDecode(img.GetAttribute("src")));
             }
             return preservedImages;
         }
@@ -684,7 +682,7 @@ namespace Bloom.Publish.BloomPub
             foreach (var imgElt in dom.SafeSelectNodes("//img[@src]").Cast<XmlElement>().ToArray())
             {
                 var file = UrlPathString
-                    .CreateFromUrlEncodedString(imgElt.Attributes["src"].Value)
+                    .CreateFromUrlEncodedString(imgElt.GetAttribute("src"))
                     .PathOnly.NotEncoded;
                 if (!RobustFile.Exists(Path.Combine(folderPath, file)))
                 {
@@ -738,7 +736,7 @@ namespace Bloom.Publish.BloomPub
                 if (img == null || img.Attributes["src"] == null)
                     continue;
                 // The filename should be already urlencoded since src is a url.
-                var src = img.Attributes["src"].Value;
+                var src = img.GetAttribute("src");
                 HtmlDom.SetImageElementUrl(
                     imgContainer,
                     UrlPathString.CreateFromUrlEncodedString(src)
@@ -761,7 +759,7 @@ namespace Bloom.Publish.BloomPub
 
                 imgContainer.SetAttribute(
                     "class",
-                    imgContainer.Attributes["class"].Value + classesToAdd
+                    imgContainer.GetAttribute("class") + classesToAdd
                 );
                 imgContainer.RemoveChild(img);
             }
