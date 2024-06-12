@@ -137,11 +137,6 @@
     --slider-height: 80px;
     --slider-item-height: 76px;
     .marginBox {
-        left: 0 !important;
-        top: 0 !important;
-        width: 100% !important;
-        height: 100% !important;
-        box-sizing: border-box; // redundant with no border?
         border: 0 !important;
         img {
             // defeats a rule in basepage.css that otherwise prevents the image from filling the page.
@@ -295,6 +290,10 @@
         text-decoration: none;
         //text-transform: uppercase;
         //transition: background-color 0.2s ease-in-out;
+        // enough for a typical line of text and the decoration we're adding to make it look like a button;
+        // tries to prevent initially coming up as overflowing, though may not succeed for other fonts.
+        // Is there a better way?
+        min-height: 36px;
 
         // This makes it look more like John's mockup, but it creates a stacking context,
         // and that interferes with setting the z-index on the handles and format button
