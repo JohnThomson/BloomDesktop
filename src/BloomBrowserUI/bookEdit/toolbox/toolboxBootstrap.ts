@@ -18,6 +18,7 @@ import { SignLanguageTool } from "./signLanguage/signLanguageTool";
 import { ImageDescriptionAdapter } from "./imageDescription/imageDescription";
 import "errorHandler";
 import { OverlayTool } from "./overlay/overlayTool";
+import { DragActivityTool } from "./dragActivity/dragActivityTool";
 
 export interface IToolboxFrameExports {
     addWordListChangedListener(
@@ -98,3 +99,4 @@ ToolBox.registerTool(new TalkingBookTool());
 ToolBox.registerTool(new SignLanguageTool());
 ToolBox.registerTool(new ImageDescriptionAdapter());
 ToolBox.registerTool(new OverlayTool());
+ToolBox.registerTool(new DragActivityTool());

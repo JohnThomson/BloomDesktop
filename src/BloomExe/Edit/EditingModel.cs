@@ -1685,6 +1685,27 @@ namespace Bloom.Edit
             }
         }
 
+        public void UpdateImageInBrowser(PageEditingModel.ImageInfoForJavascript args)
+        {
+            // we don't need to wait. Even if our caller kicks off a save, its call to RunJavascriptAsync() will come in after ours.
+            GetEditingBrowser()
+                .RunJavascriptFireAndForget(
+                    $"editTabBundle.getEditablePageBundleExports().changeImage({JsonConvert.SerializeObject(args)})"
+                );
+
+            /* Right now, when we're trying to remove saves and simplify everytihng, we are
+                   leaving the thumbnail out-of-date until you change pages, just like we do when the user adds text.
+                   Enhance: Eventually when saving is less disruptive, we will bring it back.
+                              
+                    SaveNow();
+                    _view.UpdateThumbnailAsync(_pageSelection.CurrentSelection);
+                */
+
+            Logger.WriteMinorEvent("Finished ChangePicture {0}", (object)args.src);
+            Analytics.Track("Change Picture");
+            Logger.WriteEvent("ChangePicture {0}...", (object)args.src);
+        }
+
         public void SetView(EditingView view)
         {
             _view = view;

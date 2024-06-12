@@ -1,4 +1,4 @@
-﻿using System.Linq;
+using System.Linq;
 using System.Xml;
 
 namespace Bloom.ToPalaso
@@ -33,6 +33,12 @@ namespace Bloom.ToPalaso
             )
                 current = current.ParentNode as XmlElement;
             return current;
+        }
+
+        public static bool HasClass(this XmlElement element, string className)
+        {
+            var elementClassName = element.Attributes["class"]?.Value ?? "";
+            return (elementClassName.Split(' ')).Contains(className);
         }
 
         /// <summary>

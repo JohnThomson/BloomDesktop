@@ -32,6 +32,7 @@ using System.Xml;
 using Bloom.Utils;
 using Bloom.MiscUI;
 using Bloom.ErrorReporter;
+using Bloom.ToPalaso;
 
 namespace Bloom.Edit
 {
@@ -751,11 +752,11 @@ namespace Bloom.Edit
             }
         }
 
-        public void OnCutImage(string imageId, UrlPathString imageSrc)
+        public void OnCutImage(string imageId, UrlPathString imageSrc, bool imageIsGif)
         {
             var bookFolderPath = _model.CurrentBook.FolderPath;
 
-            if (CopyImageToClipboard(imageSrc, bookFolderPath)) // returns 'true' if successful
+            if (CopyImageToClipboard(imageSrc, bookFolderPath, imageIsGif)) // returns 'true' if successful
             {
                 // Replace current image with placeHolder.png
                 // N.B. It is unnecessary to check for the existence of this file, since selecting a book in
@@ -769,21 +770,42 @@ namespace Bloom.Edit
             }
         }
 
-        public void OnCopyImage(UrlPathString imageSrc)
+        public void OnCopyImage(UrlPathString imageSrc, bool imageIsGif)
         {
             // NB: bloomImages.js contains code that prevents us arriving here
             // if our image is simply the placeholder flower
 
-            CopyImageToClipboard(imageSrc, _model.CurrentBook.FolderPath);
+            CopyImageToClipboard(imageSrc, _model.CurrentBook.FolderPath, imageIsGif);
         }
 
-        public void OnPasteImage(string imageId, UrlPathString priorImageSrc)
+        public void OnPasteImage(string imageId, UrlPathString priorImageSrc, bool imageIsGif)
         {
             using (var measure = PerformanceMeasurement.Global.Measure("Paste Image"))
             {
                 PalasoImage clipboardImage = null;
                 try
                 {
+                    if (imageIsGif)
+                    {
+                        // The only way we currently support copying and pasting a gif is through a text path.
+                        var path = PortableClipboard.GetText();
+                        if (
+                            string.IsNullOrEmpty(path)
+                            || !RobustFile.Exists(path)
+                            || Path.GetExtension(path).ToLowerInvariant() != ".gif"
+                        )
+                        {
+                            MessageBox.Show(
+                                LocalizationManager.GetString(
+                                    "EditTab.NoGifOnClipboard",
+                                    "To paste a Gif, copy a path to a Gif file, or copy from another Bloom GIF element"
+                                )
+                            );
+                            return;
+                        }
+                        SetGifImage(imageId, priorImageSrc, path);
+                        return;
+                    }
                     try
                     {
                         clipboardImage = PortableClipboard.GetImageFromClipboardWithExceptions();
@@ -901,11 +923,23 @@ namespace Bloom.Edit
             return PortableClipboard.GetImageFromClipboard();
         }
 
-        private bool CopyImageToClipboard(UrlPathString imageSrc, string bookFolderPath)
+        private bool CopyImageToClipboard(
+            UrlPathString imageSrc,
+            string bookFolderPath,
+            bool imageIsGif
+        )
         {
             var path = Path.Combine(bookFolderPath, imageSrc.PathOnly.NotEncoded);
             try
             {
+                if (imageIsGif)
+                {
+                    // Haven't been able to find a way to copy the Gif itself into the clipboard.
+                    // Possibly we could also copy the first frame as an actual image.
+                    // For now, at least we can copy one GIF overlay to another, and nothing bad happens
+                    PortableClipboard.SetText(path);
+                    return true;
+                }
                 using (var image = PalasoImage.FromFileRobustly(path))
                 {
                     PortableClipboard.CopyImageToClipboard(image);
@@ -977,18 +1011,43 @@ namespace Bloom.Edit
             return true;
         }
 
-        public void OnChangeImage(string imageId, UrlPathString imageSrc)
+        private string _gifDirectory; // Todo: worth saving this as a UserPrefs? Or can/should we use the same one as for images?
+
+        public void OnChangeImage(string imageId, UrlPathString imageSrc, bool imageIsGif)
         {
             Cursor = Cursors.WaitCursor;
+
+            string newImagePath = null;
+            if (imageIsGif)
+            {
+                // We don't want to use the image toolbox for GIFs, because it will convert them to PNGs.
+                // Instead, we'll just use a file chooser
+                var dlg = new DialogAdapters.OpenFileDialogAdapter
+                {
+                    InitialDirectory =
+                        _gifDirectory ?? Environment.SpecialFolder.MyPictures.ToString(),
+                    Multiselect = false,
+                    CheckFileExists = true,
+                    Filter = "gif|*.gif",
+                };
+                var result = dlg.ShowDialog();
+                if (result != DialogResult.OK)
+                {
+                    return;
+                }
+
+                SetGifImage(imageId, imageSrc, dlg.FileName);
+                return;
+            }
 
             var imageInfo = new PalasoImage();
             Image oldImage = null;
             var oldSize = new Size() { Height = 0, Width = 0 };
+
             var existingImagePath = Path.Combine(
                 _model.CurrentBook.FolderPath,
                 imageSrc.PathOnly.NotEncoded
             );
-            string newImagePath = null;
 
             //don't send the placeholder to the imagetoolbox... we get a better user experience if we admit we don't have an image yet.
             if (
@@ -1221,6 +1280,46 @@ namespace Bloom.Edit
             Logger.WriteMinorEvent("Emerged from ImageToolboxDialog Editor Dialog");
             Cursor = Cursors.Default;
             imageInfo.Dispose(); // ensure memory doesn't leak
+        }
+
+        private void SetGifImage(string imageId, UrlPathString priorImageSrc, string sourcePath)
+        {
+            var baseName = Path.GetFileNameWithoutExtension(sourcePath);
+            var destName = ImageUtils.GetUnusedFilename(
+                _model.CurrentBook.FolderPath,
+                baseName,
+                ".gif",
+                "gif"
+            );
+            var dest = Path.Combine(_model.CurrentBook.FolderPath, destName);
+            RobustFile.Copy(sourcePath, dest);
+            var args = new PageEditingModel.ImageInfoForJavascript()
+            {
+                imageId = imageId,
+                src = UrlPathString.CreateFromUnencodedString(destName).UrlEncoded,
+                // Enhance: can we provide any of this for a GIF?
+                copyright = "",
+                license = "",
+                creator = ""
+            };
+            _model.UpdateImageInBrowser(args);
+
+            // still needed? May have to save before it works...
+            //UpdateThumbnailAsync(_model.CurrentPage);
+        }
+
+        /// <summary>
+        /// Return true if this is an image which we intend to contain GIFs.
+        /// </summary>
+        private bool ImageIsGif(XmlElement imageElement)
+        {
+            // We add this class to the TOP element rather than looking at the file extension of the img
+            // because before a GIF is set we don't know what the file extension will be (and it may well
+            // be a placeholder image that is not a GIF).
+            var overlay = imageElement.ParentWithClass("bloom-textOverPicture");
+            if (overlay == null)
+                return false;
+            return overlay.HasClass("bloom-gif");
         }
 
         /// <summary>

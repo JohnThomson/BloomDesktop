@@ -195,6 +195,13 @@ export function addImageEditingButtons(containerDiv: HTMLElement): void {
     if (!containerDiv || containerDiv.classList.contains("hoverUp")) {
         return;
     }
+    if (containerDiv.closest(".drag-activity-try-it")) {
+        // I wish this knowledge was not here, but I don't see a better way to prevent image editing
+        // and hover effects when in test mode.
+        return;
+    }
+    const topDiv = containerDiv.closest(".bloom-textOverPicture");
+    const imageIsGif = topDiv?.classList.contains("bloom-gif") ?? false;
     let img = getImgFromContainer(containerDiv);
 
     // Enhance: remove this unused flexibility to put images as background-images on div.bloom-imageContainers.
@@ -234,7 +241,11 @@ export function addImageEditingButtons(containerDiv: HTMLElement): void {
                 img.attr("id", imageId);
             }
 
-            postJson("editView/" + command + "Image", { imageId, imageSrc });
+            postJson("editView/" + command + "Image", {
+                imageId,
+                imageSrc,
+                imageIsGif
+            });
         });
     };
 
@@ -488,10 +499,11 @@ function DisableImageTooltip(container: HTMLElement) {
 // Note: since this function (obviously) updates state / has side effects,
 // callers should consider the order operations are done if multiple operations happen at or near the same time
 // to ensure that the final state is the one they desire.
-function UpdateImageTooltipVisibility(container: HTMLElement) {
+export function UpdateImageTooltipVisibility(container: HTMLElement) {
     if (
         container.classList.contains("bloom-hideImageButtons") ||
-        container.classList.contains("ui-suppressImageButtons")
+        container.classList.contains("ui-suppressImageButtons") ||
+        container.closest(".drag-activity-try-it")
     ) {
         // Since the image buttons aren't visible, hide the image tooltip too
         DisableImageTooltip(container);
