@@ -310,6 +310,15 @@ function getSplitPaneComponentInner() {
 }
 
 function getOrigamiControl(): JQuery {
+    // for dragActivities we don't want the origami control, but we still make the
+    // wrapper so that the dragActivity can put a different control in it.
+    if (
+        document
+            .getElementsByClassName("bloom-page")[0]
+            ?.getAttribute("data-tool-id") === "dragActivity"
+    ) {
+        return $("<div class='origami-toggle-container bloom-ui'></div>");
+    }
     return $(
         "\
 <div class='origami-toggle-container bloom-ui'> \

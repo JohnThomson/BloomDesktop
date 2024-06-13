@@ -9,6 +9,7 @@ import { kDragActivityToolId } from "../toolIds";
 import { useEffect, useState } from "react";
 import {
     kBloomBlue,
+    kDarkestBackground,
     kUiFontStack,
     toolboxTheme
 } from "../../../bloomMaterialUITheme";
@@ -54,11 +55,8 @@ const Tabs: React.FunctionComponent<{
         <div
             css={css`
                 display: flex;
-                background-color: white;
-                // minimze the x padding since space-around gives extra if we have room; but as these
-                // labels get translated, we may need more space for them.
-                padding: 7px 2px;
-                justify-content: space-around;
+                background-color: ${kDarkestBackground};
+                padding: 7px 8px 7px 0px;
             `}
             className={props.classNane}
         >
@@ -70,12 +68,13 @@ const Tabs: React.FunctionComponent<{
                         onClick={() => props.onChange(index)}
                         css={css`
                             font-family: ${kUiFontStack};
-                            color: ${selected ? "white" : kBloomBlue};
+                            color: lightgray;
                             background-color: ${selected
                                 ? kBloomBlue
-                                : "white"};
+                                : kDarkestBackground};
                             border: none;
-                            padding: 2px;
+                            padding: 2px 6px;
+                            margin-left: 4px;
                             border-radius: 3px;
                         `}
                     >
@@ -1121,14 +1120,25 @@ export function setupDragActivityTabControl() {
         return;
     }
     const tabControl = page.ownerDocument.createElement("div");
-    tabControl.style.position = "absolute";
-    tabControl.style.top = "-40px";
-    tabControl.style.left = "0";
-    tabControl.style.width = "250px";
+    tabControl.style.position = "relative";
+    tabControl.style.top = "-8px";
     tabControl.setAttribute("id", "drag-activity-tab-control");
-    page.ownerDocument
-        .getElementById("page-scaling-container")
-        ?.appendChild(tabControl);
+    const origamiContainer = page.ownerDocument.getElementsByClassName(
+        "origami-toggle-container"
+    )[0];
+    if (!origamiContainer) {
+        // if it's not already created, keep trying until it is.
+        // We can probably do better than this...the origami method getOrigamiControl() could be renamed
+        // something like getControlAbovePage() and moved somewhere sensible and it could be made to
+        // create the shell into which we'll render the React element if we want that. But I'm trying to
+        // get something ready to demo.
+        setTimeout(setupDragActivityTabControl, 200);
+        return;
+    }
+    // This is a weird thing to do, but we want the drag activity controls exactly when we don't
+    // want origami, and the origami code already creates a nice wrapper inside the page (so we can
+    // get the correct page alignment) and deletes it before saving the page.
+    origamiContainer.appendChild(tabControl);
     setActiveDragActivityTab(0);
     //renderDragActivityTabControl();
 }
@@ -1138,6 +1148,8 @@ function renderDragActivityTabControl() {
         "drag-activity-tab-control"
     );
     if (!root) {
+        // not created yet, try later
+        setTimeout(renderDragActivityTabControl, 200);
         return;
     }
     ReactDOM.render(
@@ -1155,13 +1167,35 @@ const DragActivityTabControl: React.FunctionComponent<{
 }> = props => {
     return (
         <ThemeProvider theme={toolboxTheme}>
-            <Tabs
-                value={props.activeTab}
-                onChange={props.onTabChange}
-                labels={
-                    ["Start", "Correct", "Wrong", "Try It"] /* Todo: localize*/
-                }
-            />
+            <div
+                css={css`
+                    display: flex;
+                    // The mockup seems to have this a little dimmer than white, but I haven't found an existing constant
+                    // that seems appropriate. This will do for a first approximation.
+                    color: lightgray;
+                `}
+            >
+                <div
+                    css={css`
+                        margin-top: 8px;
+                        margin-right: 20px;
+                    `}
+                >
+                    Game Setup mode:
+                </div>
+                <Tabs
+                    value={props.activeTab}
+                    onChange={props.onTabChange}
+                    labels={
+                        [
+                            "Start",
+                            "Correct",
+                            "Wrong",
+                            "Try It"
+                        ] /* Todo: localize*/
+                    }
+                />
+            </div>
         </ThemeProvider>
     );
 };
