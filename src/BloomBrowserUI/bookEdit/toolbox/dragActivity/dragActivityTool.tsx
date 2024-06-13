@@ -670,15 +670,6 @@ const DragActivityControls: React.FunctionComponent<{
         <ThemeProvider theme={toolboxTheme}>
             {props.activeTab === 0 && (
                 <div>
-                    <Div
-                        css={css`
-                            color: ${kBloomBlue};
-                            background-color: white;
-                            padding-left: 5px;
-                            padding-top: 10px;
-                        `}
-                        l10nKey="EditTab.Toolbox.DragActivity.SceneInstructions"
-                    />
                     {anyDraggables && (
                         <OverlayItemRegion
                             l10nKey="EditTab.Toolbox.DragActivity.Draggable"

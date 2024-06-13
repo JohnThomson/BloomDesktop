@@ -509,6 +509,7 @@ export const OverlayItemRegion: React.FunctionComponent<{
                 <Div
                     css={css`
                         color: ${fgColor};
+                        font-weight: bold;
                     `}
                     l10nKey={
                         props.l10nKey ??
