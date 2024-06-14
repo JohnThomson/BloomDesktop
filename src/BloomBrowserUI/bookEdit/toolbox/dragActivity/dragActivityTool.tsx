@@ -68,7 +68,7 @@ const Tabs: React.FunctionComponent<{
                         onClick={() => props.onChange(index)}
                         css={css`
                             font-family: ${kUiFontStack};
-                            color: lightgray;
+                            color: ${selected ? "white" : "lightgray"};
                             background-color: ${selected
                                 ? kBloomBlue
                                 : kDarkestBackground};
