@@ -332,7 +332,13 @@ export class BubbleManager {
     private focusFirstVisibleFocusable(activeElement: HTMLElement): boolean {
         const focusElements = this.getAllVisibleFocusableDivs(activeElement);
         if (focusElements.length > 0) {
-            (focusElements[0] as HTMLElement).focus();
+            var focusElement = focusElements[0] as HTMLElement;
+            if (
+                window.getComputedStyle(focusElement).pointerEvents === "none"
+            ) {
+                return false;
+            }
+            focusElement.focus();
             return true;
         }
         return false;
@@ -1378,6 +1384,14 @@ export class BubbleManager {
         }
 
         if (bubble) {
+            if (
+                window.getComputedStyle(bubble.content).pointerEvents === "none"
+            ) {
+                // We're doing some fairly tricky stuff to handle an event on a parent element but
+                // use it to manipulate a child. If the child is not supposed to be responding to
+                // pointer events, we should not be manipulating it here either.
+                return;
+            }
             // We clicked on a bubble, and either ctrl or alt is down, or we clicked outside the
             // editable part. If we're outside the editable but inside the bubble, we don't need any default event processing,
             // and if we're inside and ctrl or alt is down, we want to prevent the events being
@@ -1541,7 +1555,12 @@ export class BubbleManager {
                     targetElement.setAttribute("controls", "");
                 }
             } else {
-                container.classList.add("grabbable");
+                if (
+                    window.getComputedStyle(hoveredBubble.content)
+                        .pointerEvents !== "none"
+                ) {
+                    container.classList.add("grabbable");
+                }
             }
         } else {
             this.applyResizingUI(hoveredBubble, container, event, isVideo);
