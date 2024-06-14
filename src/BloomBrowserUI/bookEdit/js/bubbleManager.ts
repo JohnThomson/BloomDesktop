@@ -2449,11 +2449,17 @@ export class BubbleManager {
     public addOverPictureElementWithScreenCoords(
         screenX: number,
         screenY: number,
-        style: string
+        style: string,
+        userDefinedStyleName?: string
     ): HTMLElement | undefined {
         const clientX = screenX - window.screenX;
         const clientY = screenY - window.screenY;
-        return this.addOverPictureElement(clientX, clientY, style);
+        return this.addOverPictureElement(
+            clientX,
+            clientY,
+            style,
+            userDefinedStyleName
+        );
     }
 
     private addOverPictureElementFromOriginal(
@@ -2544,7 +2550,8 @@ export class BubbleManager {
     public addOverPictureElement(
         mouseX: number,
         mouseY: number,
-        style?: string
+        style?: string,
+        userDefinedStyleName?: string
     ): HTMLElement | undefined {
         const imageContainer = this.getImageContainerFromMouse(mouseX, mouseY);
         if (!imageContainer || imageContainer.length === 0) {
@@ -2570,27 +2577,29 @@ export class BubbleManager {
         return this.addTextOverPicture(
             positionInViewport,
             imageContainer,
-            style
+            style,
+            userDefinedStyleName
         );
     }
 
     private addTextOverPicture(
         location: Point,
         imageContainerJQuery: JQuery,
-        style?: string
+        style?: string,
+        userDefinedStyleName?: string
     ): HTMLElement {
         const defaultNewTextLanguage = GetSettings().languageForNewTextBoxes;
+        const userDefinedStyle = userDefinedStyleName ?? "Bubble";
         // add a draggable text bubble to the html dom of the current page
-        const editableDivClasses =
-            "bloom-editable bloom-content1 bloom-visibility-code-on Bubble-style";
+        const editableDivClasses = `bloom-editable bloom-content1 bloom-visibility-code-on ${userDefinedStyle}-style`;
         const editableDivHtml =
             "<div class='" +
             editableDivClasses +
             "' lang='" +
             defaultNewTextLanguage +
             "'><p></p></div>";
-        const transGroupDivClasses =
-            "bloom-translationGroup bloom-leadingElement Bubble-style";
+
+        const transGroupDivClasses = `bloom-translationGroup bloom-leadingElement ${userDefinedStyle}-style`;
         const transGroupHtml =
             "<div class='" +
             transGroupDivClasses +

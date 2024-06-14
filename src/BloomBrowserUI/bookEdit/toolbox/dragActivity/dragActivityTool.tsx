@@ -684,6 +684,7 @@ const DragActivityControls: React.FunctionComponent<{
                                     hide={
                                         activityType === "word-chooser-slider"
                                     }
+                                    userDefinedStyleName="Letter"
                                 />
                                 <OverlayTextItem
                                     css={textItemProps}
@@ -694,6 +695,7 @@ const DragActivityControls: React.FunctionComponent<{
                                     hide={
                                         activityType === "word-chooser-slider"
                                     }
+                                    userDefinedStyleName="Word"
                                 />{" "}
                                 <OverlayImageItem
                                     style="image"
@@ -759,6 +761,7 @@ const DragActivityControls: React.FunctionComponent<{
                                 addClasses="check-button"
                                 contentL10nKey="EditTab.Toolbox.DragActivity.Check"
                                 hintL10nKey="EditTab.Toolbox.DragActivity.CheckHint"
+                                userDefinedStyleName="GameButton"
                             />
                         </OverlayItemRow>
                         <OverlayItemRow>
@@ -844,11 +847,13 @@ const DragActivityControls: React.FunctionComponent<{
                                 l10nKey="EditTab.Toolbox.DragActivity.TryAgain"
                                 addClasses="try-again-button drag-item-wrong"
                                 contentL10nKey="EditTab.Toolbox.DragActivity.TryAgain"
+                                userDefinedStyleName="GameButton"
                             />
                             <OverlayButtonItem
                                 l10nKey="EditTab.Toolbox.DragActivity.ShowAnswer"
                                 addClasses="show-correct-button drag-item-wrong"
                                 contentL10nKey="EditTab.Toolbox.DragActivity.ShowAnswer"
+                                userDefinedStyleName="GameButton"
                             />
                         </OverlayItemRow>
                         <OverlayItemRow>

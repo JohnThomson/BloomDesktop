@@ -50,7 +50,8 @@ const ondragend = (
     contentL10nKey?: string,
     hintL10nKey?: string,
     // Anything extra the client wants to do to the bubble
-    extraAction?: (top: HTMLElement) => void
+    extraAction?: (top: HTMLElement) => void,
+    userDefinedStyleName?: string
 ) => {
     const bubbleManager = OverlayTool.bubbleManager();
     // The Linux/Mono/Geckofx environment does not produce the dragenter, dragover,
@@ -62,7 +63,8 @@ const ondragend = (
         const bubble = bubbleManager.addOverPictureElementWithScreenCoords(
             ev.screenX,
             ev.screenY,
-            style
+            style,
+            userDefinedStyleName
         );
         if (!bubble) return;
         if (extraAction) {
@@ -372,6 +374,7 @@ export const OverlayItem: React.FunctionComponent<{
     style: string;
     draggable?: boolean;
     addClasses?: string;
+    userDefinedStyleName?: string;
 }> = props => {
     return (
         <img
@@ -389,7 +392,11 @@ export const OverlayItem: React.FunctionComponent<{
                     props.style,
                     props.draggable ?? false,
                     false, // don't make a matching text box
-                    props.addClasses
+                    props.addClasses,
+                    undefined,
+                    undefined,
+                    undefined,
+                    props.userDefinedStyleName
                 )
             }
         />
@@ -405,6 +412,7 @@ export const OverlayTextItem: React.FunctionComponent<{
     contentL10nKey?: string;
     hintL10nKey?: string;
     hide?: boolean; // If true, we don't want this item at all.
+    userDefinedStyleName?: string;
 }> = props => {
     if (props.hide) {
         return null;
@@ -423,7 +431,9 @@ export const OverlayTextItem: React.FunctionComponent<{
                     false, // don't make a matching text box
                     props.addClasses,
                     props.contentL10nKey,
-                    props.hintL10nKey
+                    props.hintL10nKey,
+                    undefined,
+                    props.userDefinedStyleName
                 )
             }
         ></Span>
@@ -445,6 +455,7 @@ export const OverlayButtonItem: React.FunctionComponent<{
     addClasses: string;
     contentL10nKey?: string;
     hintL10nKey?: string;
+    userDefinedStyleName?: string;
 }> = props => {
     return (
         <OverlayTextItem
@@ -455,6 +466,7 @@ export const OverlayButtonItem: React.FunctionComponent<{
             style="none"
             contentL10nKey={props.contentL10nKey}
             hintL10nKey={props.hintL10nKey}
+            userDefinedStyleName={props.userDefinedStyleName}
         ></OverlayTextItem>
     );
 };
