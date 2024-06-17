@@ -36,6 +36,37 @@ div.toolboxRoot {
         margin-top: @helpLinkTopMargin; // put some space before the Help link
     }
 }
+.MuiPopover-root.MuiMenu-root.MuiModal-root {
+    z-index: 18001 !important; // Beat mui rule that wants it to be 1300, but it must be above the toolbox
+    // Make the popover for mui Select look right for the toolbox context.
+    // It ought to be possible to do this in React; the doc indicates that menu colors can be controlled
+    // with the sx prop, but I couldn't get it to work.
+    // Usually, the next best option would be to put additional emotion css on the container. That won't
+    // work here because the list and items are not children of the Select; they get added at the body level.
+    // For the same reason, we can't even limit this to div.toolboxRoot; the list is not inside that.
+    ul {
+        background-color: @toolboxBackgroundColor !important;
+        color: white !important;
+    }
+    li {
+        background-color: @toolboxBackgroundColor !important;
+        // Messing with these to make a tighter list and to indicate the selected one with
+        // a bottom border, which we want as close to the text as possible (but not an underline
+        // decoration, which doesn't look right to me). In particular MUI defaults to a very large
+        // minimum height (48 pixels), some of which comes out between the text and the bottom border,
+        // which doesn't look good.
+        padding: 4px 0 0 0 !important;
+        margin: 0 16px !important;
+        min-height: 28px !important;
+        &:hover {
+            background-color: #505050 !important;
+        }
+        &.Mui-selected {
+            //text-decoration: underline;
+            border-bottom: 2px solid white;
+        }
+    }
+}
 
 .ui-accordion-header {
     -moz-user-select: none;

@@ -20,6 +20,10 @@
         <source xml:lang="en">Clicking this validates the positions things have been dragged to.</source>
         <note>ID: EditTab.Toolbox.DragActivity.CheckHint</note>
       </trans-unit>
+      <trans-unit id="EditTab.Toolbox.DragActivity.ChooseSound">
+        <source xml:lang="en">Choose...</source>
+        <note>ID: EditTab.Toolbox.DragActivity.ChooseSound</note>
+      </trans-unit>
       <trans-unit id="EditTab.Toolbox.DragActivity.CorrectInstructions">
         <source xml:lang="en">Add items that will show when the learner gets the correct answer. For example, you might add a text that says “Correct!” with a GIF of a dancing chicken.</source>
         <note>ID: EditTab.Toolbox.DragActivity.CorrectInstructions</note>
@@ -214,6 +218,14 @@
       <trans-unit id="EditTab.Toolbox.DragActivity.TryAgain">
         <source xml:lang="en">Try Again</source>
         <note>ID: EditTab.Toolbox.DragActivity.TryAgain</note>
+      </trans-unit>
+      <trans-unit id="EditTab.Toolbox.DragActivity.WhenCorrect">
+        <source xml:lang="en">When the answer is correct</source>
+        <note>ID: EditTab.Toolbox.DragActivity.WhenCorrect</note>
+      </trans-unit>
+      <trans-unit id="EditTab.Toolbox.DragActivity.WhenWrong">
+        <source xml:lang="en">When the answer is wrong</source>
+        <note>ID: EditTab.Toolbox.DragActivity.WhenWrong</note>
       </trans-unit>
       <trans-unit id="EditTab.Toolbox.DragActivity.Word">
         <source xml:lang="en">Word</source>

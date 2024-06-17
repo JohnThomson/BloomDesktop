@@ -187,7 +187,23 @@ namespace Bloom.web.controllers
 
             try
             {
-                RobustFile.Copy(jsonData.from, jsonData.to, true);
+                var source = jsonData.from;
+                if (
+                    !Path.IsPathRooted(source)
+                    && Path.GetExtension(source).ToLowerInvariant() == ".mp3"
+                )
+                {
+                    // MP3 files in the sounds folder can be found automatically.
+                    // We can extend this as necessary if there are other built-in files
+                    // we want to be easily able to copy like this.
+                    source = Path.Combine(
+                        FileLocationUtilities.DirectoryOfApplicationOrSolution,
+                        BloomFileLocator.BrowserRoot,
+                        "sounds",
+                        source
+                    );
+                }
+                RobustFile.Copy(source, jsonData.to, true);
             }
             catch (Exception e)
             {

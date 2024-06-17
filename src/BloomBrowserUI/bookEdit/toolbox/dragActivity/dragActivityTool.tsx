@@ -10,6 +10,7 @@ import { useEffect, useState } from "react";
 import {
     kBloomBlue,
     kDarkestBackground,
+    kOptionPanelBackgroundColor,
     kUiFontStack,
     toolboxTheme
 } from "../../../bloomMaterialUITheme";
@@ -19,7 +20,6 @@ import {
     OverlayButtonItem,
     OverlayGifItem,
     OverlayImageItem,
-    OverlayItem,
     OverlayItemRegion,
     OverlayItemRow,
     OverlayTextItem,
@@ -35,14 +35,11 @@ import {
     setupWordChooserSlider,
     undoPrepareActivity
 } from "./dragActivityRuntime";
-import { BubbleManager, theOneBubbleManager } from "../../js/bubbleManager";
-import { UpdateImageTooltipVisibility } from "../../js/bloomImages";
-import BloomButton from "../../../react_components/bloomButton";
-import theOneLocalizationManager, {
-    LocalizationManager
-} from "../../../lib/localizationManager/localizationManager";
-import { postJson } from "../../../utils/bloomApi";
+import theOneLocalizationManager from "../../../lib/localizationManager/localizationManager";
+import { postData, postJson } from "../../../utils/bloomApi";
 import { getToolboxBundleExports } from "../../editViewFrame";
+import { MenuItem, Select, menuClasses } from "@mui/material";
+import { useL10n } from "../../../react_components/l10nHooks";
 //import { Tab } from "@mui/material";
 
 const Tabs: React.FunctionComponent<{
@@ -500,12 +497,9 @@ const Instructions: React.FunctionComponent<{
     return (
         <TriangleCollapse
             css={css`
-                color: ${kBloomBlue};
-                background-color: white;
                 padding-left: 5px;
             `}
             initiallyOpen={true}
-            buttonColor={kBloomBlue}
             labelL10nKey={
                 props.l10nTitleKey ??
                 "EditTab.Toolbox.DragActivity.Instructions"
@@ -581,6 +575,12 @@ const DragActivityControls: React.FunctionComponent<{
     const [wrongSound, setWrongSound] = useState("");
     const [soundFolder, setSoundFolder] = useState("");
     const [activityType, setActivityType] = useState("");
+    const noneSound = useL10n("None", "EditTab.Toolbox.DragActivity.None", "");
+    const chooseSound = useL10n(
+        "Choose...",
+        "EditTab.Toolbox.DragActivity.ChooseSound",
+        ""
+    );
     useEffect(() => {
         const getStateFromPage = () => {
             const pageBody = ToolBox.getPage();
@@ -606,7 +606,11 @@ const DragActivityControls: React.FunctionComponent<{
         };
         getStateFromPage();
     }, [props.pageGeneration]);
-    const getSound = async forCorrect => {
+    const getPage = () => {
+        const pageBody = ToolBox.getPage();
+        return pageBody?.getElementsByClassName("bloom-page")[0] as HTMLElement;
+    };
+    const showDialogToChooseSoundFile = async forCorrect => {
         const result = await postJson("fileIO/chooseFile", {
             title: "Choose Sound File",
             fileTypes: [
@@ -621,10 +625,7 @@ const DragActivityControls: React.FunctionComponent<{
         if (!result || !result.data) {
             return;
         }
-        const pageBody = ToolBox.getPage();
-        const page = pageBody?.getElementsByClassName(
-            "bloom-page"
-        )[0] as HTMLElement;
+        const page = getPage();
         setSoundFolder(result.data);
         if (forCorrect) {
             setCorrectSound(result.data);
@@ -638,6 +639,44 @@ const DragActivityControls: React.FunctionComponent<{
         updateTabClass(props.activeTab);
     }, [props.activeTab]);
 
+    // Souns "Yay", and below "Awww", "Oh-oh". amd "Waah" were taken from https://bloomlibrary.org/EFL-education-for-life-org/EFL-CatandDog/book/8ItXq7Rp5s.
+    // We need to investigate licensing before we ship. The book (10 - Cat and Dog and the egg) is CC-BY-NC, and the activities, to which the
+    // sounds presumably belong, are CC-BY-NC-SA. This may mean they are copyright by the owners of Active Presenter 8 or SIL-PNG
+    // and we can't use them for just any book that wants them, therefore probably not at all. Also, if we can use them, we may need
+    // (based on NC) to determine how the source should be acknowledged.
+    // It's not clear from the credits page of the book, unfortunately.
+    // I don't know the source of "Ding-a-ling" or "Sad Drum", but I think they are sounds we were already using for activities, so
+    // presumably they are OK to use.
+    const correctSoundOptions = [
+        { label: noneSound, id: "none" },
+        { label: "Ding-a-ling", id: "ding-a-ling.mp3" },
+        { label: "Yay", id: "yay.mp3" },
+        { label: chooseSound, id: "choose" }
+    ];
+    if (
+        correctSoundOptions.find(opt => opt.id === correctSound) === undefined
+    ) {
+        correctSoundOptions.splice(0, 0, {
+            label: correctSound.replace(/\.mp3$/i, ""),
+            id: correctSound
+        });
+    }
+
+    const wrongSoundOptions = [
+        { label: noneSound, id: "none" },
+        { label: "Awww", id: "awww.mp3" },
+        { label: "Oh-oh", id: "oh-oh.mp3" },
+        { label: "Sad Drum", id: "sad drum.mp3" },
+        { label: "Waah", id: "waah.mp3" },
+        { label: chooseSound, id: "choose" }
+    ];
+    if (wrongSoundOptions.find(opt => opt.id === wrongSound) === undefined) {
+        wrongSoundOptions.splice(0, 0, {
+            label: wrongSound.replace(/\.mp3$/i, ""),
+            id: wrongSound
+        });
+    }
+
     const [dragObjectType, setDragObjectType] = useState("text");
     // Todo: something has to call setDragObjectType when a draggable is selected.
     let titleId = "EditTab.Toolbox.DragActivity.Draggable";
@@ -649,6 +688,103 @@ const DragActivityControls: React.FunctionComponent<{
         titleId = "EditTab.Toolbox.DragActivity.OrderCircle";
         bodyId = "EditTab.Toolbox.DragActivity.OrderCircleInstructions";
     }
+
+    const onSoundItemChosen = (forCorrect: boolean, newSoundId: string) => {
+        if (newSoundId === "choose") {
+            showDialogToChooseSoundFile(forCorrect);
+            return;
+        }
+        if (
+            (newSoundId === correctSound && forCorrect) ||
+            (newSoundId === wrongSound && !forCorrect)
+        ) {
+            // Nothing is changing; also, we don't want to try to copy the sound file again, especially if it
+            // is a user-chosen one that we won't find in our sounds folder.
+            return;
+        }
+        const page = getPage();
+        if (forCorrect) {
+            setCorrectSound(newSoundId);
+            if (newSoundId === "none") {
+                page.removeAttribute("data-correct-sound");
+            } else {
+                page.setAttribute("data-correct-sound", newSoundId);
+            }
+        } else {
+            setWrongSound(newSoundId);
+            if (newSoundId === "none") {
+                page.removeAttribute("data-wrong-sound");
+            } else {
+                page.setAttribute("data-wrong-sound", newSoundId);
+            }
+        }
+        if (newSoundId !== "none") {
+            // I think copying the sound can be fire-and-forget. But if you add something that needs it to be there,
+            // like playing it, you should await this.
+            copyBuiltInSound(newSoundId);
+        }
+    };
+
+    const copyBuiltInSound = async (newSoundId: string) => {
+        const resultAudioDir = await postJson(
+            "fileIO/getSpecialLocation",
+            "CurrentBookAudioDirectory"
+        );
+
+        if (!resultAudioDir) {
+            return; // huh??
+        }
+
+        const targetPath = resultAudioDir.data + "/" + newSoundId;
+        await postData("fileIO/copyFile", {
+            from: encodeURIComponent(newSoundId),
+            to: encodeURIComponent(targetPath)
+        });
+    };
+
+    // Make a <Select> for choosing a sound file. The arguments allow reusing this both for the correct and wrong sound.
+    const soundSelect = (
+        forCorrect: boolean,
+        options: { label: string; id: string }[],
+        value: string,
+        setValue: (fc: boolean, value: string) => void
+    ) => {
+        return (
+            <Select
+                css={css`
+                    svg.MuiSvgIcon-root {
+                        color: white !important;
+                    }
+                    ul {
+                        background-color: ${kOptionPanelBackgroundColor} !important;
+                    }
+                    fieldset {
+                        border-color: rgba(255, 255, 255, 0.5) !important;
+                    }
+                `}
+                size="small"
+                value={value}
+                sx={{
+                    width: 170
+                }}
+                onChange={event => {
+                    const newSoundId = event.target.value as string;
+                    setValue(forCorrect, newSoundId);
+                }}
+                disabled={false}
+            >
+                {options.map(option => (
+                    <MenuItem
+                        value={option.id}
+                        key={option.id}
+                        disabled={false}
+                    >
+                        {option.label}
+                    </MenuItem>
+                ))}
+            </Select>
+        );
+    };
 
     const textItemProps = css`
         margin-left: 5px;
@@ -780,7 +916,6 @@ const DragActivityControls: React.FunctionComponent<{
 
             {props.activeTab === 1 && (
                 <div>
-                    <Instructions l10nKey="CorrectInstructions" />
                     <OverlayItemRegion theme="blueOnTan" l10nKey="">
                         <OverlayItemRow>
                             <OverlayImageItem
@@ -811,17 +946,27 @@ const DragActivityControls: React.FunctionComponent<{
                             />
                         </OverlayItemRow>
                     </OverlayItemRegion>
+                    <Instructions l10nKey="CorrectInstructions" />
                     <div css={playAudioCss}>
-                        <Div l10nKey="EditTab.Toolbox.DragActivity.PlayAudio" />
-                        <button onClick={() => getSound(true)}>
-                            {correctSound}
-                        </button>
+                        <Div l10nKey="EditTab.Toolbox.DragActivity.WhenCorrect" />
+                        <Div
+                            css={css`
+                                margin-top: 10px;
+                            `}
+                            l10nKey="EditTab.Toolbox.DragActivity.PlayAudio"
+                        />
+
+                        {soundSelect(
+                            true,
+                            correctSoundOptions,
+                            correctSound,
+                            onSoundItemChosen
+                        )}
                     </div>
                 </div>
             )}
             {props.activeTab === 2 && (
                 <div>
-                    <Instructions l10nKey="WrongInstructions" />
                     <OverlayItemRegion theme="blueOnTan" l10nKey="">
                         <OverlayItemRow>
                             <OverlayImageItem
@@ -866,11 +1011,21 @@ const DragActivityControls: React.FunctionComponent<{
                             />
                         </OverlayItemRow>
                     </OverlayItemRegion>
+                    <Instructions l10nKey="WrongInstructions" />
                     <div css={playAudioCss}>
-                        <Div l10nKey="EditTab.Toolbox.DragActivity.PlayAudio" />
-                        <button onClick={() => getSound(false)}>
-                            {wrongSound}
-                        </button>
+                        <Div l10nKey="EditTab.Toolbox.DragActivity.WhenWrong" />
+                        <Div
+                            css={css`
+                                margin-top: 10px;
+                            `}
+                            l10nKey="EditTab.Toolbox.DragActivity.PlayAudio"
+                        />
+                        {soundSelect(
+                            false,
+                            wrongSoundOptions,
+                            wrongSound,
+                            onSoundItemChosen
+                        )}
                     </div>
                 </div>
             )}
