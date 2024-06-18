@@ -37,7 +37,10 @@ import {
 } from "./dragActivityRuntime";
 import theOneLocalizationManager from "../../../lib/localizationManager/localizationManager";
 import { postData, postJson } from "../../../utils/bloomApi";
-import { getToolboxBundleExports } from "../../editViewFrame";
+import {
+    getEditablePageBundleExports,
+    getToolboxBundleExports
+} from "../../editViewFrame";
 import { MenuItem, Select, menuClasses } from "@mui/material";
 import { useL10n } from "../../../react_components/l10nHooks";
 //import { Tab } from "@mui/material";
@@ -108,6 +111,19 @@ export const setupDraggingTargets = (startingPoint: HTMLElement) => {
             "bloom-activity-slider"
         )[0] as HTMLElement;
         wrapper.addEventListener("click", designTimeClickOnSlider);
+    }
+};
+
+const removeDraggingTargets = (startingPoint: HTMLElement) => {
+    const page = startingPoint.closest(".bloom-page") as HTMLElement;
+    page.querySelectorAll("[data-target-of]").forEach((elt: HTMLElement) => {
+        elt.removeEventListener("mousedown", startDrag);
+    });
+    if (page.getAttribute("data-activity") === "word-chooser-slider") {
+        const wrapper = page.getElementsByClassName(
+            "bloom-activity-slider"
+        )[0] as HTMLElement;
+        wrapper.removeEventListener("click", designTimeClickOnSlider);
     }
 };
 
@@ -513,6 +529,7 @@ const Instructions: React.FunctionComponent<{
     );
 };
 
+const startTabIndex = 0;
 const correctTabIndex = 1;
 const wrongTabIndex = 2;
 const tryItTabIndex = 3;
@@ -1060,6 +1077,12 @@ export class DragActivityTool extends ToolboxToolReactAdaptor {
         this.renderRoot();
     }
 
+    // Activating the tool calls this right before newPageReady().
+    // Currently the latter does this.renderRoot(), so we don't need to do it here.
+    // public showTool() {
+    //     this.renderRoot();
+    // }
+
     public requiresToolId(): boolean {
         return true;
     }
@@ -1114,25 +1137,35 @@ export class DragActivityTool extends ToolboxToolReactAdaptor {
         return result;
     }
 
+    private lastPageId = "";
+
     public newPageReady() {
         const bubbleManager = OverlayTool.bubbleManager();
         const page = DragActivityTool.getBloomPage();
-        if (!bubbleManager || !page) {
+        const pageFrameExports = getEditablePageBundleExports();
+        if (!bubbleManager || !page || !pageFrameExports) {
             // probably the toolbox just finished loading before the page.
             // No clean way to fix this
             window.setTimeout(() => this.newPageReady(), 100);
             return;
         }
-        // useful during development, MAY not need in production.
-        bubbleManager.removeDetachedTargets();
-        // Force things to Start tab as we change page.
-        // If we decide not to do this, we should probably at least find a way to do it
-        // when it's a brand newly-created page.
-        this.tab = 0;
-        // This forces various things to update to match the new page.
-        this.renderRoot();
 
-        setupDraggingTargets(page);
+        const pageId = page.getAttribute("id") ?? "";
+        if (pageId === this.lastPageId) {
+            // reinitialize for the current tab. This is especially important in Try It mode,
+            // because detachFromPage() undoes some of the initialization for that tab.
+            pageFrameExports.setActiveDragActivityTab(
+                pageFrameExports.getActiveDragActivityTab()
+            );
+        } else {
+            this.lastPageId = pageId;
+            // useful during development, MAY not need in production.
+            bubbleManager.removeDetachedTargets();
+            // Force things to Start tab as we change page.
+            // If we decide not to do this, we should probably at least find a way to do it
+            // when it's a brand newly-created page.
+            pageFrameExports.setActiveDragActivityTab(0);
+        }
     }
 
     public detachFromPage() {
@@ -1267,6 +1300,11 @@ export function setActiveDragActivityTab(tab: number) {
         // We can't currently do this for hidden bubbles, and selecting one of these tabs
         // may cause some previously hidden bubbles to become visible.
         bubbleManager?.ensureBubblesIntersectParent(page);
+    }
+    if (tab === startTabIndex) {
+        setupDraggingTargets(page);
+    } else {
+        removeDraggingTargets(page);
     }
 }
 
