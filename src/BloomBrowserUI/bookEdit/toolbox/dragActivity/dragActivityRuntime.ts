@@ -39,7 +39,7 @@ export function prepareActivity(
         const y = target.offsetTop;
         slots.push({ x, y });
         originalPositions.set(elt, { x: elt.offsetLeft, y: elt.offsetTop });
-        elt.addEventListener("pointerdown", startDrag);
+        elt.addEventListener("pointerdown", startDrag, { capture: true });
     });
     const checkButtons = Array.from(
         page.getElementsByClassName("check-button")
@@ -255,6 +255,7 @@ const startDrag = (e: PointerEvent) => {
     if (e.button !== 0) return; // only left button
     if (e.ctrlKey) return; // ignore ctrl+click
     // get the mouse cursor position at startup:
+    e.preventDefault(); // e.g., don't do default drag of child image
     const target = e.currentTarget as HTMLElement;
     dragTarget = target;
     const page = target.closest(".bloom-page") as HTMLElement;
