@@ -568,7 +568,8 @@ const updateTabClass = (tabIndex: number) => {
         "drag-activity-start",
         "drag-activity-correct",
         "drag-activity-wrong",
-        "drag-activity-try-it"
+        "drag-activity-try-it",
+        "drag-activity-solution" // doesn't have a tab, but good to remove any time we change.
     ];
     for (let i = 0; i < classes.length; i++) {
         const className = classes[i];
@@ -1161,10 +1162,45 @@ export class DragActivityTool extends ToolboxToolReactAdaptor {
             this.lastPageId = pageId;
             // useful during development, MAY not need in production.
             bubbleManager.removeDetachedTargets();
+            setTimeout(() => {
+                this.copyInitialText();
+            }, 100);
+
             // Force things to Start tab as we change page.
             // If we decide not to do this, we should probably at least find a way to do it
             // when it's a brand newly-created page.
             pageFrameExports.setActiveDragActivityTab(0);
+        }
+    }
+
+    // Elements marked with bloom-init-L1 are not allowed to be empty. Usually they are initially,
+    // unless L1 is English, so we copy the English content to them. This is a pretty horrid thing
+    // to do, since the block is tagged to indicate that it's another language, but for these kinds
+    // of fields the source bubble, which only shows up on an overlay page when the item is selected,
+    // is not enough hint. We hope the user will edit appropriately.
+    private copyInitialText() {
+        const page = DragActivityTool.getBloomPage();
+        if (!page) {
+            return;
+        }
+        const groupsToInit = page.getElementsByClassName("bloom-init-L1");
+        for (let i = 0; i < groupsToInit.length; i++) {
+            const group = groupsToInit[i] as HTMLElement;
+            const l1editable = group.getElementsByClassName(
+                "bloom-content1"
+            )[0];
+            if (
+                !l1editable ||
+                l1editable.textContent?.replace(/\s/g, "") !== ""
+            ) {
+                continue;
+            }
+            const enContent = Array.from(
+                group.getElementsByClassName("bloom-editable")
+            ).find(e => e.getAttribute("lang") === "en");
+            if (enContent) {
+                l1editable.innerHTML = enContent.innerHTML;
+            }
         }
     }
 

@@ -242,6 +242,8 @@ const showCorrect = (e: MouseEvent) => {
             elt.style.left = x + "px";
             elt.style.top = y + "px";
         });
+    classSetter(currentPage!, "drag-activity-wrong", false);
+    classSetter(currentPage!, "drag-activity-solution", true);
 };
 
 let dragStartX = 0;
@@ -358,6 +360,8 @@ export const performTryAgain = (e: MouseEvent) => {
     const page = target.closest(".bloom-page") as HTMLElement;
     classSetter(page, "drag-activity-correct", false);
     classSetter(page, "drag-activity-wrong", false);
+    //currently I don't think it could be set here, but make sure.
+    classSetter(page, "drag-activity-solution", false);
 };
 
 export const classSetter = (
