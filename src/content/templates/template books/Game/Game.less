@@ -15,6 +15,16 @@
     display: block;
 }
 
+// We want these only in the start tab, except for ones that are specific to the other tabs
+.drag-activity-correct .bloom-textOverPicture:not(.drag-item-correct),
+.drag-activity-wrong .bloom-textOverPicture:not(.drag-item-wrong),
+.drag-activity-try-it .bloom-textOverPicture,
+.drag-activity-solution .bloom-textOverPicture {
+    img[src="placeHolder.png"] {
+        display: none;
+    }
+}
+
 .activeButton {
     opacity:1;
     &:hover {
