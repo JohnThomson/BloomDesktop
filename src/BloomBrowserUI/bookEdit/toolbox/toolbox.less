@@ -50,20 +50,18 @@ div.toolboxRoot {
     }
     li {
         background-color: @toolboxBackgroundColor !important;
-        // Messing with these to make a tighter list and to indicate the selected one with
-        // a bottom border, which we want as close to the text as possible (but not an underline
-        // decoration, which doesn't look right to me). In particular MUI defaults to a very large
-        // minimum height (48 pixels), some of which comes out between the text and the bottom border,
-        // which doesn't look good.
-        padding: 4px 0 0 0 !important;
+        // Messing with these to make a tighter list and to try to make the divider lines look good.
+        padding: 2px 0 !important;
         margin: 0 16px !important;
         min-height: 28px !important;
         &:hover {
             background-color: #505050 !important;
         }
         &.Mui-selected {
-            //text-decoration: underline;
-            border-bottom: 2px solid white;
+            background-color: @bloom-blue !important;
+        }
+        &.MuiMenuItem-divider {
+            border-bottom: 1px solid rgba(255, 255, 255, 0.4);
         }
     }
 }

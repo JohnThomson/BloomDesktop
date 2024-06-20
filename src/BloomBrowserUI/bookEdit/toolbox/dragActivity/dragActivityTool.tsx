@@ -652,6 +652,7 @@ const DragActivityControls: React.FunctionComponent<{
             setWrongSound(result.data);
             page.setAttribute("data-wrong-sound", result.data);
         }
+        playSound(result.data, page);
     };
     useEffect(() => {
         updateTabClass(props.activeTab);
@@ -666,32 +667,34 @@ const DragActivityControls: React.FunctionComponent<{
     // I don't know the source of "Ding-a-ling" or "Sad Drum", but I think they are sounds we were already using for activities, so
     // presumably they are OK to use.
     const correctSoundOptions = [
-        { label: noneSound, id: "none" },
-        { label: "Ding-a-ling", id: "ding-a-ling.mp3" },
-        { label: "Yay", id: "yay.mp3" },
-        { label: chooseSound, id: "choose" }
+        { label: noneSound, id: "none", divider: false },
+        { label: "Ding-a-ling", id: "ding-a-ling.mp3", divider: false },
+        { label: "Yay", id: "yay.mp3", divider: true },
+        { label: chooseSound, id: "choose", divider: false }
     ];
     if (
         correctSoundOptions.find(opt => opt.id === correctSound) === undefined
     ) {
         correctSoundOptions.splice(0, 0, {
             label: correctSound.replace(/\.mp3$/i, ""),
-            id: correctSound
+            id: correctSound,
+            divider: false
         });
     }
 
     const wrongSoundOptions = [
-        { label: noneSound, id: "none" },
-        { label: "Awww", id: "awww.mp3" },
-        { label: "Oh-oh", id: "oh-oh.mp3" },
-        { label: "Sad Drum", id: "sad drum.mp3" },
-        { label: "Waah", id: "waah.mp3" },
-        { label: chooseSound, id: "choose" }
+        { label: noneSound, id: "none", divider: false },
+        { label: "Awww", id: "awww.mp3", divider: false },
+        { label: "Oh-oh", id: "oh-oh.mp3", divider: false },
+        { label: "Sad Drum", id: "sad drum.mp3", divider: false },
+        { label: "Waah", id: "waah.mp3", divider: true },
+        { label: chooseSound, id: "choose", divider: false }
     ];
     if (wrongSoundOptions.find(opt => opt.id === wrongSound) === undefined) {
         wrongSoundOptions.splice(0, 0, {
             label: wrongSound.replace(/\.mp3$/i, ""),
-            id: wrongSound
+            id: wrongSound,
+            divider: false
         });
     }
 
@@ -740,6 +743,8 @@ const DragActivityControls: React.FunctionComponent<{
             // I think copying the sound can be fire-and-forget. But if you add something that needs it to be there,
             // like playing it, you should await this.
             copyBuiltInSound(newSoundId);
+
+            playSound(newSoundId, page);
         }
     };
 
@@ -763,7 +768,7 @@ const DragActivityControls: React.FunctionComponent<{
     // Make a <Select> for choosing a sound file. The arguments allow reusing this both for the correct and wrong sound.
     const soundSelect = (
         forCorrect: boolean,
-        options: { label: string; id: string }[],
+        options: { label: string; id: string; divider: boolean }[],
         value: string,
         setValue: (fc: boolean, value: string) => void
     ) => {
@@ -796,6 +801,7 @@ const DragActivityControls: React.FunctionComponent<{
                         value={option.id}
                         key={option.id}
                         disabled={false}
+                        divider={option.divider}
                     >
                         {option.label}
                     </MenuItem>
@@ -1228,6 +1234,24 @@ export class DragActivityTool extends ToolboxToolReactAdaptor {
     //     return exports ? exports.getTheOneBubbleManager() : undefined;
     // }
 }
+function playSound(newSoundId: string, page: HTMLElement) {
+    const audio = new Audio("audio/" + newSoundId);
+    audio.style.visibility = "hidden";
+    audio.classList.add("bloom-ui"); // so it won't be saved, even if we fail to remove it otherwise
+
+    // To my surprise, in BP storybook it works without adding the audio to any document.
+    // But in Bloom proper, it does not. I think it is because this code is part of the toolbox,
+    // so the audio element doesn't have the right context to interpret the relative URL.
+    page.append(audio);
+    // It feels cleaner if we remove it when done. This could fail, e.g., if the user
+    // switches tabs or pages before we get done playing. Removing it immediately
+    // prevents the sound being played. It's not a big deal if it doesn't get removed.
+    audio.onended = () => {
+        page.removeChild(audio);
+    };
+    audio.play();
+}
+
 function designTimeClickOnSlider(this: HTMLElement, ev: MouseEvent) {
     if (draggingSlider) {
         return;
