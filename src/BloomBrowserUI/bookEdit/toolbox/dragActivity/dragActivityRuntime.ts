@@ -64,22 +64,19 @@ export function prepareActivity(
     // random word order in sentence
     Array.from(page.getElementsByClassName("drag-item-order-sentence")).forEach(
         (elt: HTMLElement) => {
-            const content = elt
-                .getElementsByClassName("bloom-content1")[0]
-                ?.textContent?.trim();
+            const contentElt = elt.getElementsByClassName("bloom-content1")[0];
+            const content = contentElt?.textContent?.trim();
             if (!content) return;
+            const userStyle =
+                Array.from(contentElt.classList).find(c =>
+                    c.endsWith("-style")
+                ) ?? "Normal-style";
             const words = content.split(" ");
             const shuffledWords = shuffle(words);
             const container = page.ownerDocument.createElement("div");
             container.classList.add("drag-item-random-sentence");
             container.setAttribute("data-answer", content);
-            shuffledWords.forEach(word => {
-                const wordItem = page.ownerDocument.createElement("div");
-                wordItem.classList.add("drag-item-order-word");
-                wordItem.textContent = word;
-                container.appendChild(wordItem);
-                wordItem.addEventListener("pointerdown", startDragReposition);
-            });
+            makeWordItems(page, shuffledWords, container, userStyle, true);
             container.style.left = elt.style.left;
             container.style.top = elt.style.top;
             container.style.width =
@@ -95,6 +92,25 @@ export function prepareActivity(
     showARandomWord(page);
     setupSliderImageEvents(page);
     playInitialElements(page);
+}
+
+function makeWordItems(
+    page: HTMLElement,
+    words: string[],
+    container: HTMLElement,
+    userStyle: string,
+    makeDraggable: boolean
+) {
+    words.forEach(word => {
+        const wordItem = page.ownerDocument.createElement("div");
+        wordItem.classList.add("drag-item-order-word");
+        wordItem.textContent = word;
+        container.appendChild(wordItem);
+        wordItem.classList.add(userStyle);
+        if (makeDraggable) {
+            wordItem.addEventListener("pointerdown", startDragReposition);
+        }
+    });
 }
 
 function changePageButtonClicked(e: MouseEvent) {
@@ -227,8 +243,11 @@ export function undoPrepareActivity(page: HTMLElement) {
 }
 
 const showCorrect = (e: MouseEvent) => {
+    if (!currentPage) {
+        return; // huh?? but makes TS happy
+    }
     currentPage
-        ?.querySelectorAll("[data-bubble-id]")
+        .querySelectorAll("[data-bubble-id]")
         .forEach((elt: HTMLElement) => {
             const targetId = elt.getAttribute("data-bubble-id");
             const target = currentPage?.querySelector(
@@ -242,6 +261,21 @@ const showCorrect = (e: MouseEvent) => {
             elt.style.left = x + "px";
             elt.style.top = y + "px";
         });
+    Array.from(
+        currentPage.getElementsByClassName("drag-item-random-sentence")
+    ).forEach((container: HTMLElement) => {
+        const correctAnswer =
+            container.getAttribute("data-answer")?.split(" ") ?? [];
+        const classes = container.children[0]?.classList;
+        let userStyle = "Normal-style";
+        if (classes) {
+            userStyle =
+                Array.from(classes).find(c => c.endsWith("-style")) ??
+                "Normal-style";
+        }
+        container.innerHTML = "";
+        makeWordItems(currentPage!, correctAnswer, container, userStyle, false);
+    });
     classSetter(currentPage!, "drag-activity-wrong", false);
     classSetter(currentPage!, "drag-activity-solution", true);
 };
@@ -473,15 +507,19 @@ function startDragReposition(e: PointerEvent) {
     dragStartY = e.clientY / scale - target.offsetTop;
     // Leave the original where it was and make a copy to drag around.
     draggableReposition = target.ownerDocument.createElement("div");
-    draggableReposition.classList.add("drag-item-order-word");
+    target.classList.forEach(c => draggableReposition.classList.add(c));
+    //draggableReposition.classList.add("drag-item-order-word");
     draggableReposition.textContent = target.textContent;
     draggableReposition.style.position = "absolute";
     draggableReposition.style.left = target.offsetLeft + "px";
     draggableReposition.style.top = target.offsetTop + "px";
+    // We don't want it to show while we're dragging the clone. But to stop the other
+    // words from jumping around, we need to keep the original taking up space.
+    target.style.visibility = "hidden";
     // It's bizarre to put the listeners and pointer capture on the target, which is NOT being dragged,
     // rather than the draggableReposition, which is. But it doesn't work to setPointerCapture on
     // the draggableReposition. I think it's because the draggableReposition is not the object clicked.
-    // And once the mouse events are captured by the target, all mouse events to to that, so we get
+    // And once the mouse events are captured by the target, all mouse events go to that, so we get
     // them properly while dragging, and can use them to move the draggableReposition.
     target.setPointerCapture(e.pointerId);
     target.addEventListener("pointerup", stopDragReposition);
@@ -530,6 +568,7 @@ const stopDragReposition = (e: PointerEvent) => {
     e.preventDefault();
     const x = e.clientX;
     const y = e.clientY;
+    itemBeingRepositioned.style.visibility = "visible";
     itemBeingRepositioned.removeEventListener("pointerup", stopDragReposition);
     itemBeingRepositioned.removeEventListener(
         "pointermove",
