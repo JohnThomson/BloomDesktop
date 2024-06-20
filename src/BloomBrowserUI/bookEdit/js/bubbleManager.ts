@@ -1886,6 +1886,10 @@ export class BubbleManager {
             // Ignore clicks on the image overlay buttons. The button's handler should process that instead.
             return true;
         }
+        if (targetElement.closest("[data-target-of")) {
+            // Bloom game targets want to handle their own dragging.
+            return true;
+        }
         if (ev.ctrlKey || ev.altKey) {
             return false;
         }
