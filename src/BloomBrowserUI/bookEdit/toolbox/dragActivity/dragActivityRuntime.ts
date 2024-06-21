@@ -584,33 +584,86 @@ const stopDragReposition = (e: PointerEvent) => {
     const itemDroppedOn = page.ownerDocument
         .elementFromPoint(x, y)
         ?.closest(".drag-item-order-word");
+    const container = itemBeingRepositioned.parentElement!;
     if (itemDroppedOn) {
-        const container = itemDroppedOn.parentElement;
         if (
-            container !== itemBeingRepositioned.parentElement ||
+            container !== itemDroppedOn.parentElement ||
             itemDroppedOn === itemBeingRepositioned ||
             !container
         ) {
             return;
         }
-        const oldIndex = Array.from(container.children).indexOf(
-            itemBeingRepositioned
-        );
-        const newIndex = Array.from(container.children).indexOf(itemDroppedOn);
         // Enhance: animate. Maybe we can start by inserting the item, but with width: 0.
         // Then animate the width to its normal size, while animating the width of the one being removed to 0.
         // Then remove the one being removed.
         // Unfortunately this requires a duplicate; we can probably use draggableReposition for that.
-        if (oldIndex < newIndex) {
-            container.insertBefore(
-                itemBeingRepositioned,
-                itemDroppedOn.nextSibling
+        animateMove(itemBeingRepositioned, draggableReposition, () =>
+            container.insertBefore(itemBeingRepositioned, itemDroppedOn)
+        );
+    } else {
+        const relatedItems = Array.from(
+            itemBeingRepositioned.parentElement!.getElementsByClassName(
+                "drag-item-order-word"
+            )
+        ) as HTMLElement[];
+        const lastItem = relatedItems[relatedItems.length - 1];
+        const bounds = lastItem.getBoundingClientRect();
+        if (y > bounds.bottom || (x > bounds.right && y > bounds.top)) {
+            animateMove(itemBeingRepositioned, draggableReposition, () =>
+                container.appendChild(itemBeingRepositioned)
             );
-        } else {
-            container.insertBefore(itemBeingRepositioned, itemDroppedOn);
         }
     }
 };
+
+function animateMove(
+    itemBeingRepositioned: HTMLElement,
+    duplicate: HTMLElement,
+    doMove: () => void
+) {
+    const duration = 300;
+    const start = Date.now();
+    const container = itemBeingRepositioned.parentElement!;
+    container.insertBefore(duplicate, itemBeingRepositioned);
+    const padding = 11; // enhance: compute from element
+    const margin = 5; // enhance: compute from element
+    doMove();
+    itemBeingRepositioned.style.overflowX = "hidden";
+    duplicate.style.overflowX = "hidden"; // so we can clip it by setting width
+    duplicate.style.position = ""; // has been absolute, but now we want it taking up space in paragraph
+    duplicate.style.left = ""; // inherits position:relative, so need to clear these.
+    duplicate.style.top = "";
+    duplicate.style.visibility = "hidden"; // it's moved from the old position, this just takes up the space that is animating away.
+    duplicate.style.boxSizing = "border-box"; // probably not needed now we're setting padding to zero
+    duplicate.style.marginRight = "0"; // clear all these so it can shrink to taking up no space at all.
+    duplicate.style.paddingRight = "0";
+    duplicate.style.paddingLeft = "0";
+    const startWidth = itemBeingRepositioned.offsetWidth; // before we mess with its padding!
+    itemBeingRepositioned.style.paddingLeft = "0";
+    itemBeingRepositioned.style.paddingRight = "0";
+
+    const step = () => {
+        const elapsed = Date.now() - start;
+        const fraction = Math.min(elapsed / duration, 1);
+        itemBeingRepositioned.style.width = startWidth * fraction + "px";
+        itemBeingRepositioned.style.paddingLeft = padding * fraction + "px";
+        itemBeingRepositioned.style.paddingRight = padding * fraction + "px";
+        // This width includes the original padding and margin, so that it takes up the original space
+        // to begin with, but can drop to zero.
+        duplicate.style.width =
+            (startWidth + margin + 2 * padding) * (1 - fraction) + "px";
+        if (fraction < 1) {
+            requestAnimationFrame(step);
+        } else {
+            // animation is over, clean up.
+            container.removeChild(duplicate);
+            itemBeingRepositioned.style.width = "";
+            itemBeingRepositioned.style.paddingLeft = "";
+            itemBeingRepositioned.style.paddingRight = "";
+        }
+    };
+    requestAnimationFrame(step);
+}
 function checkRandomSentences(page: HTMLElement) {
     const sentences = page.getElementsByClassName("drag-item-random-sentence");
     for (let i = 0; i < sentences.length; i++) {
