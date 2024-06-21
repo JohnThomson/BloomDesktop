@@ -123,6 +123,10 @@
         <note>ID: EditTab.Toolbox.DragActivityTool</note>
       </trans-unit>
       <!-- Drag Activity Tool -->
+      <trans-unit id="EditTab.Toolbox.DragActivity.AllItemsSameSizeTooltip">
+        <source xml:lang="en">Keep all items and targets the same size</source>
+        <note>ID: EditTab.Toolbox.DragActivity.AllItemsSameSizeTooltip</note>
+      </trans-unit>
       <trans-unit id="EditTab.Toolbox.DragActivity.Check">
         <source xml:lang="en">Check</source>
         <note>ID: EditTab.Toolbox.DragActivity.Check</note>
@@ -145,9 +149,13 @@
         <source xml:lang="en">Draggable</source>
         <note>ID: EditTab.Toolbox.DragActivity.Draggable</note>
       </trans-unit>
-      <trans-unit id="EditTab.Toolbox.DragActivity.DraggableInstructions">
-        <source xml:lang="en">Place the items anywhere on the scene, in a mixed up order.</source>
-        <note>ID: EditTab.Toolbox.DragActivity.DraggableInstructions</note>
+      <trans-unit id="EditTab.Toolbox.DragActivity.DragLetterHeading">
+        <source xml:lang="en">Drag Letters to Targets</source>
+        <note>ID: EditTab.Toolbox.DragActivity.DragLetterHeading</note>
+      </trans-unit>
+      <trans-unit id="EditTab.Toolbox.DragActivity.DragLetterInstructions">
+        <source xml:lang="en">Place the letters anywhere on the scene, in a mixed up order.</source>
+        <note>ID: EditTab.Toolbox.DragActivity.DragLetterInstructions</note>
       </trans-unit>
       <trans-unit id="EditTab.Toolbox.DragActivity.DraggableTarget">
         <source xml:lang="en">Draggable Target</source>
@@ -177,6 +185,10 @@
       <trans-unit id="EditTab.Toolbox.DragActivity.OrderSentence">
         <source xml:lang="en">Order Sentence</source>
         <note>ID: EditTab.Toolbox.DragActivity.OrderSentence</note>
+      </trans-unit>
+      <trans-unit id="EditTab.Toolbox.DragActivity.Options">
+        <source xml:lang="en">Options</source>
+        <note>ID: EditTab.Toolbox.DragActivity.Options</note>
       </trans-unit>
       <trans-unit id="EditTab.Toolbox.DragActivity.PlayAudio">
         <source xml:lang="en">Play Audio</source>

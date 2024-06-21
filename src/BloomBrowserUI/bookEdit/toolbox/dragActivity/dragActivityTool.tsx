@@ -43,6 +43,7 @@ import {
 } from "../../editViewFrame";
 import { MenuItem, Select, menuClasses } from "@mui/material";
 import { useL10n } from "../../../react_components/l10nHooks";
+import { getTheOneBubbleManager } from "../../editablePage";
 //import { Tab } from "@mui/material";
 
 const Tabs: React.FunctionComponent<{
@@ -137,49 +138,58 @@ const overlap = (start: HTMLElement, end: HTMLElement): boolean => {
 };
 
 export const adjustTarget = (
-    start: HTMLElement,
-    end: HTMLElement | undefined
+    draggable: HTMLElement,
+    target: HTMLElement | undefined,
+    forceAdjustAll?: boolean
 ) => {
-    let arrow = (start.ownerDocument.getElementById(
+    let arrow = (draggable.ownerDocument.getElementById(
         "target-arrow"
     ) as unknown) as SVGSVGElement;
-    if (!end) {
+    if (!target) {
         if (arrow) {
             arrow.remove();
         }
         return;
     }
-    let adjustAll = false;
-    if (end.offsetHeight !== start.offsetHeight) {
-        end.style.height = `${start.offsetHeight}px`;
+    // if the target is not the same size, presumably the draggable size changed, in which case
+    // we need to adjust the target, and possibly all other targets and draggables on the page.
+    let adjustAll = forceAdjustAll ?? false;
+    if (target.offsetHeight !== draggable.offsetHeight) {
+        target.style.height = `${draggable.offsetHeight}px`;
         adjustAll = true;
     }
-    if (end.offsetWidth !== start.offsetWidth) {
-        end.style.width = `${start.offsetWidth}px`;
+    if (target.offsetWidth !== draggable.offsetWidth) {
+        target.style.width = `${draggable.offsetWidth}px`;
         adjustAll = true;
     }
+
+    // Resize everything, unless that behavior is turned off.
     // Enhance: possibly we should only resize the ones that are initially the same size as the
-    // target used to be? Maybe we ned a way to turn off this behavior?
-    if (adjustAll) {
+    // target used to be?
+    if (
+        adjustAll &&
+        draggable.closest(".bloom-page")!.getAttribute("data-same-size") !==
+            "false"
+    ) {
         // We need to adjust the position of all the other targets.
-        const page = start.closest(".bloom-page") as HTMLElement;
+        const page = draggable.closest(".bloom-page") as HTMLElement;
         const otherDraggables = Array.from(
             page.querySelectorAll("[data-bubble-id]")
-        ).filter(x => x !== start);
+        ).filter(x => x !== draggable);
         const otherTargets = Array.from(
             page.querySelectorAll("[data-target-of]")
-        ).filter(x => x !== end);
+        ).filter(x => x !== target);
         otherDraggables.concat(otherTargets).forEach((elt: HTMLElement) => {
-            if (elt.offsetHeight !== start.offsetHeight) {
-                elt.style.height = `${start.offsetHeight}px`;
+            if (elt.offsetHeight !== draggable.offsetHeight) {
+                elt.style.height = `${draggable.offsetHeight}px`;
             }
-            if (elt.offsetWidth !== start.offsetWidth) {
-                elt.style.width = `${start.offsetWidth}px`;
+            if (elt.offsetWidth !== draggable.offsetWidth) {
+                elt.style.width = `${draggable.offsetWidth}px`;
             }
         });
     }
     // if start and end overlap, we don't want an arrow
-    if (overlap(start, end)) {
+    if (overlap(draggable, target)) {
         if (arrow) {
             arrow.remove();
         }
@@ -187,44 +197,44 @@ export const adjustTarget = (
     }
     //const scale = page.getBoundingClientRect().width / page.offsetWidth;
     // These values make a line from the center of the start to the center of the end.
-    const startX = start.offsetLeft + start.offsetWidth / 2;
-    const startY = start.offsetTop + start.offsetHeight / 2;
-    const endXCenter = end.offsetLeft + end.offsetWidth / 2;
-    const endYCenter = end.offsetTop + end.offsetHeight / 2;
+    const startX = draggable.offsetLeft + draggable.offsetWidth / 2;
+    const startY = draggable.offsetTop + draggable.offsetHeight / 2;
+    const endXCenter = target.offsetLeft + target.offsetWidth / 2;
+    const endYCenter = target.offsetTop + target.offsetHeight / 2;
     let endX = endXCenter;
     let endY = endYCenter;
-    if (end.offsetLeft > startX) {
+    if (target.offsetLeft > startX) {
         // The target is entirely to the right of the center of the draggable.
         // We will go for one of the left corners of the target.
-        endX = end.offsetLeft;
-    } else if (end.offsetLeft + end.offsetWidth < startX) {
+        endX = target.offsetLeft;
+    } else if (target.offsetLeft + target.offsetWidth < startX) {
         // The target is entirely to the left of the center of the draggable.
         // We will go for one of the right corners of the target.
-        endX = end.offsetLeft + end.offsetWidth;
+        endX = target.offsetLeft + target.offsetWidth;
     }
-    if (end.offsetTop > startY) {
+    if (target.offsetTop > startY) {
         // The target is entirely below the center of the draggable.
         // We will go for one of the top corners of the target.
-        endY = end.offsetTop;
-    } else if (end.offsetTop + end.offsetHeight < startY) {
+        endY = target.offsetTop;
+    } else if (target.offsetTop + target.offsetHeight < startY) {
         // The target is entirely above the center of the draggable.
         // We will go for one of the bottom corners of the target.
-        endY = end.offsetTop + end.offsetHeight;
+        endY = target.offsetTop + target.offsetHeight;
     }
 
     if (!arrow) {
-        arrow = start.ownerDocument.createElementNS(
+        arrow = draggable.ownerDocument.createElementNS(
             "http://www.w3.org/2000/svg",
             "svg"
         );
         arrow.setAttribute("id", "target-arrow");
-        start.parentElement!.appendChild(arrow);
+        draggable.parentElement!.appendChild(arrow);
     }
 
     // But we actually want border to border
     // If the line runs through the top or bottom border:
     const yMultiplier = startY < endY ? 1 : -1;
-    const deltaYTB = (start.offsetHeight / 2) * yMultiplier;
+    const deltaYTB = (draggable.offsetHeight / 2) * yMultiplier;
     const startYTB = startY + deltaYTB;
     // If it's a horizontal arrow, we won't be using this, but we need to avoid dividing by zero and get a really big number
     const deltaXTB =
@@ -235,7 +245,7 @@ export const adjustTarget = (
 
     // If the line runs through the left or right border:
     const xMultiplier = startX < endX ? 1 : -1;
-    const deltaXLR = (start.offsetWidth / 2) * xMultiplier;
+    const deltaXLR = (draggable.offsetWidth / 2) * xMultiplier;
     const startXLR = startX + deltaXLR;
     // If it's a vertical arrow, we won't be using this, but we need to avoid dividing by zero and get a really big number
     const deltaYLR =
@@ -263,17 +273,17 @@ export const adjustTarget = (
     let line2 = line?.nextSibling as SVGLineElement;
     let line3 = line2?.nextSibling as SVGLineElement;
     if (!line) {
-        line = start.ownerDocument.createElementNS(
+        line = draggable.ownerDocument.createElementNS(
             "http://www.w3.org/2000/svg",
             "line"
         );
         arrow.appendChild(line);
-        line2 = start.ownerDocument.createElementNS(
+        line2 = draggable.ownerDocument.createElementNS(
             "http://www.w3.org/2000/svg",
             "line"
         );
         arrow.appendChild(line2);
-        line3 = start.ownerDocument.createElementNS(
+        line3 = draggable.ownerDocument.createElementNS(
             "http://www.w3.org/2000/svg",
             "line"
         );
@@ -593,6 +603,7 @@ const DragActivityControls: React.FunctionComponent<{
     const [wrongSound, setWrongSound] = useState("");
     const [soundFolder, setSoundFolder] = useState("");
     const [activityType, setActivityType] = useState("");
+    const [allItemsSameSize, setAllItemsSameSize] = useState(true);
     const noneSound = useL10n("None", "EditTab.Toolbox.DragActivity.None", "");
     const chooseSound = useL10n(
         "Choose...",
@@ -614,6 +625,9 @@ const DragActivityControls: React.FunctionComponent<{
 
             const correctSound = page.getAttribute("data-correct-sound");
             const wrongSound = page.getAttribute("data-wrong-sound");
+            setAllItemsSameSize(
+                page.getAttribute("data-same-size") !== "false"
+            );
             theOneLocalizationManager
                 .asyncGetText("EditTab.Toolbox.DragActivity.None", "None", "")
                 .then(none => {
@@ -701,13 +715,10 @@ const DragActivityControls: React.FunctionComponent<{
     const [dragObjectType, setDragObjectType] = useState("text");
     // Todo: something has to call setDragObjectType when a draggable is selected.
     let titleId = "EditTab.Toolbox.DragActivity.Draggable";
-    let bodyId = "EditTab.Toolbox.DragActivity.DraggableInstructions";
     if (dragObjectType === "dragTarget") {
         titleId = "EditTab.Toolbox.DragActivity.DraggableTarget";
-        bodyId = "EditTab.Toolbox.DragActivity.DraggableTargetInstructions";
     } else if (dragObjectType === "orderCircle") {
         titleId = "EditTab.Toolbox.DragActivity.OrderCircle";
-        bodyId = "EditTab.Toolbox.DragActivity.OrderCircleInstructions";
     }
 
     const onSoundItemChosen = (forCorrect: boolean, newSoundId: string) => {
@@ -765,6 +776,16 @@ const DragActivityControls: React.FunctionComponent<{
         });
     };
 
+    let correctTabLabels = { instructionsKey: "", headingKey: "" };
+    switch (activityType) {
+        case "drag-letter-to-target":
+            correctTabLabels = {
+                instructionsKey: "DragLetterInstructions",
+                headingKey: "DragLetterHeading"
+            };
+            break;
+    }
+
     // Make a <Select> for choosing a sound file. The arguments allow reusing this both for the correct and wrong sound.
     const soundSelect = (
         forCorrect: boolean,
@@ -810,6 +831,40 @@ const DragActivityControls: React.FunctionComponent<{
         );
     };
 
+    const getTarget = (draggable: HTMLElement): HTMLElement | undefined => {
+        const targetId = draggable.getAttribute("data-bubble-id");
+        if (!targetId) {
+            return undefined;
+        }
+        return getPage()?.querySelector(
+            `[data-target-of="${targetId}"]`
+        ) as HTMLElement;
+    };
+
+    const toggleAllSameSize = () => {
+        const newAllSameSize = !allItemsSameSize;
+        setAllItemsSameSize(newAllSameSize);
+        const page = getPage();
+        page.setAttribute("data-same-size", newAllSameSize ? "true" : "false");
+        if (newAllSameSize) {
+            const bm = getTheOneBubbleManager();
+            let someDraggable = bm.getActiveElement(); // prefer the selected one
+            if (
+                !someDraggable ||
+                !someDraggable.getAttribute("data-bubble-id")
+            ) {
+                // find something
+                someDraggable = page.querySelector(
+                    "[data-bubble-id]"
+                ) as HTMLElement;
+            }
+            if (!someDraggable) {
+                return;
+            }
+            adjustTarget(someDraggable, getTarget(someDraggable), true);
+        }
+    };
+
     const textItemProps = css`
         margin-left: 5px;
         text-align: center; // Center the text horizontally
@@ -824,7 +879,8 @@ const DragActivityControls: React.FunctionComponent<{
         margin-left: 10px;
         margin-top: 10px;
     `;
-    const anyDraggables = activityType != "sort-sentence";
+    const anyDraggables = activityType !== "sort-sentence";
+    const anyOptions = anyDraggables; // but they might diverge as we do more?
     return (
         <ThemeProvider theme={toolboxTheme}>
             {props.activeTab === 0 && (
@@ -853,21 +909,27 @@ const DragActivityControls: React.FunctionComponent<{
                                     draggable={true}
                                     addClasses="draggable-text"
                                     hide={
-                                        activityType === "word-chooser-slider"
+                                        activityType ===
+                                            "word-chooser-slider" ||
+                                        activityType === "drag-letter-to-target"
                                     }
                                     userDefinedStyleName="Word"
                                 />{" "}
-                                <OverlayImageItem
-                                    style="image"
-                                    draggable={
-                                        activityType !== "word-chooser-slider"
-                                    }
-                                    matchingTextBox={
-                                        activityType === "word-chooser-slider"
-                                    }
-                                    color={kBloomBlue}
-                                    strokeColor={kBloomBlue}
-                                />
+                                {activityType !== "drag-letter-to-target" && (
+                                    <OverlayImageItem
+                                        style="image"
+                                        draggable={
+                                            activityType !==
+                                            "word-chooser-slider"
+                                        }
+                                        matchingTextBox={
+                                            activityType ===
+                                            "word-chooser-slider"
+                                        }
+                                        color={kBloomBlue}
+                                        strokeColor={kBloomBlue}
+                                    />
+                                )}
                                 {activityType === "word-chooser-slider" && (
                                     <OverlayWrongImageItem
                                         style="image"
@@ -935,6 +997,55 @@ const DragActivityControls: React.FunctionComponent<{
                             />
                         </OverlayItemRow>
                     </OverlayItemRegion>
+                </div>
+            )}
+            {props.activeTab === 0 && (
+                <div
+                    css={css`
+                        margin-left: 10px;
+                    `}
+                >
+                    {correctTabLabels.headingKey && (
+                        <Div
+                            css={css`
+                                margin-top: 10px;
+                                font-weight: bold;
+                                font-size: larger;
+                            `}
+                            l10nKey={
+                                "EditTab.Toolbox.DragActivity." +
+                                correctTabLabels.headingKey
+                            }
+                        ></Div>
+                    )}
+                    {correctTabLabels.instructionsKey && (
+                        <Instructions
+                            l10nKey={correctTabLabels.instructionsKey}
+                        />
+                    )}
+                    {anyOptions && (
+                        <Div l10nKey="EditTab.Toolbox.DragActivity.Options"></Div>
+                    )}
+                    {anyOptions && (
+                        <div
+                            css={css`
+                                display: flex;
+                                margin-top: 5px;
+                            `}
+                        >
+                            <div
+                                css={css`
+                                    background-color: ${allItemsSameSize
+                                        ? "grey"
+                                        : "transparent"};
+                                    padding: 6px;
+                                `}
+                                onClick={toggleAllSameSize}
+                            >
+                                <img src="images/uniform sized targets.svg"></img>
+                            </div>
+                        </div>
+                    )}
                 </div>
             )}
 
@@ -1283,7 +1394,8 @@ function designTimeClickOnSlider(this: HTMLElement, ev: MouseEvent) {
 const dragActivityTypes = [
     "word-chooser-slider",
     "drag-to-destination",
-    "sort-sentence"
+    "sort-sentence",
+    "drag-letter-to-target"
 ];
 
 // After careful thought, I think the right source of truth for which tab is active is an
