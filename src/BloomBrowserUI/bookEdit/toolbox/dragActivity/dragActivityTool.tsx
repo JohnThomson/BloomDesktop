@@ -1555,7 +1555,7 @@ const DragActivityTabControl: React.FunctionComponent<{
                             "Start",
                             "Correct",
                             "Wrong",
-                            "Try It"
+                            "Play"
                         ] /* Todo: localize*/
                     }
                 />
