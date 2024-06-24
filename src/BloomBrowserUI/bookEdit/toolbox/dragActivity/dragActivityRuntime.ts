@@ -495,12 +495,17 @@ function checkDraggables(page: HTMLElement) {
     return allCorrect;
 }
 
+let placeHolder: HTMLElement | undefined;
+let startWidth = 0;
+const draggableWordMargin = 5; // enhance: compute from element
+
 function startDragReposition(e: PointerEvent) {
     if (e.button !== 0) return; // only left button
     if (e.ctrlKey) return; // ignore ctrl+click
     // get the pointer position at startup:
     const target = e.currentTarget as HTMLElement;
     itemBeingRepositioned = target;
+    startWidth = target.offsetWidth; // includes original padding but not margin
     const page = target.closest(".bloom-page") as HTMLElement;
     const scale = page.getBoundingClientRect().width / page.offsetWidth;
     dragStartX = e.clientX / scale - target.offsetLeft;
@@ -513,9 +518,16 @@ function startDragReposition(e: PointerEvent) {
     draggableReposition.style.position = "absolute";
     draggableReposition.style.left = target.offsetLeft + "px";
     draggableReposition.style.top = target.offsetTop + "px";
-    // We don't want it to show while we're dragging the clone. But to stop the other
-    // words from jumping around, we need to keep the original taking up space.
-    target.style.visibility = "hidden";
+    // We don't want it to show while we're dragging the clone. We need something to take up the space,
+    // though, until we decide it has moved. We could mess with its own properties, but then we have
+    // to put everythin back. Also, we want to move it in the paragraph, and if we move the thing
+    // itself, we seem to lose our mouse capture. So we make a placeholder to take up the space.
+    placeHolder = makeAnimationPlaceholder(target);
+    // don't add padding here, target still has it. Capture this before we hide it.
+    placeHolder.style.width = startWidth + draggableWordMargin + "px";
+    target.parentElement?.insertBefore(placeHolder, target);
+    target.style.display = "none";
+
     // It's bizarre to put the listeners and pointer capture on the target, which is NOT being dragged,
     // rather than the draggableReposition, which is. But it doesn't work to setPointerCapture on
     // the draggableReposition. I think it's because the draggableReposition is not the object clicked.
@@ -535,6 +547,8 @@ function startDragReposition(e: PointerEvent) {
 const preventTouchDefault = (e: TouchEvent) => {
     e.preventDefault();
 };
+
+let lastItemDraggedOver: HTMLElement | undefined;
 
 const elementDragReposition = (e: PointerEvent) => {
     const page = draggableReposition.closest(".bloom-page") as HTMLElement;
@@ -561,6 +575,72 @@ const elementDragReposition = (e: PointerEvent) => {
     // }
     draggableReposition.style.top = y + "px";
     draggableReposition.style.left = x + "px";
+
+    // move things immediately
+    if (animationInProgress) {
+        return;
+    }
+    const container = itemBeingRepositioned.parentElement!;
+    const itemDraggedOver = Array.from(container.children).find(c => {
+        const rect = c.getBoundingClientRect();
+        return (
+            c !== itemBeingRepositioned &&
+            c !== placeHolder &&
+            c !== draggableReposition &&
+            e.clientX > rect.left &&
+            e.clientX < rect.right &&
+            e.clientY > rect.top &&
+            e.clientY < rect.bottom
+        );
+    });
+
+    // If we don't check for a different item, then when we drag a short word over a long one, the mouse
+    // may still be over the long word when the animation finishes, at which point it unhelpfully moves
+    // back.
+    if (itemDraggedOver && itemDraggedOver !== lastItemDraggedOver) {
+        const children = Array.from(container.children);
+        if (
+            children.indexOf(itemDraggedOver) > children.indexOf(placeHolder!)
+        ) {
+            // moving right; it wants to go after the thing we dragged onto.
+            // (It's OK if nextSibling is null; gets inserted at end, which is what we want.)
+            animateMove(() => {
+                container.insertBefore(
+                    placeHolder!,
+                    itemDraggedOver.nextSibling
+                );
+            });
+        } else {
+            // moving left; it wants to go before the thing we dragged onto.
+            animateMove(() => {
+                container.insertBefore(placeHolder!, itemDraggedOver);
+            });
+        }
+    } else {
+        // moved outside the sentence altogether. If we're below or to the right of the last item,
+        // move to the end. Enhance: should we move to the front if we're above or to the left?
+        const relatedItems = Array.from(
+            itemBeingRepositioned.parentElement!.getElementsByClassName(
+                "drag-item-order-word"
+            )
+        ).filter(
+            x =>
+                x !== itemBeingRepositioned &&
+                x !== placeHolder &&
+                x !== draggableReposition
+        ) as HTMLElement[];
+        const lastItem = relatedItems[relatedItems.length - 1];
+        const bounds = lastItem.getBoundingClientRect();
+        if (
+            e.clientY > bounds.bottom ||
+            (e.clientX > bounds.right && e.clientY > bounds.top)
+        ) {
+            animateMove(() => {
+                container.appendChild(placeHolder!);
+            });
+        }
+    }
+    lastItemDraggedOver = itemDraggedOver as HTMLElement;
 };
 
 const stopDragReposition = (e: PointerEvent) => {
@@ -581,85 +661,92 @@ const stopDragReposition = (e: PointerEvent) => {
     );
     // We're getting rid of this, so we don't need to remove the event handlers it has.
     draggableReposition.parentElement?.removeChild(draggableReposition);
-    const itemDroppedOn = page.ownerDocument
-        .elementFromPoint(x, y)
-        ?.closest(".drag-item-order-word");
-    const container = itemBeingRepositioned.parentElement!;
-    if (itemDroppedOn) {
-        if (
-            container !== itemDroppedOn.parentElement ||
-            itemDroppedOn === itemBeingRepositioned ||
-            !container
-        ) {
-            return;
-        }
-        // Enhance: animate. Maybe we can start by inserting the item, but with width: 0.
-        // Then animate the width to its normal size, while animating the width of the one being removed to 0.
-        // Then remove the one being removed.
-        // Unfortunately this requires a duplicate; we can probably use draggableReposition for that.
-        animateMove(itemBeingRepositioned, draggableReposition, () =>
-            container.insertBefore(itemBeingRepositioned, itemDroppedOn)
-        );
-    } else {
-        const relatedItems = Array.from(
-            itemBeingRepositioned.parentElement!.getElementsByClassName(
-                "drag-item-order-word"
-            )
-        ) as HTMLElement[];
-        const lastItem = relatedItems[relatedItems.length - 1];
-        const bounds = lastItem.getBoundingClientRect();
-        if (y > bounds.bottom || (x > bounds.right && y > bounds.top)) {
-            animateMove(itemBeingRepositioned, draggableReposition, () =>
-                container.appendChild(itemBeingRepositioned)
-            );
-        }
-    }
+
+    itemBeingRepositioned.style.width = "";
+    itemBeingRepositioned.style.paddingLeft = "";
+    itemBeingRepositioned.style.paddingRight = "";
+    itemBeingRepositioned.style.marginRight = "";
+    itemBeingRepositioned.parentElement?.insertBefore(
+        itemBeingRepositioned,
+        placeHolder!
+    );
+    itemBeingRepositioned.parentElement?.removeChild(placeHolder!);
+    placeHolder = undefined;
+    itemBeingRepositioned.style.display = "";
+
+    // const itemDroppedOn = page.ownerDocument
+    //     .elementFromPoint(x, y)
+    //     ?.closest(".drag-item-order-word");
+    // const container = itemBeingRepositioned.parentElement!;
+    // if (itemDroppedOn) {
+    //     if (
+    //         container !== itemDroppedOn.parentElement ||
+    //         itemDroppedOn === itemBeingRepositioned ||
+    //         !container
+    //     ) {
+    //         return;
+    //     }
+    //     container.insertBefore(itemBeingRepositioned, itemDroppedOn)
+    // } else {
+    //     const relatedItems = Array.from(
+    //         itemBeingRepositioned.parentElement!.getElementsByClassName(
+    //             "drag-item-order-word"
+    //         )
+    //     ) as HTMLElement[];
+    //     const lastItem = relatedItems[relatedItems.length - 1];
+    //     const bounds = lastItem.getBoundingClientRect();
+    //     if (y > bounds.bottom || (x > bounds.right && y > bounds.top)) {
+    //             container.appendChild(itemBeingRepositioned)
+    //     }
+    // }
 };
 
-function animateMove(
-    itemBeingRepositioned: HTMLElement,
-    duplicate: HTMLElement,
-    doMove: () => void
-) {
-    const duration = 300;
-    const start = Date.now();
+function makeAnimationPlaceholder(itemBeingRepositioned: HTMLElement) {
+    const placeholder = itemBeingRepositioned.cloneNode(true) as HTMLElement;
+    placeholder.style.overflowX = "hidden";
+    placeholder.style.marginRight = "0"; // clear all these so it can shrink to taking up no space at all.
+    placeholder.style.paddingLeft = "0";
+    placeholder.style.paddingRight = "0";
+    placeholder.style.display = ""; // in case it was display:none
+    placeholder.style.visibility = "hidden"; //just takes up space for animation
+    return placeholder;
+}
+
+let animationInProgress = false;
+
+function animateMove(movePlaceholder: () => void) {
+    animationInProgress = true;
+    const duration = 200;
     const container = itemBeingRepositioned.parentElement!;
-    container.insertBefore(duplicate, itemBeingRepositioned);
-    const padding = 11; // enhance: compute from element
-    const margin = 5; // enhance: compute from element
-    doMove();
-    itemBeingRepositioned.style.overflowX = "hidden";
-    duplicate.style.overflowX = "hidden"; // so we can clip it by setting width
-    duplicate.style.position = ""; // has been absolute, but now we want it taking up space in paragraph
-    duplicate.style.left = ""; // inherits position:relative, so need to clear these.
-    duplicate.style.top = "";
-    duplicate.style.visibility = "hidden"; // it's moved from the old position, this just takes up the space that is animating away.
-    duplicate.style.boxSizing = "border-box"; // probably not needed now we're setting padding to zero
-    duplicate.style.marginRight = "0"; // clear all these so it can shrink to taking up no space at all.
-    duplicate.style.paddingRight = "0";
-    duplicate.style.paddingLeft = "0";
-    const startWidth = itemBeingRepositioned.offsetWidth; // before we mess with its padding!
-    itemBeingRepositioned.style.paddingLeft = "0";
-    itemBeingRepositioned.style.paddingRight = "0";
+    const duplicate = makeAnimationPlaceholder(itemBeingRepositioned);
+    container.insertBefore(duplicate, placeHolder!);
+    movePlaceholder();
+    const start = Date.now();
+
+    // without padding or margin. Although we set box-sizing: border-box, we remove padding from
+    // the placeholder so that it can shrink to zero width
 
     const step = () => {
         const elapsed = Date.now() - start;
         const fraction = Math.min(elapsed / duration, 1);
-        itemBeingRepositioned.style.width = startWidth * fraction + "px";
-        itemBeingRepositioned.style.paddingLeft = padding * fraction + "px";
-        itemBeingRepositioned.style.paddingRight = padding * fraction + "px";
+        const originalWordWidth = startWidth + draggableWordMargin;
+        if (!placeHolder) {
+            // terminated by mouseUp
+            container.removeChild(duplicate);
+            animationInProgress = false;
+            return;
+        }
+        placeHolder!.style.width = originalWordWidth * fraction + "px";
         // This width includes the original padding and margin, so that it takes up the original space
         // to begin with, but can drop to zero.
-        duplicate.style.width =
-            (startWidth + margin + 2 * padding) * (1 - fraction) + "px";
+        duplicate.style.width = originalWordWidth * (1 - fraction) + "px";
         if (fraction < 1) {
             requestAnimationFrame(step);
         } else {
             // animation is over, clean up.
             container.removeChild(duplicate);
-            itemBeingRepositioned.style.width = "";
-            itemBeingRepositioned.style.paddingLeft = "";
-            itemBeingRepositioned.style.paddingRight = "";
+            placeHolder!.style.width = originalWordWidth + "px";
+            animationInProgress = false;
         }
     };
     requestAnimationFrame(step);
