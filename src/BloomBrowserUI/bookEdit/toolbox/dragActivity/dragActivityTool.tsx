@@ -960,9 +960,7 @@ const DragActivityControls: React.FunctionComponent<{
                                         strokeColor={kBloomBlue}
                                     />
                                 )}
-                                {(activityType === "word-chooser-slider" ||
-                                    activityType ===
-                                        "drag-image-to-target") && (
+                                {activityType === "word-chooser-slider" && (
                                     <OverlayWrongImageItem
                                         style="image"
                                         draggable={false}
