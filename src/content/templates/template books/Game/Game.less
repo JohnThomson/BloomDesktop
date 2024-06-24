@@ -156,8 +156,9 @@
 // IIRC, there are good reasons not to give the draggable itself a z-index in edit mode.
 // I think we can live with the target being in front in the other tabs, but
 // when testing we need to be able to drag the bubble over the target.
+// (But we don't want pictures that are just part of the background to be in front of targets.)
 .drag-activity-try-it {
-    .bloom-textOverPicture {
+    .bloom-textOverPicture[data-bubble-id] {
         z-index: @bubbleCanvasZIndex + 2;
     }
     // Buttons for editing images and formatting text should not show in test mode.
