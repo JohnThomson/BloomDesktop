@@ -43,6 +43,7 @@ import {
 } from "../../editViewFrame";
 import { MenuItem, Select, menuClasses } from "@mui/material";
 import { useL10n } from "../../../react_components/l10nHooks";
+import { BloomTooltip } from "../../../react_components/BloomToolTip";
 //import { Tab } from "@mui/material";
 
 const Tabs: React.FunctionComponent<{
@@ -787,6 +788,18 @@ const DragActivityControls: React.FunctionComponent<{
                 headingKey: "DragLetterHeading"
             };
             break;
+        case "sort-sentence":
+            correctTabLabels = {
+                instructionsKey: "OrderSentenceInstructions",
+                headingKey: "OrderSentenceHeading"
+            };
+            break;
+        case "drag-image-to-target":
+            correctTabLabels = {
+                instructionsKey: "DragImageInstructions",
+                headingKey: "DragImageHeading"
+            };
+            break;
     }
 
     // Make a <Select> for choosing a sound file. The arguments allow reusing this both for the correct and wrong sound.
@@ -911,7 +924,9 @@ const DragActivityControls: React.FunctionComponent<{
                                     draggable={true}
                                     addClasses="draggable-text"
                                     hide={
-                                        activityType === "word-chooser-slider"
+                                        activityType ===
+                                            "word-chooser-slider" ||
+                                        activityType === "drag-image-to-target"
                                     }
                                     userDefinedStyleName="Letter"
                                 />
@@ -924,7 +939,9 @@ const DragActivityControls: React.FunctionComponent<{
                                     hide={
                                         activityType ===
                                             "word-chooser-slider" ||
-                                        activityType === "drag-letter-to-target"
+                                        activityType ===
+                                            "drag-letter-to-target" ||
+                                        activityType === "drag-image-to-target"
                                     }
                                     userDefinedStyleName="Word"
                                 />{" "}
@@ -943,7 +960,9 @@ const DragActivityControls: React.FunctionComponent<{
                                         strokeColor={kBloomBlue}
                                     />
                                 )}
-                                {activityType === "word-chooser-slider" && (
+                                {(activityType === "word-chooser-slider" ||
+                                    activityType ===
+                                        "drag-image-to-target") && (
                                     <OverlayWrongImageItem
                                         style="image"
                                         draggable={false}
@@ -1037,7 +1056,12 @@ const DragActivityControls: React.FunctionComponent<{
                         />
                     )}
                     {anyOptions && (
-                        <Div l10nKey="EditTab.Toolbox.DragActivity.Options"></Div>
+                        <Div
+                            css={css`
+                                margin-top: 10px;
+                            `}
+                            l10nKey="EditTab.Toolbox.DragActivity.Options"
+                        ></Div>
                     )}
                     {anyOptions && (
                         <div
@@ -1046,29 +1070,45 @@ const DragActivityControls: React.FunctionComponent<{
                                 margin-top: 5px;
                             `}
                         >
-                            <div
-                                css={css`
-                                    background-color: ${allItemsSameSize
-                                        ? "grey"
-                                        : "transparent"};
-                                    padding: 6px;
-                                    margin-right: 10px;
-                                `}
-                                onClick={toggleAllSameSize}
+                            <BloomTooltip
+                                id="sameSize"
+                                placement="top-end"
+                                tip={
+                                    <Div l10nKey="EditTab.Toolbox.DragActivity.SameSize"></Div>
+                                }
                             >
-                                <img src="images/uniform sized targets.svg"></img>
-                            </div>
-                            <div
-                                css={css`
-                                    background-color: ${showTargetsDuringPlay
-                                        ? "grey"
-                                        : "transparent"};
-                                    padding: 6px;
-                                `}
-                                onClick={toggleShowTargetsDuringPlay}
+                                <div
+                                    css={css`
+                                        background-color: ${allItemsSameSize
+                                            ? kBloomBlue
+                                            : "transparent"};
+                                        padding: 6px;
+                                        margin-right: 10px;
+                                    `}
+                                    onClick={toggleAllSameSize}
+                                >
+                                    <img src="images/uniform sized targets.svg"></img>
+                                </div>
+                            </BloomTooltip>
+                            <BloomTooltip
+                                id="sameSize"
+                                placement="top-end"
+                                tip={
+                                    <Div l10nKey="EditTab.Toolbox.DragActivity.ShowTargetsPlay"></Div>
+                                }
                             >
-                                <img src="images/Show Targets During Play.svg"></img>
-                            </div>
+                                <div
+                                    css={css`
+                                        background-color: ${showTargetsDuringPlay
+                                            ? kBloomBlue
+                                            : "transparent"};
+                                        padding: 6px;
+                                    `}
+                                    onClick={toggleShowTargetsDuringPlay}
+                                >
+                                    <img src="images/Show Targets During Play.svg"></img>
+                                </div>
+                            </BloomTooltip>
                         </div>
                     )}
                 </div>
@@ -1415,7 +1455,8 @@ const dragActivityTypes = [
     "word-chooser-slider",
     "drag-to-destination",
     "sort-sentence",
-    "drag-letter-to-target"
+    "drag-letter-to-target",
+    "drag-image-to-target"
 ];
 
 // After careful thought, I think the right source of truth for which tab is active is an

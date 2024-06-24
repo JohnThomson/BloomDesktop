@@ -75,6 +75,10 @@
         <note>ID: EditTab.Toolbox.DragActivity.None</note>
         <note>Used as the label of a button that is otherwise the name of a sound file, indicating that no sound has been chosen.</note>
       </trans-unit>
+      <trans-unit id="EditTab.Toolbox.DragActivity.SameSize">
+        <source xml:lang="en">Keep all items and targets the same size</source>
+        <note>ID: EditTab.Toolbox.DragActivity.SameSize</note>
+      </trans-unit>
       <trans-unit id="EditTab.Toolbox.DragActivity.SceneInstructions">
         <source xml:lang="en">Properties of the Scene</source>
         <note>ID: EditTab.Toolbox.DragActivity.SceneInstructions</note>
@@ -82,6 +86,10 @@
       <trans-unit id="EditTab.Toolbox.DragActivity.SentenceHint">
         <source xml:lang="en">Type a sentence. The reader will be asked to sort the words.</source>
         <note>ID: EditTab.Toolbox.DragActivity.SentenceHint</note>
+      </trans-unit>
+      <trans-unit id="EditTab.Toolbox.DragActivity.ShowPlay">
+        <source xml:lang="en">Show drag targets during Play</source>
+        <note>ID: EditTab.Toolbox.DragActivity.ShowPlay</note>
       </trans-unit>
       <trans-unit id="EditTab.Toolbox.DragActivity.OrderCircle">
         <source xml:lang="en">Order Circle</source>
@@ -152,6 +160,10 @@
         <source xml:lang="en">Draggable</source>
         <note>ID: EditTab.Toolbox.DragActivity.Draggable</note>
       </trans-unit>
+      <trans-unit id="EditTab.Toolbox.DragActivity.DragImageHeading">
+        <source xml:lang="en">Drag Images to Targets</source>
+        <note>ID: EditTab.Toolbox.DragActivity.DragImageHeading</note>
+      </trans-unit>
       <trans-unit id="EditTab.Toolbox.DragActivity.DragLetterHeading">
         <source xml:lang="en">Drag Letters to Targets</source>
         <note>ID: EditTab.Toolbox.DragActivity.DragLetterHeading</note>
@@ -159,6 +171,10 @@
       <trans-unit id="EditTab.Toolbox.DragActivity.DragLetterInstructions">
         <source xml:lang="en">Place the letters anywhere on the scene, in a mixed up order.</source>
         <note>ID: EditTab.Toolbox.DragActivity.DragLetterInstructions</note>
+      </trans-unit>
+      <trans-unit id="EditTab.Toolbox.DragActivity.DragImageInstructions">
+        <source xml:lang="en">Place the images anywhere on the scene, and the targets where the student should put them.</source>
+        <note>ID: EditTab.Toolbox.DragActivity.DragImagesnstructions</note>
       </trans-unit>
       <trans-unit id="EditTab.Toolbox.DragActivity.DraggableTarget">
         <source xml:lang="en">Draggable Target</source>
@@ -185,9 +201,13 @@
         <note>ID: EditTab.Toolbox.DragActivity.Letter</note>
         <note>This is the label of an item that can be dragged onto the canvas to hold text, typically a single letter. It works best if it is one of the widest letters (including digraphs) in your alphabet</note>
       </trans-unit>
-      <trans-unit id="EditTab.Toolbox.DragActivity.OrderSentence">
+      <trans-unit id="EditTab.Toolbox.DragActivity.OrderSentenceHeading">
         <source xml:lang="en">Order Sentence</source>
-        <note>ID: EditTab.Toolbox.DragActivity.OrderSentence</note>
+        <note>ID: EditTab.Toolbox.DragActivity.OrderSentenceHeading</note>
+      </trans-unit>
+      <trans-unit id="EditTab.Toolbox.DragActivity.OrderSentenceInstructions">
+        <source xml:lang="en">Type a sentence. Bloom will shuffle the words for the student to fix.</source>
+        <note>ID: EditTab.Toolbox.DragActivity.OrderSentenceInstructions</note>
       </trans-unit>
       <trans-unit id="EditTab.Toolbox.DragActivity.Options">
         <source xml:lang="en">Options</source>
@@ -209,6 +229,10 @@
       <trans-unit id="EditTab.Toolbox.DragActivity.SentenceHint">
         <source xml:lang="en">Type a sentence. The reader will be asked to sort the words.</source>
         <note>ID: EditTab.Toolbox.DragActivity.SentenceHint</note>
+      </trans-unit>
+      <trans-unit id="EditTab.Toolbox.DragActivity.ShowTargetsPlay">
+        <source xml:lang="en">Show drag targets during Play</source>
+        <note>ID: EditTab.Toolbox.DragActivity.ShowTargetsPlay</note>
       </trans-unit>
       <trans-unit id="EditTab.Toolbox.DragActivity.OrderCircle">
         <source xml:lang="en">Order Circle</source>

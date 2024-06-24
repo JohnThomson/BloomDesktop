@@ -1926,7 +1926,9 @@ namespace Bloom.Book
                 musicAttrName,
                 musicVolumeName,
                 "data-correct-sound",
-                "data-wrong-sound"
+                "data-wrong-sound",
+                "data-same-size",
+                "data-show-targets-during-play"
             };
             foreach (var attr in attrsToCopy)
             {

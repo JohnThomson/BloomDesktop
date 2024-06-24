@@ -76,6 +76,16 @@
     }
 }
 
+// We'd like them in front of targets in Correct and Wrong tabs, too, but if we mess with
+// their own z-index there, it will mess up how they interact with the handles and canvas.
+.drag-activity-try-it {
+    .drag-item-wrong,
+    .drag-item-correct {
+        // In front of targets, in case they overlap
+        z-index: @bubbleCanvasZIndex + 2;
+    }
+}
+
 .drag-activity-try-it .drag-item-order-sentence {
     display: none;
 }
