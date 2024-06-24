@@ -603,6 +603,7 @@ const DragActivityControls: React.FunctionComponent<{
     const [soundFolder, setSoundFolder] = useState("");
     const [activityType, setActivityType] = useState("");
     const [allItemsSameSize, setAllItemsSameSize] = useState(true);
+    const [showTargetsDuringPlay, setShowTargetsDuringPlay] = useState(true);
     const noneSound = useL10n("None", "EditTab.Toolbox.DragActivity.None", "");
     const chooseSound = useL10n(
         "Choose...",
@@ -626,6 +627,9 @@ const DragActivityControls: React.FunctionComponent<{
             const wrongSound = page.getAttribute("data-wrong-sound");
             setAllItemsSameSize(
                 page.getAttribute("data-same-size") !== "false"
+            );
+            setShowTargetsDuringPlay(
+                page.getAttribute("data-show-targets-during-play") !== "false"
             );
             theOneLocalizationManager
                 .asyncGetText("EditTab.Toolbox.DragActivity.None", "None", "")
@@ -864,6 +868,16 @@ const DragActivityControls: React.FunctionComponent<{
         }
     };
 
+    const toggleShowTargetsDuringPlay = () => {
+        const newShowTargetsDuringPlay = !showTargetsDuringPlay;
+        setShowTargetsDuringPlay(newShowTargetsDuringPlay);
+        const page = getPage();
+        page.setAttribute(
+            "data-show-targets-during-play",
+            newShowTargetsDuringPlay ? "true" : "false"
+        );
+    };
+
     const textItemProps = css`
         margin-left: 5px;
         text-align: center; // Center the text horizontally
@@ -1038,10 +1052,22 @@ const DragActivityControls: React.FunctionComponent<{
                                         ? "grey"
                                         : "transparent"};
                                     padding: 6px;
+                                    margin-right: 10px;
                                 `}
                                 onClick={toggleAllSameSize}
                             >
                                 <img src="images/uniform sized targets.svg"></img>
+                            </div>
+                            <div
+                                css={css`
+                                    background-color: ${showTargetsDuringPlay
+                                        ? "grey"
+                                        : "transparent"};
+                                    padding: 6px;
+                                `}
+                                onClick={toggleShowTargetsDuringPlay}
+                            >
+                                <img src="images/Show Targets During Play.svg"></img>
                             </div>
                         </div>
                     )}

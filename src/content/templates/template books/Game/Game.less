@@ -246,6 +246,20 @@
         }
     }
 }
+// If we're not going to show the targets during play, we indicate this by not giving them a background
+// in other tabs.
+.bloom-page[data-show-targets-during-play="false"] {
+    [data-target-of] {
+        background-color: transparent;
+    }
+}
+// And don't show them at all in play mode.
+.drag-activity-try-it .bloom-page[data-show-targets-during-play="false"] {
+    [data-target-of] {
+        // display:none would prevent the snap code from using them, since they would not have a location.
+        visibility: hidden;
+    }
+}
 
 @tan: #e9d9bd;
 @paleTan: #f9e9cc;
