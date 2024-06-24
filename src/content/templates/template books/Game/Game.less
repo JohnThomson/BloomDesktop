@@ -33,18 +33,13 @@
     }
 }
 
-.activeButton {
-    opacity:1;
-    &:hover {
-        border-color: @bloom-blue;
-        &:active {
-            border-color:black;
-        }
-    }
-}
 // The slider can go away at runtime once everything is correctly placed.
 .drag-activity-correct.drag-activity-try-it .bloom-activity-slider {
     display: none;
+}
+
+.activeButton {
+    opacity:1;
 }
 
 .drag-activity-correct .bloom-page:not([data-activity="word-chooser-slider"]) {
@@ -262,7 +257,7 @@
 .activityBlueOnTan {
     --page-color: #e9d9bd;
     --target-color: #f9e9cc;
-    --dragable-background-color: #2980bb;
+    --draggable-background-color: #2980bb;
     --draggable-color: white;
     --fixed-color: #fc8602;
     --slider-button-color: #2980bb;
@@ -288,7 +283,7 @@
         }
     }
     .bloom-textOverPicture.draggable-text {
-        background-color: var(--dragable-background-color);
+        background-color: var(--draggable-background-color);
         color: var(--draggable-color);
     }
     .drag-item-correct,
@@ -300,7 +295,7 @@
     }
     .drag-item-order-word,
     .drag-item-order-sentence p {
-        background-color: var(--dragable-background-color);
+        background-color: var(--draggable-background-color);
         color: var(--draggable-color);
         border-radius: 10px;
         padding: 0px 11px;
@@ -328,17 +323,17 @@
     }
 
     [data-target-of] {
-        border: dashed 2px var(--dragable-background-color);
+        border: dashed 2px var(--draggable-background-color);
         background-color: var(--target-color);
 
         &:focus {
             box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1),
-                0 0 8px var(--dragable-background-color);
+                0 0 8px var(--draggable-background-color);
         }
     }
 
     .bloom-change-page-button {
-        background-color: var(--dragable-background-color);
+        background-color: var(--draggable-background-color);
         color: var(--draggable-color);
         border-radius: 10px;
         padding: 3px 2px 2px 10px;
@@ -381,7 +376,7 @@
         // border-radius: 4px;
 
         .bloom-translationGroup {
-            background-color: var(--dragable-background-color);
+            background-color: var(--draggable-background-color);
             color: var(--draggable-color);
             height: 100%;
             width: 100%;
@@ -416,6 +411,18 @@
             // }
         }
     }
+    .game-button {
+        background-color: var(--draggable-background-color);
+    }
+
+    .activeButton {
+        &:hover {
+            border-color: @bloom-blue;
+            &:active {
+                border-color:black;
+            }
+        }
+    }
 }
 .game-button,
 .page-turn-button {
@@ -425,7 +432,6 @@
 }
 
 .game-button {
-    background-color: @bloom-blue;
     height: 36px;
     width: 50px;
     opacity: 0.3;

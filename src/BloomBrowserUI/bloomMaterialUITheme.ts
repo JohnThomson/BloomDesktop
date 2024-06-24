@@ -6,6 +6,8 @@ import {
     kBloomToolboxWhite
 } from "./utils/colorUtils";
 
+// drag activity
+
 export const kBloomBlue = "#1d94a4";
 export const kBloomBlueTextBackground = "#19818f"; // darker for better contrast
 export const kBloomBlue50Transparent = "#8ecad280";

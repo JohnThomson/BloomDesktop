@@ -13,6 +13,7 @@
       <trans-unit id="EditTab.Toolbox.DragActivity.CheckAnswer">
         <source xml:lang="en">Check Answer</source>
         <note>ID: EditTab.Toolbox.DragActivity.CheckAnswer</note>
+        <note>Check if this is still used before merging. Button was removed, may be wanted as tooltip.</note>
       </trans-unit>
       <trans-unit id="EditTab.Toolbox.DragActivity.CheckHint">
         <!-- Currently, if this is changed, RuntimeInformationInjector.AddHtmlUiStrings must be changed to match.
@@ -93,6 +94,7 @@
       <trans-unit id="EditTab.Toolbox.DragActivity.ShowAnswer">
         <source xml:lang="en">Show Answer</source>
         <note>ID: EditTab.Toolbox.DragActivity.ShowAnswer</note>
+        <note>Check if this is still used before merging. Button was removed, may be wanted as tooltip.</note>
       </trans-unit>
       <trans-unit id="EditTab.Toolbox.DragActivity.TestInstructions">
         <source xml:lang="en">Try it out!</source>
@@ -105,6 +107,7 @@
       <trans-unit id="EditTab.Toolbox.DragActivity.TryAgain">
         <source xml:lang="en">Try Again</source>
         <note>ID: EditTab.Toolbox.DragActivity.TryAgain</note>
+        <note>Check if this is still used before merging. Button was removed, may be wanted as tooltip.</note>
       </trans-unit>
       <trans-unit id="EditTab.Toolbox.DragActivity.Word">
         <source xml:lang="en">Word</source>

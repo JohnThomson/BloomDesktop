@@ -43,7 +43,6 @@ import {
 } from "../../editViewFrame";
 import { MenuItem, Select, menuClasses } from "@mui/material";
 import { useL10n } from "../../../react_components/l10nHooks";
-import { getTheOneBubbleManager } from "../../editablePage";
 //import { Tab } from "@mui/material";
 
 const Tabs: React.FunctionComponent<{
@@ -847,7 +846,7 @@ const DragActivityControls: React.FunctionComponent<{
         const page = getPage();
         page.setAttribute("data-same-size", newAllSameSize ? "true" : "false");
         if (newAllSameSize) {
-            const bm = getTheOneBubbleManager();
+            const bm = OverlayTool.bubbleManager()!;
             let someDraggable = bm.getActiveElement(); // prefer the selected one
             if (
                 !someDraggable ||
@@ -1339,11 +1338,6 @@ export class DragActivityTool extends ToolboxToolReactAdaptor {
         //     bubbleManager.detachBubbleChangeNotification();
         // }
     }
-
-    // public static bubbleManager(): BubbleManager | undefined {
-    //     const exports = getEditablePageBundleExports();
-    //     return exports ? exports.getTheOneBubbleManager() : undefined;
-    // }
 }
 function playSound(newSoundId: string, page: HTMLElement) {
     const audio = new Audio("audio/" + newSoundId);
