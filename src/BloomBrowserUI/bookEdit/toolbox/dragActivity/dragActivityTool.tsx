@@ -978,13 +978,13 @@ const DragActivityControls: React.FunctionComponent<{
                                 color={kBloomBlue}
                                 strokeColor={kBloomBlue}
                             />
-                            <OverlayButtonItem
+                            {/* <OverlayButtonItem
                                 l10nKey="EditTab.Toolbox.DragActivity.CheckAnswer"
                                 addClasses="check-button"
                                 contentL10nKey="EditTab.Toolbox.DragActivity.Check"
                                 hintL10nKey="EditTab.Toolbox.DragActivity.CheckHint"
                                 userDefinedStyleName="GameButton"
-                            />
+                            /> */}
                         </OverlayItemRow>
                         <OverlayItemRow>
                             <OverlayVideoItem
@@ -1122,7 +1122,7 @@ const DragActivityControls: React.FunctionComponent<{
                                 addClasses="drag-item-wrong"
                             />
                         </OverlayItemRow>
-                        <OverlayItemRow>
+                        {/* <OverlayItemRow>
                             <OverlayButtonItem
                                 l10nKey="EditTab.Toolbox.DragActivity.TryAgain"
                                 addClasses="try-again-button drag-item-wrong"
@@ -1135,7 +1135,7 @@ const DragActivityControls: React.FunctionComponent<{
                                 contentL10nKey="EditTab.Toolbox.DragActivity.ShowAnswer"
                                 userDefinedStyleName="GameButton"
                             />
-                        </OverlayItemRow>
+                        </OverlayItemRow> */}
                         <OverlayItemRow>
                             <OverlayTextItem
                                 css={textItemProps}
