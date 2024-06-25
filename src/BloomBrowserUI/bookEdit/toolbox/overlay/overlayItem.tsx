@@ -197,35 +197,44 @@ const ondragend = (
             }
             bubble.setAttribute("data-bubble-id", id);
             bubble.style.width = ev.currentTarget.clientWidth + "px";
-            // don't simplify to 'document.createElement'; may be in a different iframe
-            const target = bubble.ownerDocument.createElement("div");
-            target.setAttribute("data-target-of", id);
-            const left = getDimension(bubble.style.left);
-            const top = getDimension(bubble.style.top);
-            const width = getDimension(bubble.style.width);
-            const height = getDimension(bubble.style.height);
-            let newLeft = left + 20;
-            let newTop = top + height + 30;
-            if (newTop + height > bubble.parentElement!.clientHeight) {
-                newTop = top - height - 30;
-            }
-            if (newLeft + width > bubble.parentElement!.clientWidth) {
-                newLeft = left - width - 30;
-            }
-            // Todo: if this puts it outside the parent of bubble, move it somewhere else
-            target.style.left = `${newLeft}px`;
-            target.style.top = `${newTop}px`;
-            target.style.width = `${width}px`;
-            target.style.height = `${height}px`;
-            // This allows it to get focus, which allows it to get the shadow effect we want when
-            // clicked. But is that really right? We can't actually type there.
-            target.setAttribute("tabindex", "0");
-            bubble.parentElement!.appendChild(target);
-            setupDraggingTargets(target);
-            adjustTarget(bubble, target);
+            makeTargetForBubble(bubble);
             // }, 1000);
         }
     }
+};
+
+export const makeTargetForBubble = (bubble: HTMLElement): HTMLElement => {
+    // don't simplify to 'document.createElement'; may be in a different iframe
+    const id = bubble.getAttribute("data-bubble-id");
+    if (!id) {
+        throw new Error("Bubble does not have a data-bubble-id attribute");
+    }
+    const target = bubble.ownerDocument.createElement("div");
+    target.setAttribute("data-target-of", id);
+    const left = getDimension(bubble.style.left);
+    const top = getDimension(bubble.style.top);
+    const width = getDimension(bubble.style.width);
+    const height = getDimension(bubble.style.height);
+    let newLeft = left + 20;
+    let newTop = top + height + 30;
+    if (newTop + height > bubble.parentElement!.clientHeight) {
+        newTop = top - height - 30;
+    }
+    if (newLeft + width > bubble.parentElement!.clientWidth) {
+        newLeft = left - width - 30;
+    }
+    // Todo: if this puts it outside the parent of bubble, move it somewhere else
+    target.style.left = `${newLeft}px`;
+    target.style.top = `${newTop}px`;
+    target.style.width = `${width}px`;
+    target.style.height = `${height}px`;
+    // This allows it to get focus, which allows it to get the shadow effect we want when
+    // clicked. But is that really right? We can't actually type there.
+    target.setAttribute("tabindex", "0");
+    bubble.parentElement!.appendChild(target);
+    setupDraggingTargets(target);
+    adjustTarget(bubble, target);
+    return target;
 };
 
 // A wrapper for something that is an overlay source icon, typically an SVG.

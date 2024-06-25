@@ -142,6 +142,7 @@ const OverlayToolControls: React.FunctionComponent = () => {
         // The callback function is (currently) called when switching between bubbles, but is not called
         // if the tail spec changes, or for style and similar changes to the bubble that are initiated by React.
         bubbleManager.requestBubbleChangeNotification(
+            "drag",
             (bubble: BubbleSpec | undefined) => {
                 setCurrentFamilySpec(bubble);
             }
@@ -926,7 +927,7 @@ export class OverlayTool extends ToolboxToolReactAdaptor {
             //bubbleManager.turnOffBubbleEditing();
 
             EnableAllImageEditing();
-            bubbleManager.detachBubbleChangeNotification();
+            bubbleManager.detachBubbleChangeNotification("overlay");
         }
     }
 

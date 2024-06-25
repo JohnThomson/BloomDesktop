@@ -32,12 +32,13 @@ export function prepareActivity(
         const target = page.querySelector(
             `[data-target-of="${targetId}"]`
         ) as HTMLElement;
-        if (!target) {
-            return;
+        if (target) {
+            const x = target.offsetLeft;
+            const y = target.offsetTop;
+            slots.push({ x, y });
         }
-        const x = target.offsetLeft;
-        const y = target.offsetTop;
-        slots.push({ x, y });
+        // if it has data-bubble-id, it should be draggable, just not needed
+        // for the right answer.
         originalPositions.set(elt, { x: elt.offsetLeft, y: elt.offsetTop });
         elt.addEventListener("pointerdown", startDrag, { capture: true });
     });
@@ -254,7 +255,7 @@ const showCorrect = (e: MouseEvent) => {
                 `[data-target-of="${targetId}"]`
             ) as HTMLElement;
             if (!target) {
-                return;
+                return; // this one is not required to be in a right place
             }
             const x = target.offsetLeft;
             const y = target.offsetTop;
@@ -468,6 +469,10 @@ function checkDraggables(page: HTMLElement) {
             `[data-target-of="${targetId}"]`
         ) as HTMLElement;
         if (!target) {
+            // this one is not required to be in a right place.
+            // Possibly we might one day need to check that it has NOT been dragged to a target.
+            // But for now, we only allow ond draggable per target, so if this has been wrongly
+            // used some other one will not be in the right place.
             return;
         }
 
@@ -476,6 +481,18 @@ function checkDraggables(page: HTMLElement) {
 
         if (!rightPosition(elt, correctX, correctY)) {
             // It's not in the expected place. But perhaps one with the same text is?
+            // This only applies if it's a text item.
+            // (don't use getElementsByClassName here...there could be a TG on an image description of
+            // a picture. To be a text item it must have a direct child that is a TG.)
+            if (
+                !Array.from(elt.children).some(x =>
+                    x.classList.contains("bloom-translationGroup")
+                )
+            ) {
+                // not a text item. Two images or videos with the same (empty) text are not equivalent.
+                allCorrect = false;
+                return;
+            }
             const visibleText = getVisibleText(elt);
             if (
                 !bubbles.some((bubble: HTMLElement) => {

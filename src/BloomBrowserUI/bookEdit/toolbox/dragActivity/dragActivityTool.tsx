@@ -6,7 +6,7 @@ import ReactDOM = require("react-dom");
 import ToolboxToolReactAdaptor from "../toolboxToolReactAdaptor";
 import { kDragActivityToolId } from "../toolIds";
 //import Tabs from "@mui/material/Tabs";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
     kBloomBlue,
     kDarkestBackground,
@@ -24,7 +24,8 @@ import {
     OverlayItemRow,
     OverlayTextItem,
     OverlayVideoItem,
-    OverlayWrongImageItem
+    OverlayWrongImageItem,
+    makeTargetForBubble
 } from "../overlay/overlayItem";
 import { OverlayTool, deleteBubble } from "../overlay/overlayTool";
 import { ToolBox } from "../toolbox";
@@ -603,6 +604,16 @@ const updateTabClass = (tabIndex: number) => {
     }
 };
 
+const getPage = () => {
+    const pageBody = ToolBox.getPage();
+    return pageBody?.getElementsByClassName("bloom-page")[0] as HTMLElement;
+};
+
+// like definition of .disabled in toolbox.less"
+// if argument is false returns CSS to make the element look disabled and ignore pointer events.
+const disabledCss = enabled =>
+    enabled ? "" : "opacity:0.4; pointer-events:none;";
+
 const DragActivityControls: React.FunctionComponent<{
     activeTab: number;
     onTabChange: (tab: number) => void;
@@ -624,9 +635,32 @@ const DragActivityControls: React.FunctionComponent<{
         "EditTab.Toolbox.DragActivity.ChooseSound",
         ""
     );
+    const bubbleManager = OverlayTool.bubbleManager();
+    const currentBubbleElement = bubbleManager?.getActiveElement();
+    const currentBubbleTargetId = currentBubbleElement?.getAttribute(
+        "data-bubble-id"
+    );
+    const [currentBubbleTarget, setCurrentBubbleTarget] = useState<
+        HTMLElement | undefined
+    >();
+    useEffect(() => {
+        if (!currentBubbleTargetId) {
+            setCurrentBubbleTarget(undefined);
+            return;
+        }
+        const page = getPage();
+        setCurrentBubbleTarget(
+            page?.querySelector(
+                `[data-target-of="${currentBubbleTargetId}"]`
+            ) as HTMLElement
+        );
+    }, [currentBubbleTargetId]);
     useEffect(() => {
         const bubbleManager = OverlayTool.bubbleManager();
-        bubbleManager?.requestBubbleChangeNotification(setCurrentBuble);
+        bubbleManager?.requestBubbleChangeNotification(
+            "overlay",
+            setCurrentBuble
+        );
     }, []);
     useEffect(() => {
         const getStateFromPage = () => {
@@ -659,10 +693,6 @@ const DragActivityControls: React.FunctionComponent<{
         };
         getStateFromPage();
     }, [props.pageGeneration]);
-    const getPage = () => {
-        const pageBody = ToolBox.getPage();
-        return pageBody?.getElementsByClassName("bloom-page")[0] as HTMLElement;
-    };
     const showDialogToChooseSoundFile = async forCorrect => {
         const result = await postJson("fileIO/chooseFile", {
             title: "Choose Sound File",
@@ -872,6 +902,21 @@ const DragActivityControls: React.FunctionComponent<{
         return getPage()?.querySelector(
             `[data-target-of="${targetId}"]`
         ) as HTMLElement;
+    };
+
+    const toggleIsPartOfRightAnswer = () => {
+        if (!currentBubbleTargetId) {
+            return;
+        }
+        if (currentBubbleTarget) {
+            currentBubbleTarget.ownerDocument
+                .getElementById("target-arrow")
+                ?.remove();
+            currentBubbleTarget.remove();
+            setCurrentBubbleTarget(undefined);
+        } else {
+            setCurrentBubbleTarget(makeTargetForBubble(currentBubbleElement!));
+        }
     };
 
     const toggleAllSameSize = () => {
@@ -1094,11 +1139,7 @@ const DragActivityControls: React.FunctionComponent<{
                             >
                                 <div
                                     css={css`
-                                        background-color: ${allItemsSameSize
-                                            ? kBloomBlue
-                                            : "transparent"};
-                                        padding: 6px;
-                                        margin-right: 10px;
+                                        ${optionCss(allItemsSameSize)}
                                     `}
                                     onClick={toggleAllSameSize}
                                 >
@@ -1114,14 +1155,32 @@ const DragActivityControls: React.FunctionComponent<{
                             >
                                 <div
                                     css={css`
-                                        background-color: ${showTargetsDuringPlay
-                                            ? kBloomBlue
-                                            : "transparent"};
-                                        padding: 6px;
+                                        ${optionCss(showTargetsDuringPlay)}
                                     `}
                                     onClick={toggleShowTargetsDuringPlay}
                                 >
                                     <img src="images/Show Targets During Play.svg"></img>
+                                </div>
+                            </BloomTooltip>
+                            <BloomTooltip
+                                // enable if there's an active bubble that has a data-bubble-id indicating it is draggable in Play mode
+                                css={css`
+                                    ${disabledCss(currentBubbleTargetId)}
+                                `}
+                                id="partOfRightAnswer"
+                                placement="top-end"
+                                tip={
+                                    <Div l10nKey="EditTab.Toolbox.DragActivity.PartOfRightAnswer"></Div>
+                                }
+                            >
+                                <div
+                                    // it's part of the right answer iff it has a target
+                                    css={css`
+                                        ${optionCss(currentBubbleTarget)}
+                                    `}
+                                    onClick={toggleIsPartOfRightAnswer}
+                                >
+                                    <img src="images/Is part of right answer.svg"></img>
                                 </div>
                             </BloomTooltip>
                         </div>
@@ -1261,9 +1320,7 @@ const DragActivityControls: React.FunctionComponent<{
                         title={deleteTooltip}
                         css={css`
                             margin: 10px;
-                            ${currentBubble // like definition of .disabled in toolbox.less
-                                ? ""
-                                : "opacity:0.4; pointer-events:none;"};
+                            ${disabledCss(currentBubble)};
                         `}
                     >
                         <TrashIcon
@@ -1277,6 +1334,20 @@ const DragActivityControls: React.FunctionComponent<{
         </ThemeProvider>
     );
 };
+
+const optionCss = turnedOn => `background-color: ${
+    turnedOn ? kBloomBlue : "transparent"
+};
+padding: 6px;
+border-radius: 3px;
+height: 30px;
+width: 30px;
+margin-right: 10px;
+img {
+    height: 100%;
+    width: 100%;
+}
+}`;
 
 export class DragActivityTool extends ToolboxToolReactAdaptor {
     public static theOneDragActivityTool: DragActivityTool | undefined;
@@ -1429,15 +1500,17 @@ export class DragActivityTool extends ToolboxToolReactAdaptor {
         if (page) {
             undoPrepareActivity(page);
         }
-        // const bubbleManager = OverlayTool.bubbleManager();
-        // if (bubbleManager) {
-        //     // For now we are leaving bubble editing on, because even with the toolbox hidden,
-        //     // the user might edit text, delete bubbles, move handles, etc.
-        //     // We turn it off only when about to save the page.
-        //     //bubbleManager.turnOffBubbleEditing();
-        //     EnableAllImageEditing();
-        //     bubbleManager.detachBubbleChangeNotification();
-        // }
+        const bubbleManager = OverlayTool.bubbleManager();
+        if (bubbleManager) {
+            // For now we are leaving bubble editing on, because even with the toolbox hidden,
+            // the user might edit text, delete bubbles, move handles, etc.
+            // We turn it off only when about to save the page.
+            //bubbleManager.turnOffBubbleEditing();
+            //EnableAllImageEditing();
+            // This might be a good idea in the way of cleanup, but we'd have to reconnect
+            // after switching pages. For now, we only ever have one callback, so it's not a big deal.
+            //bubbleManager.detachBubbleChangeNotification("drag");
+        }
     }
 }
 function playSound(newSoundId: string, page: HTMLElement) {

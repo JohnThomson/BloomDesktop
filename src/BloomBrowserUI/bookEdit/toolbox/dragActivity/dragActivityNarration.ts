@@ -232,7 +232,14 @@ function updatePlayerStatus() {
     // }
     const url = currentAudioUrl(currentAudioId);
     //logSound(url, 1);
-    player.setAttribute("src", url + "?nocache=" + new Date().getTime());
+    // because this code is meant to work in both Bloom and BloomPlayer, we can't call a Bloom API to find
+    // out whether we actually have a recording (as we well might not, if we just opened the talking book
+    // tool and haven't recorded anything yet). So we just try to play it and see what happens.
+    // The optional param tells Bloom not to report an error if the file isn't found.
+    player.setAttribute(
+        "src",
+        url + "?nocache=" + new Date().getTime() + "&optional=true"
+    );
 }
 
 function currentAudioUrl(id: string): string {

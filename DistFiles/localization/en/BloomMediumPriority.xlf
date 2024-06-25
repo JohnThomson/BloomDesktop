@@ -213,6 +213,10 @@
         <source xml:lang="en">Options</source>
         <note>ID: EditTab.Toolbox.DragActivity.Options</note>
       </trans-unit>
+      <trans-unit id="EditTab.Toolbox.DragActivity.PartOfRightAnswer">
+        <source xml:lang="en">Selected element is part of right answer</source>
+        <note>ID: EditTab.Toolbox.DragActivity.PartOfRightAnswer</note>
+      </trans-unit>
       <trans-unit id="EditTab.Toolbox.DragActivity.PlayAudio">
         <source xml:lang="en">Play Audio</source>
         <note>ID: EditTab.Toolbox.DragActivity.PlayAudio</note>

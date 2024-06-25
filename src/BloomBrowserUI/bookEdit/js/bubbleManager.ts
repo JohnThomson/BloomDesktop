@@ -62,9 +62,10 @@ export class BubbleManager {
 
     private activeElement: HTMLElement | undefined;
     public isComicEditingOn: boolean = false;
-    private notifyBubbleChange:
-        | ((x: BubbleSpec | undefined) => void)
-        | undefined;
+    private notifyBubbleChange: {
+        id: string;
+        handler: (x: BubbleSpec | undefined) => void;
+    }[] = [];
 
     // These variables are used by the bubble's onmouse* event handlers
     private bubbleToDrag: Bubble | undefined; // Use Undefined to indicate that there is no active drag in progress
@@ -925,12 +926,15 @@ export class BubbleManager {
             );
         }
         this.activeElement = element;
-        if (this.notifyBubbleChange) {
-            this.notifyBubbleChange(this.getSelectedFamilySpec());
-        }
+        this.doNotifyChange();
         Comical.activateElement(this.activeElement);
         this.adjustTarget(this.activeElement);
         this.showCorrespondingTextBox(this.activeElement);
+    }
+
+    public doNotifyChange() {
+        const spec = this.getSelectedFamilySpec();
+        this.notifyBubbleChange.forEach(f => f.handler(spec));
     }
 
     // Set the color of the text in all of the active bubble family's TextOverPicture boxes.
@@ -2252,13 +2256,18 @@ export class BubbleManager {
     }
 
     public requestBubbleChangeNotification(
+        id: string,
         notifier: (bubble: BubbleSpec | undefined) => void
     ): void {
-        this.notifyBubbleChange = notifier;
+        this.detachBubbleChangeNotification(id);
+        this.notifyBubbleChange.push({ id, handler: notifier });
     }
 
-    public detachBubbleChangeNotification(): void {
-        this.notifyBubbleChange = undefined;
+    public detachBubbleChangeNotification(id: string): void {
+        const index = this.notifyBubbleChange.findIndex(x => x.id === id);
+        if (index >= 0) {
+            this.notifyBubbleChange.splice(index, 1);
+        }
     }
 
     public updateSelectedItemBubbleSpec(
@@ -2720,9 +2729,7 @@ export class BubbleManager {
         // See https://issues.bloomlibrary.org/youtrack/issue/BL-11620.
         if (setElementActive) {
             this.activeElement = contentElement;
-            if (this.notifyBubbleChange) {
-                this.notifyBubbleChange(this.getSelectedFamilySpec());
-            }
+            this.doNotifyChange();
             this.showCorrespondingTextBox(contentElement);
         }
         const bubble = new Bubble(contentElement);
