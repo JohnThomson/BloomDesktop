@@ -8,10 +8,7 @@ import { EditableDivUtils } from "./js/editableDivUtils";
 import "../lib/jquery.i18n.custom.ts"; //localize()
 import "errorHandler";
 import { theOneBubbleManager, BubbleManager } from "./js/bubbleManager";
-import {
-    setActiveDragActivityTab,
-    getActiveDragActivityTab
-} from "../bookEdit/toolbox/dragActivity/dragActivityTool";
+import { renderDragActivityTabControl } from "./toolbox/dragActivity/DragActivityTabControl";
 
 function getPageId(): string {
     const page = document.querySelector(".bloom-page");
@@ -50,8 +47,7 @@ export interface IPageFrameExports {
     ckeditorUndo(): void;
 
     SayHello(): void;
-    setActiveDragActivityTab(tab: number): void;
-    getActiveDragActivityTab(): number;
+    renderDragActivityTabControl(currentTab: number): void;
 }
 
 // This exports the functions that should be accessible from other IFrames or from C#.
@@ -81,8 +77,7 @@ export {
     SetupElements,
     attachToCkEditor,
     changeImage,
-    setActiveDragActivityTab,
-    getActiveDragActivityTab
+    renderDragActivityTabControl
 };
 import { origamiCanUndo, origamiUndo } from "./js/origami";
 import { postString } from "../utils/bloomApi";

@@ -44,14 +44,22 @@ import {
 import { MenuItem, Select, menuClasses } from "@mui/material";
 import { useL10n } from "../../../react_components/l10nHooks";
 import { BloomTooltip } from "../../../react_components/BloomToolTip";
+import {
+    DragActivityTabControl,
+    renderDragActivityTabControl
+} from "./DragActivityTabControl";
 //import { Tab } from "@mui/material";
 
-const Tabs: React.FunctionComponent<{
+export const Tabs: React.FunctionComponent<{
     value: number;
     onChange: (newValue: number) => void;
     labels: string[];
     classNane?: string;
 }> = props => {
+    const changeHandler = (index: number) => {
+        console.log("changeHandler", index);
+        props.onChange(index);
+    };
     return (
         <div
             css={css`
@@ -66,7 +74,7 @@ const Tabs: React.FunctionComponent<{
                 return (
                     <button
                         key={child}
-                        onClick={() => props.onChange(index)}
+                        onClick={() => changeHandler(index)}
                         css={css`
                             font-family: ${kUiFontStack};
                             color: ${selected ? "white" : "lightgray"};
@@ -1335,10 +1343,11 @@ export class DragActivityTool extends ToolboxToolReactAdaptor {
         if (pageId === this.lastPageId) {
             // reinitialize for the current tab. This is especially important in Try It mode,
             // because detachFromPage() undoes some of the initialization for that tab.
-            pageFrameExports.setActiveDragActivityTab(
-                pageFrameExports.getActiveDragActivityTab()
-            );
+            const currentTab = getActiveDragActivityTab();
+            console.log("reinitializing tab ", currentTab);
+            setActiveDragActivityTab(currentTab);
         } else {
+            console.log("initializing new page");
             this.lastPageId = pageId;
             // useful during development, MAY not need in production.
             bubbleManager.removeDetachedTargets();
@@ -1349,7 +1358,7 @@ export class DragActivityTool extends ToolboxToolReactAdaptor {
             // Force things to Start tab as we change page.
             // If we decide not to do this, we should probably at least find a way to do it
             // when it's a brand newly-created page.
-            pageFrameExports.setActiveDragActivityTab(0);
+            setActiveDragActivityTab(0);
         }
     }
 
@@ -1457,50 +1466,47 @@ const dragActivityTypes = [
     "drag-image-to-target"
 ];
 
-// After careful thought, I think the right source of truth for which tab is active is an
-// attribute of the parent elemen of the bloom-page.
+// After careful thought, I think the right source of truth for which tab is active is a variable on the
+// top level window object.
+// For a long time it was an attribute of the parent element of the bloom-page. This makes it difficult to
+// stay on the same tab when reloading the current page (typically after a Save), since the whole document
+// is reloaded.
 // I don't want it anywhere in the toolbox, because it is applicable even when the Drag Activity Toolbox is not active.
+// In addition to the reason above for not wanting it anywhere in the page iframe,
 // I don't want it part of the page, because then I have to take steps to prevent persisting it.
 // I don't want it in the element we add to hold the tab control, because it's possible for the page
 // to exist before that gets created, and then we have another complication for the toolbox to worry about
 // when trying to get it.
-// I don't want it all the way up on the body because that is shared by multiple pages in BloomPlayer,
-// and style rules that depend on anything there don't work. (This is less important because I don't plan
-// to have any rules that depend on data-drag-activity-tab, but it's convenient to have it on the same
-// element that does have classes for that purpose.
-
+// With this new strategy, I think it would be possible to stay on the same tab while changing pages.
+// I'm not sure this is desirable. Currently newPageReady() explicitly resets to the Start tab
+// if it is loading a different page.
 export function getActiveDragActivityTab(): number {
-    const page = DragActivityTool.getBloomPage();
-    if (!page) {
-        return 0;
-    }
-    const parent = page.parentElement;
-    if (!parent) {
-        return 0;
-    }
-    const tab = parent.getAttribute("data-drag-activity-tab");
-    if (!tab) {
-        return 0;
-    }
-    const result = parseInt(tab);
-    if (isNaN(result)) {
-        return 0;
-    }
-    return result;
+    return window.top!["dragActivityPage"] ?? 0;
 }
 
 export function setActiveDragActivityTab(tab: number) {
+    window.top!["dragActivityPage"] = tab;
     const page = DragActivityTool.getBloomPage();
-    if (!page) {
+    const pageFrameExports = getEditablePageBundleExports();
+    if (!page || !pageFrameExports) {
+        // just loading page??
+        setTimeout(() => {
+            console.log(
+                "had to postpone setting tab to ",
+                tab,
+                " because page not ready yet."
+            );
+            setActiveDragActivityTab(tab);
+        }, 100);
         return;
     }
     const parent = page.parentElement;
     if (!parent) {
+        console.error("No parent for page");
         return;
     }
-    parent.setAttribute("data-drag-activity-tab", tab.toString());
     updateTabClass(tab);
-    renderDragActivityTabControl();
+    pageFrameExports.renderDragActivityTabControl(tab);
     // Update the toolbox.
     /// Review: might it not exist yet? Do we need a timeout if so?
     // I think we're OK, if for no other reason, because both the dragActivityTool code and the
@@ -1568,63 +1574,5 @@ export function setupDragActivityTabControl() {
     // want origami, and the origami code already creates a nice wrapper inside the page (so we can
     // get the correct page alignment) and deletes it before saving the page.
     origamiContainer.appendChild(tabControl);
-    setActiveDragActivityTab(0);
-    //renderDragActivityTabControl();
+    setActiveDragActivityTab(getActiveDragActivityTab());
 }
-function renderDragActivityTabControl() {
-    const page = DragActivityTool.getBloomPage();
-    const root = page?.ownerDocument.getElementById(
-        "drag-activity-tab-control"
-    );
-    if (!root) {
-        // not created yet, try later
-        setTimeout(renderDragActivityTabControl, 200);
-        return;
-    }
-    ReactDOM.render(
-        <DragActivityTabControl
-            activeTab={getActiveDragActivityTab()}
-            onTabChange={setActiveDragActivityTab}
-        />,
-        root
-    );
-}
-
-const DragActivityTabControl: React.FunctionComponent<{
-    activeTab: number;
-    onTabChange: (tab: number) => void;
-}> = props => {
-    return (
-        <ThemeProvider theme={toolboxTheme}>
-            <div
-                css={css`
-                    display: flex;
-                    // The mockup seems to have this a little dimmer than white, but I haven't found an existing constant
-                    // that seems appropriate. This will do for a first approximation.
-                    color: lightgray;
-                `}
-            >
-                <div
-                    css={css`
-                        margin-top: 8px;
-                        margin-right: 20px;
-                    `}
-                >
-                    Game Setup mode:
-                </div>
-                <Tabs
-                    value={props.activeTab}
-                    onChange={props.onTabChange}
-                    labels={
-                        [
-                            "Start",
-                            "Correct",
-                            "Wrong",
-                            "Play"
-                        ] /* Todo: localize*/
-                    }
-                />
-            </div>
-        </ThemeProvider>
-    );
-};

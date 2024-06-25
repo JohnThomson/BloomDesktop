@@ -18,7 +18,10 @@ import { SignLanguageTool } from "./signLanguage/signLanguageTool";
 import { ImageDescriptionAdapter } from "./imageDescription/imageDescription";
 import "errorHandler";
 import { OverlayTool } from "./overlay/overlayTool";
-import { DragActivityTool } from "./dragActivity/dragActivityTool";
+import {
+    DragActivityTool,
+    setActiveDragActivityTab
+} from "./dragActivity/dragActivityTool";
 
 export interface IToolboxFrameExports {
     addWordListChangedListener(
@@ -36,10 +39,11 @@ export interface IToolboxFrameExports {
     applyToolboxStateToPage(): void;
 
     removeToolboxMarkup(): void;
+    setActiveDragActivityTab(tab: number): void;
 }
 
 // each of these exports shows up under this window's toolboxBundle object (see bloomFrames.ts)
-export { removeToolboxMarkup, showOrHideTool_click };
+export { removeToolboxMarkup, showOrHideTool_click, setActiveDragActivityTab };
 export {
     showSetupDialog,
     initializeReaderSetupDialog,
