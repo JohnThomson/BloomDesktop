@@ -1368,7 +1368,8 @@ export class BubbleManager {
         const bubble = Comical.getBubbleHit(
             container,
             coordinates.getUnscaledX(),
-            coordinates.getUnscaledY()
+            coordinates.getUnscaledY(),
+            true // only consider bubbles with pointer events allowed.
         );
 
         if (
