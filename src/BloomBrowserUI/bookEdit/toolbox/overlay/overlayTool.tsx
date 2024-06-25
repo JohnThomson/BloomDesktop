@@ -49,6 +49,16 @@ import {
     OverlayTextItem
 } from "./overlayItem";
 
+export const deleteBubble = () => {
+    const bubbleManager = OverlayTool.bubbleManager();
+    if (bubbleManager) {
+        const active = bubbleManager.getActiveElement();
+        if (active) {
+            bubbleManager.deleteTOPBox(active);
+        }
+    }
+};
+
 const OverlayToolControls: React.FunctionComponent = () => {
     const l10nPrefix = "ColorPicker.";
     type BubbleType = "text" | "image" | "video" | undefined;
@@ -419,16 +429,6 @@ const OverlayToolControls: React.FunctionComponent = () => {
                 ev.screenY,
                 style
             );
-        }
-    };
-
-    const deleteBubble = () => {
-        const bubbleManager = OverlayTool.bubbleManager();
-        if (bubbleManager) {
-            const active = bubbleManager.getActiveElement();
-            if (active) {
-                bubbleManager.deleteTOPBox(active);
-            }
         }
     };
 

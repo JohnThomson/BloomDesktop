@@ -26,7 +26,7 @@ import {
     OverlayVideoItem,
     OverlayWrongImageItem
 } from "../overlay/overlayItem";
-import { OverlayTool } from "../overlay/overlayTool";
+import { OverlayTool, deleteBubble } from "../overlay/overlayTool";
 import { ToolBox } from "../toolbox";
 import {
     classSetter,
@@ -48,7 +48,8 @@ import {
     DragActivityTabControl,
     renderDragActivityTabControl
 } from "./DragActivityTabControl";
-//import { Tab } from "@mui/material";
+import { default as TrashIcon } from "@mui/icons-material/Delete";
+import { BubbleSpec } from "comicaljs";
 
 export const Tabs: React.FunctionComponent<{
     value: number;
@@ -613,12 +614,20 @@ const DragActivityControls: React.FunctionComponent<{
     const [activityType, setActivityType] = useState("");
     const [allItemsSameSize, setAllItemsSameSize] = useState(true);
     const [showTargetsDuringPlay, setShowTargetsDuringPlay] = useState(true);
+    const [currentBubble, setCurrentBuble] = useState<BubbleSpec | undefined>(
+        undefined
+    );
     const noneSound = useL10n("None", "EditTab.Toolbox.DragActivity.None", "");
+    const deleteTooltip = useL10n("Delete", "Common.Delete");
     const chooseSound = useL10n(
         "Choose...",
         "EditTab.Toolbox.DragActivity.ChooseSound",
         ""
     );
+    useEffect(() => {
+        const bubbleManager = OverlayTool.bubbleManager();
+        bubbleManager?.requestBubbleChangeNotification(setCurrentBuble);
+    }, []);
     useEffect(() => {
         const getStateFromPage = () => {
             const pageBody = ToolBox.getPage();
@@ -1244,6 +1253,25 @@ const DragActivityControls: React.FunctionComponent<{
                         `}
                         l10nKey="EditTab.Toolbox.DragActivity.TestInstructions"
                     />
+                </div>
+            )}
+            {props.activeTab !== 3 && (
+                <div>
+                    <div
+                        title={deleteTooltip}
+                        css={css`
+                            margin: 10px;
+                            ${currentBubble // like definition of .disabled in toolbox.less
+                                ? ""
+                                : "opacity:0.4; pointer-events:none;"};
+                        `}
+                    >
+                        <TrashIcon
+                            id="trashIcon"
+                            color="primary"
+                            onClick={() => deleteBubble()}
+                        />
+                    </div>
                 </div>
             )}
         </ThemeProvider>
