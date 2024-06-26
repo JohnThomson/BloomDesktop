@@ -159,18 +159,27 @@ export const adjustTarget = (
         if (arrow) {
             arrow.remove();
         }
+    }
+    // This may get called when we click something that isn't a draggable at all.
+    // That gets rid of any arrow. It shouldn't do anything else.
+    if (!draggable?.getAttribute("data-bubble-id")) {
         return;
     }
     // if the target is not the same size, presumably the draggable size changed, in which case
     // we need to adjust the target, and possibly all other targets and draggables on the page.
+    // If there's no target, just assume we need to adjust all.
     let adjustAll = forceAdjustAll ?? false;
-    if (target.offsetHeight !== draggable.offsetHeight) {
-        target.style.height = `${draggable.offsetHeight}px`;
+    if (!target) {
         adjustAll = true;
-    }
-    if (target.offsetWidth !== draggable.offsetWidth) {
-        target.style.width = `${draggable.offsetWidth}px`;
-        adjustAll = true;
+    } else {
+        if (target.offsetHeight !== draggable.offsetHeight) {
+            target.style.height = `${draggable.offsetHeight}px`;
+            adjustAll = true;
+        }
+        if (target.offsetWidth !== draggable.offsetWidth) {
+            target.style.width = `${draggable.offsetWidth}px`;
+            adjustAll = true;
+        }
     }
 
     // Resize everything, unless that behavior is turned off.
@@ -197,6 +206,9 @@ export const adjustTarget = (
                 elt.style.width = `${draggable.offsetWidth}px`;
             }
         });
+    }
+    if (!target) {
+        return;
     }
     // if start and end overlap, we don't want an arrow
     if (overlap(draggable, target)) {

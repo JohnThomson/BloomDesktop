@@ -2798,6 +2798,7 @@ export class BubbleManager {
 
     private adjustTarget(draggable: HTMLElement | undefined) {
         if (!draggable) {
+            // I think this is just to remove the arrow if any.
             adjustTarget(document.firstElementChild as HTMLElement, undefined);
             return;
         }
