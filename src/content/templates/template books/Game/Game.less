@@ -166,6 +166,25 @@
     }
 }
 
+// This might be more specific than it needs to be, but it roughly matches a rule that gives it a border and shadow,
+// and another that gives it an outline, that we don't want in play mode.
+.drag-activity-try-it {
+    .bloom-textOverPicture {
+        .bloom-translationGroup {
+            .bloom-editable.bloom-editable.bloom-editable {
+                // Overrides the inherited values from editMode.less, which are a slightly different shade of blue.
+                border: none;
+                box-shadow: none;
+                outline: none !important;
+                p:after {
+                    // suppress sticking in a paragraph mark when clicked
+                    content:unset;
+                }
+            }
+        }
+    }
+}
+
 // The rule above makes the target in front of the draggable it is the target-of.
 // IIRC, there are good reasons not to give the draggable itself a z-index in edit mode.
 // I think we can live with the target being in front in the other tabs, but

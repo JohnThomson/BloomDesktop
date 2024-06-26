@@ -174,7 +174,7 @@ function playEnded(): void {
         elementsToPlayConsecutivelyStack &&
         elementsToPlayConsecutivelyStack.length > 0
     ) {
-        elementsToPlayConsecutivelyStack.pop(); // get rid of the last one we played
+        const elementJustPlayed = elementsToPlayConsecutivelyStack.pop(); // get rid of the last one we played
         const newStackCount = elementsToPlayConsecutivelyStack.length;
         if (newStackCount > 0) {
             // More items to play
@@ -185,7 +185,7 @@ function playEnded(): void {
         } else {
             // Nothing left to play. Anything we should do?
             //reportPlayEnded();
-            removeAudioCurrent();
+            removeAudioCurrent(elementJustPlayed);
             // In some error conditions, we need to stop repeating attempts to play.
             getPlayer().pause();
         }
@@ -341,7 +341,7 @@ function setHighlightTo({
         return;
     }
 
-    removeAudioCurrent();
+    removeAudioCurrent((oldElement || newElement) as HTMLElement);
 
     if (disableHighlightIfNoAudio) {
         const mediaPlayer = getPlayer();
@@ -376,10 +376,14 @@ function setHighlightTo({
     }
 }
 
-function removeAudioCurrent() {
+function removeAudioCurrent(around: HTMLElement = document.body) {
     // Note that HTMLCollectionOf's length can change if you change the number of elements matching the selector.
+    // For safety we get rid of all existing ones. But we do take a starting point element
+    // (might be the one that has the higlight, or the one getting it)
+    // to make sure we're cleaning up in the right document, which is in question when used in
+    // Bloom Editor.
     const audioCurrentArray = Array.from(
-        document.getElementsByClassName("ui-audioCurrent")
+        around.ownerDocument.getElementsByClassName("ui-audioCurrent")
     );
 
     for (let i = 0; i < audioCurrentArray.length; i++) {

@@ -27,7 +27,9 @@ export function prepareActivity(
 
     slots = [];
     originalPositions = new Map<HTMLElement, { x: number; y: number }>();
-    page.querySelectorAll("[data-bubble-id]").forEach((elt: HTMLElement) => {
+    const draggables = Array.from(page.querySelectorAll("[data-bubble-id]"));
+    const targets: HTMLElement[] = [];
+    draggables.forEach((elt: HTMLElement) => {
         const targetId = elt.getAttribute("data-bubble-id");
         const target = page.querySelector(
             `[data-target-of="${targetId}"]`
@@ -36,11 +38,29 @@ export function prepareActivity(
             const x = target.offsetLeft;
             const y = target.offsetTop;
             slots.push({ x, y });
+            targets.push(target);
         }
         // if it has data-bubble-id, it should be draggable, just not needed
         // for the right answer.
         originalPositions.set(elt, { x: elt.offsetLeft, y: elt.offsetTop });
         elt.addEventListener("pointerdown", startDrag, { capture: true });
+    });
+    const dontPlayWhenClicked = draggables.concat(targets);
+    const otherTextItems = Array.from(
+        page.getElementsByClassName("bloom-visibility-code-on")
+    ).filter(e => {
+        var top = e.closest(".bloom-textOverPicture") as HTMLElement;
+        if (!top) {
+            // unlikely, but if there's something else on the page, may as well play when clicked
+            // if it can.
+            return true;
+        }
+        // draggables play as well as doing more complex things when clicked.
+        // targets don't need to play.
+        return dontPlayWhenClicked.indexOf(top) < 0;
+    });
+    otherTextItems.forEach(e => {
+        e.addEventListener("pointerdown", playAudioOfTarget);
     });
     const checkButtons = Array.from(
         page.getElementsByClassName("check-button")
@@ -94,6 +114,11 @@ export function prepareActivity(
     setupSliderImageEvents(page);
     playInitialElements(page);
 }
+
+const playAudioOfTarget = (e: PointerEvent) => {
+    const target = e.currentTarget as HTMLElement;
+    playAudioOf(target);
+};
 
 function makeWordItems(
     page: HTMLElement,
@@ -178,11 +203,18 @@ function getAudioSentences(editables: HTMLElement[]) {
 function getPlayableDivs(container: HTMLElement) {
     // We want to play any audio we have from divs the user can see.
     // This is a crude test, but currently we always use display:none to hide unwanted languages.
-    return Array.from(
+    const result = Array.from(
         container.getElementsByClassName("bloom-editable")
     ).filter(
         e => window.getComputedStyle(e).display !== "none"
     ) as HTMLElement[];
+    if (
+        container.classList.contains("bloom-editable") &&
+        window.getComputedStyle(container).display !== "none"
+    ) {
+        result.push(container);
+    }
+    return result;
 }
 
 function shuffle<T>(array: T[]): T[] {
@@ -210,6 +242,12 @@ export function undoPrepareActivity(page: HTMLElement) {
     );
     changePageButtons.forEach(b =>
         b.removeEventListener("click", changePageButtonClicked)
+    );
+
+    Array.from(page.getElementsByClassName("bloom-visibility-code-on")).forEach(
+        e => {
+            e.removeEventListener("pointerdown", playAudioOfTarget);
+        }
     );
 
     page.querySelectorAll("[data-bubble-id]").forEach((elt: HTMLElement) => {
@@ -308,7 +346,11 @@ const startDrag = (e: PointerEvent) => {
     target.addEventListener("pointerup", stopDrag);
     // call a function whenever the cursor moves:
     target.addEventListener("pointermove", elementDrag);
-    const possibleElements = getPlayableDivs(target);
+    playAudioOf(target);
+};
+
+const playAudioOf = (element: HTMLElement) => {
+    const possibleElements = getPlayableDivs(element);
     const playables = getAudioSentences(possibleElements);
     playAllAudio(playables);
 };
