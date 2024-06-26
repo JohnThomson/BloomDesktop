@@ -213,7 +213,7 @@ export function undoPrepareActivity(page: HTMLElement) {
     );
 
     page.querySelectorAll("[data-bubble-id]").forEach((elt: HTMLElement) => {
-        elt.removeEventListener("pointerdown", startDrag);
+        elt.removeEventListener("pointerdown", startDrag, { capture: true });
     });
     const checkButtons = Array.from(
         page.getElementsByClassName("check-button")
@@ -225,11 +225,14 @@ export function undoPrepareActivity(page: HTMLElement) {
         page.getElementsByClassName("show-correct-button")
     );
 
-    checkButtons.concat(tryAgainButtons).forEach((elt: HTMLElement) => {
+    checkButtons.forEach((elt: HTMLElement) => {
         elt.removeEventListener("click", performCheck);
     });
     showCorrectButtons.forEach((elt: HTMLElement) => {
         elt.removeEventListener("click", showCorrect);
+    });
+    tryAgainButtons.forEach((elt: HTMLElement) => {
+        elt.removeEventListener("click", performTryAgain);
     });
 
     Array.from(
