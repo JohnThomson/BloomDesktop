@@ -51,6 +51,7 @@ import {
 } from "./DragActivityTabControl";
 import { default as TrashIcon } from "@mui/icons-material/Delete";
 import { BubbleSpec } from "comicaljs";
+import { remove } from "mobx";
 
 export const Tabs: React.FunctionComponent<{
     value: number;
@@ -621,6 +622,16 @@ const getPage = () => {
     return pageBody?.getElementsByClassName("bloom-page")[0] as HTMLElement;
 };
 
+const getTarget = (draggable: HTMLElement): HTMLElement | undefined => {
+    const targetId = draggable.getAttribute("data-bubble-id");
+    if (!targetId) {
+        return undefined;
+    }
+    return getPage()?.querySelector(
+        `[data-target-of="${targetId}"]`
+    ) as HTMLElement;
+};
+
 // like definition of .disabled in toolbox.less"
 // if argument is false returns CSS to make the element look disabled and ignore pointer events.
 const disabledCss = enabled =>
@@ -637,6 +648,8 @@ const DragActivityControls: React.FunctionComponent<{
     const [activityType, setActivityType] = useState("");
     const [allItemsSameSize, setAllItemsSameSize] = useState(true);
     const [showTargetsDuringPlay, setShowTargetsDuringPlay] = useState(true);
+    const [showAnswersInTargets, setShowAnswersInTargets] = useState(false);
+    const observer = React.useRef<MutationObserver | null>(null);
     const [currentBubble, setCurrentBuble] = useState<BubbleSpec | undefined>(
         undefined
     );
@@ -675,6 +688,24 @@ const DragActivityControls: React.FunctionComponent<{
         );
     }, []);
     useEffect(() => {
+        if (
+            showAnswersInTargets &&
+            currentBubbleElement &&
+            currentBubbleTarget
+        ) {
+            if (observer.current) {
+                observer.current.disconnect();
+            }
+            observer.current = new MutationObserver(_ => {
+                copyContentToTarget(currentBubbleElement);
+            });
+            observer.current.observe(currentBubbleElement, {
+                childList: true,
+                subtree: true
+            });
+        }
+    }, [currentBubbleElement, currentBubbleTarget, showAnswersInTargets]);
+    useEffect(() => {
         const getStateFromPage = () => {
             const pageBody = ToolBox.getPage();
             const page = pageBody?.getElementsByClassName(
@@ -694,6 +725,9 @@ const DragActivityControls: React.FunctionComponent<{
             );
             setShowTargetsDuringPlay(
                 page.getAttribute("data-show-targets-during-play") !== "false"
+            );
+            setShowAnswersInTargets(
+                page.getAttribute("data-show-answers-in-targets") === "true"
             );
             theOneLocalizationManager
                 .asyncGetText("EditTab.Toolbox.DragActivity.None", "None", "")
@@ -906,16 +940,6 @@ const DragActivityControls: React.FunctionComponent<{
         );
     };
 
-    const getTarget = (draggable: HTMLElement): HTMLElement | undefined => {
-        const targetId = draggable.getAttribute("data-bubble-id");
-        if (!targetId) {
-            return undefined;
-        }
-        return getPage()?.querySelector(
-            `[data-target-of="${targetId}"]`
-        ) as HTMLElement;
-    };
-
     const toggleIsPartOfRightAnswer = () => {
         if (!currentBubbleTargetId) {
             return;
@@ -952,6 +976,28 @@ const DragActivityControls: React.FunctionComponent<{
                 return;
             }
             adjustTarget(someDraggable, getTarget(someDraggable), true);
+        }
+    };
+
+    const toggleShowAnswersInTargets = () => {
+        const newShowAnswersInTargets = !showAnswersInTargets;
+        setShowAnswersInTargets(newShowAnswersInTargets);
+        const page = getPage();
+        page.setAttribute(
+            "data-show-answers-in-targets",
+            newShowAnswersInTargets ? "true" : "false"
+        );
+        const draggables = Array.from(
+            page.querySelectorAll("[data-bubble-id]")
+        );
+        if (newShowAnswersInTargets) {
+            draggables.forEach(draggable => {
+                copyContentToTarget(draggable as HTMLElement);
+            });
+        } else {
+            draggables.forEach(draggable => {
+                removeContentFromTarget(draggable as HTMLElement);
+            });
         }
     };
 
@@ -1195,6 +1241,22 @@ const DragActivityControls: React.FunctionComponent<{
                                     <img src="images/Is part of right answer.svg"></img>
                                 </div>
                             </BloomTooltip>
+                            <BloomTooltip
+                                id="showAnswersInTargets"
+                                placement="top"
+                                tip={
+                                    <Div l10nKey="EditTab.Toolbox.DragActivity.ShowAnswersInTargets"></Div>
+                                }
+                            >
+                                <div
+                                    css={css`
+                                        ${optionCss(showAnswersInTargets)}
+                                    `}
+                                    onClick={toggleShowAnswersInTargets}
+                                >
+                                    <img src="images/Show answers on targets.svg"></img>
+                                </div>
+                            </BloomTooltip>
                         </div>
                     )}
                 </div>
@@ -1354,7 +1416,7 @@ padding: 6px;
 border-radius: 3px;
 height: 30px;
 width: 30px;
-margin-right: 10px;
+margin-right: 7px;
 img {
     height: 100%;
     width: 100%;
@@ -1688,4 +1750,26 @@ export function setupDragActivityTabControl() {
     // get the correct page alignment) and deletes it before saving the page.
     origamiContainer.appendChild(tabControl);
     setActiveDragActivityTab(getActiveDragActivityTab());
+}
+function copyContentToTarget(draggable: HTMLElement) {
+    const target = getTarget(draggable);
+    if (!target) {
+        return;
+    }
+    target.innerHTML = draggable.innerHTML;
+    // Don't need the bubble controls
+    Array.from(target.getElementsByClassName("bloom-ui")).forEach(e => {
+        e.remove();
+    });
+    // Bloom has integrity checks for duplicate ids, and we don't need them in the duplicate content.
+    Array.from(target.querySelectorAll("[id]")).forEach(e => {
+        e.removeAttribute("id");
+    });
+}
+
+function removeContentFromTarget(draggable: HTMLElement) {
+    const target = getTarget(draggable);
+    if (target) {
+        target.innerHTML = "";
+    }
 }

@@ -9,6 +9,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Web;
+using System.Windows.Markup;
 using System.Xml;
 using System.Xml.Xsl;
 using Amazon;
@@ -1928,7 +1929,8 @@ namespace Bloom.Book
                 "data-correct-sound",
                 "data-wrong-sound",
                 "data-same-size",
-                "data-show-targets-during-play"
+                "data-show-targets-during-play",
+                "data-show-answers-in-targets"
             };
             foreach (var attr in attrsToCopy)
             {

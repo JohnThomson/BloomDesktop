@@ -160,6 +160,10 @@
     // above overlay canvas so we can drag it when the canvas is active
     z-index: @bubbleCanvasZIndex + 1;
     box-sizing: border-box;
+    > * {// targets have children to show a shadow of what is supposed to go there.
+        // the contents are identical, this makes them a shadow.
+        opacity: 50%;
+    }
 }
 
 // The rule above makes the target in front of the draggable it is the target-of.
