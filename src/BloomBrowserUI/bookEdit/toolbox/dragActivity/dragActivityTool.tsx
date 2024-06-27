@@ -686,7 +686,8 @@ const DragActivityControls: React.FunctionComponent<{
             "overlay",
             setCurrentBuble
         );
-    }, []);
+        // Somehow we're losing thes notifcations as we change pages. Doing this a bit more often makes sure we get them.
+    }, [props.pageGeneration]);
     useEffect(() => {
         if (
             showAnswersInTargets &&
@@ -1720,13 +1721,26 @@ export function setActiveDragActivityTab(tab: number) {
     }
 }
 
+export function isPageBloomGame(): boolean {
+    const page = DragActivityTool.getBloomPage();
+    if (!page) {
+        return false; // huh??
+    }
+    return isPageBloomGameInternal(page);
+}
+
+export function isPageBloomGameInternal(page: HTMLElement): boolean {
+    const activityType = page.getAttribute("data-activity") ?? "";
+    return dragActivityTypes.indexOf(activityType) >= 0;
+}
+
 export function setupDragActivityTabControl() {
     const page = DragActivityTool.getBloomPage();
     if (!page) {
         return;
     }
-    const activityType = page.getAttribute("data-activity") ?? "";
-    if (dragActivityTypes.indexOf(activityType) < 0) {
+
+    if (!isPageBloomGameInternal(page)) {
         return;
     }
     const tabControl = page.ownerDocument.createElement("div");
