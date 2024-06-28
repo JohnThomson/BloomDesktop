@@ -1525,45 +1525,80 @@ export class DragActivityTool extends ToolboxToolReactAdaptor {
             this.lastPageId = pageId;
             // useful during development, MAY not need in production.
             bubbleManager.removeDetachedTargets();
-            setTimeout(() => {
-                this.copyInitialText();
-            }, 100);
 
             // Force things to Start tab as we change page.
             // If we decide not to do this, we should probably at least find a way to do it
             // when it's a brand newly-created page.
             setActiveDragActivityTab(0);
         }
+        setTimeout(() => {
+            this.observeElementsWhereBlankMatters();
+        }, 100);
     }
 
-    // Elements marked with bloom-init-L1 are not allowed to be empty. Usually they are initially,
-    // unless L1 is English, so we copy the English content to them. This is a pretty horrid thing
-    // to do, since the block is tagged to indicate that it's another language, but for these kinds
-    // of fields the source bubble, which only shows up on an overlay page when the item is selected,
-    // is not enough hint. We hope the user will edit appropriately.
-    private copyInitialText() {
+    // Set the bloom-blank class iff the element contains nothing that regex recognizes as a non-whitespace character.
+    private setBlankClass(element: HTMLElement) {
+        if (element.textContent?.replace(/\s/g, "") === "") {
+            element.classList.add("bloom-blank");
+        } else {
+            element.classList.remove("bloom-blank");
+        }
+    }
+
+    // mutation observers are tricky. There does not appear to be a simple way of getting from the function
+    // arguments to the object that was observed. Even a simple keystroke seems to produce at least three
+    // mutation records, and some of them have detached targets that have no connection to the editable we
+    // want. (Possibly they are CkEditor bookmarks that were inserted and then removed.)
+    // Documentation on what records to expect for different kinds of mutation is poor.
+    // It's definitely possible that one of them is a CharacterNode that doesn't have closest().
+    // However, every change I've tried has at least one record with a target that is either the
+    // bloom-editable or one of its descendants. So we should find it for at least one of them
+    // by navigating up to an element and then using closest().
+    blankObserver = new MutationObserver(mutations => {
+        for (let i = 0; i < mutations.length; i++) {
+            let editable: Node | null = mutations[i].target;
+            while (editable && editable.nodeType !== Node.ELEMENT_NODE)
+                editable = editable.parentNode;
+            if (!editable) continue; // we actually seem to get some disconnected nodes, I don't know why
+            editable = (editable as HTMLElement).closest(".bloom-editable");
+            if (editable) {
+                this.setBlankClass(editable as HTMLElement);
+                return;
+            }
+        }
+    });
+
+    // Elements marked with bloom-show-en-when-blank should not look empty. Usually they are initially,
+    // unless L1 is English, so we have style rules to show the English as a dim overlay
+    // if the bloom-content1 is empty. Unfortunately we can't use :empty because the bloom-editable
+    // usually contains at least an empty <p>. We want the new :blank selector, but it's not
+    // implemented yet. So we use a mutation observer to add the class .bloom-blank to elements
+    // that have this class on their parent and are bloom-content1, and write rules using that.
+    // This is a bit ugly, but way better than the previous approach of copying English text into
+    // an element marked as being in another language. Apart from the ugliness of that, we couldn't
+    // dim it or make it go away as soon as something is typed.
+    private observeElementsWhereBlankMatters() {
         const page = DragActivityTool.getBloomPage();
         if (!page) {
             return;
         }
-        const groupsToInit = page.getElementsByClassName("bloom-init-L1");
+        const groupsToInit = page.getElementsByClassName(
+            "bloom-show-en-when-blank"
+        );
         for (let i = 0; i < groupsToInit.length; i++) {
             const group = groupsToInit[i] as HTMLElement;
             const l1editable = group.getElementsByClassName(
                 "bloom-content1"
             )[0];
-            if (
-                !l1editable ||
-                l1editable.textContent?.replace(/\s/g, "") !== ""
-            ) {
+            if (!l1editable) {
                 continue;
             }
-            const enContent = Array.from(
-                group.getElementsByClassName("bloom-editable")
-            ).find(e => e.getAttribute("lang") === "en");
-            if (enContent) {
-                l1editable.innerHTML = enContent.innerHTML;
-            }
+            this.blankObserver.observe(l1editable, {
+                childList: true,
+                subtree: true,
+                characterData: true
+            });
+            this.setBlankClass(l1editable as HTMLElement);
         }
     }
 
