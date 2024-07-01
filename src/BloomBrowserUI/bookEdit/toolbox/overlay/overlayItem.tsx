@@ -187,20 +187,25 @@ const ondragend = (
         }
         if (draggable) {
             //setTimeout(() => {
-            let id = Math.random()
-                .toString(36)
-                .substring(2, 9);
-            while (document.querySelector(`[data-bubble-id="${id}"]`)) {
-                id = Math.random()
-                    .toString(36)
-                    .substring(2, 9);
-            }
-            bubble.setAttribute("data-bubble-id", id);
+            setGeneratedBubbleId(bubble);
             bubble.style.width = ev.currentTarget.clientWidth + "px";
             makeTargetForBubble(bubble);
             // }, 1000);
         }
     }
+};
+
+export const setGeneratedBubbleId = (bubble: HTMLElement): string => {
+    let id = Math.random()
+        .toString(36)
+        .substring(2, 9);
+    while (bubble.ownerDocument.querySelector(`[data-bubble-id="${id}"]`)) {
+        id = Math.random()
+            .toString(36)
+            .substring(2, 9);
+    }
+    bubble.setAttribute("data-bubble-id", id);
+    return id;
 };
 
 export const makeTargetForBubble = (bubble: HTMLElement): HTMLElement => {

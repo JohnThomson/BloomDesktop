@@ -60,6 +60,17 @@ export const deleteBubble = () => {
     }
 };
 
+export const duplicateBubble = () => {
+    const bubbleManager = OverlayTool.bubbleManager();
+    if (bubbleManager) {
+        const active = bubbleManager.getActiveElement();
+        if (active) {
+            return bubbleManager.duplicateTOPBox(active);
+        }
+    }
+    return undefined;
+};
+
 const OverlayToolControls: React.FunctionComponent = () => {
     const l10nPrefix = "ColorPicker.";
     type BubbleType = "text" | "image" | "video" | undefined;
@@ -431,16 +442,6 @@ const OverlayToolControls: React.FunctionComponent = () => {
                 ev.screenY,
                 style
             );
-        }
-    };
-
-    const duplicateBubble = () => {
-        const bubbleManager = OverlayTool.bubbleManager();
-        if (bubbleManager) {
-            const active = bubbleManager.getActiveElement();
-            if (active) {
-                bubbleManager.duplicateTOPBox(active);
-            }
         }
     };
 

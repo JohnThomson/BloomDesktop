@@ -2835,7 +2835,7 @@ export class BubbleManager {
     }
 
     // We verify that 'textElement' is the active element before calling this method.
-    public duplicateTOPBox(textElement: HTMLElement) {
+    public duplicateTOPBox(textElement: HTMLElement): HTMLElement | undefined {
         // simple guard
         if (!textElement || !textElement.parentElement) {
             return;
@@ -2862,8 +2862,12 @@ export class BubbleManager {
                 return;
             }
 
-            this.duplicateBubbleFamily(patriarchBubble, bubbleSpecToDuplicate);
+            return this.duplicateBubbleFamily(
+                patriarchBubble,
+                bubbleSpecToDuplicate
+            );
         }
+        return undefined;
     }
 
     // Should duplicate all bubbles and their size and relative placement and color, etc.,

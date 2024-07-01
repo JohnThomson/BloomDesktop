@@ -25,9 +25,14 @@ import {
     OverlayTextItem,
     OverlayVideoItem,
     OverlayWrongImageItem,
-    makeTargetForBubble
+    makeTargetForBubble,
+    setGeneratedBubbleId
 } from "../overlay/overlayItem";
-import { OverlayTool, deleteBubble } from "../overlay/overlayTool";
+import {
+    OverlayTool,
+    deleteBubble,
+    duplicateBubble
+} from "../overlay/overlayTool";
 import { ToolBox } from "../toolbox";
 import {
     classSetter,
@@ -52,6 +57,7 @@ import {
 import { default as TrashIcon } from "@mui/icons-material/Delete";
 import { BubbleSpec } from "comicaljs";
 import { remove } from "mobx";
+import { setPlayerUrlPrefixFromWindowLocationHref } from "./dragActivityNarration";
 
 export const Tabs: React.FunctionComponent<{
     value: number;
@@ -655,6 +661,10 @@ const DragActivityControls: React.FunctionComponent<{
     );
     const noneSound = useL10n("None", "EditTab.Toolbox.DragActivity.None", "");
     const deleteTooltip = useL10n("Delete", "Common.Delete");
+    const duplicateTooltip = useL10n(
+        "Duplicate",
+        "EditTab.Toolbox.ComicTool.Options.Duplicate"
+    );
     const chooseSound = useL10n(
         "Choose...",
         "EditTab.Toolbox.DragActivity.ChooseSound",
@@ -1390,7 +1400,12 @@ const DragActivityControls: React.FunctionComponent<{
                 </div>
             )}
             {props.activeTab !== 3 && (
-                <div>
+                <div
+                    css={css`
+                        display: flex;
+                        justify-content: space-between;
+                    `}
+                >
                     <div
                         title={deleteTooltip}
                         css={css`
@@ -1404,10 +1419,58 @@ const DragActivityControls: React.FunctionComponent<{
                             onClick={() => deleteBubble()}
                         />
                     </div>
+                    <div
+                        title={duplicateTooltip}
+                        css={css`
+                            margin: 10px;
+                            ${disabledCss(currentBubble)};
+                        `}
+                    >
+                        <img
+                            className="duplicate-bubble-icon"
+                            src="/bloom/bookEdit/toolbox/overlay/duplicate-bubble.svg"
+                            onClick={() => duplicateDragBubble()}
+                        />
+                    </div>
                 </div>
             )}
         </ThemeProvider>
     );
+};
+
+const duplicateDragBubble = () => {
+    const old = OverlayTool.bubbleManager()?.getActiveElement();
+    const duplicate = duplicateBubble();
+    if (!duplicate || !old) {
+        // can't be duplicate without an old, but make TS happy
+        return;
+    }
+    const oldTarget = getTarget(old);
+    if (old.getAttribute("data-bubble-id")) {
+        const oldAttributes = old.attributes;
+        for (let i = 0; i < oldAttributes.length; i++) {
+            const attr = oldAttributes[i];
+            if (attr.name !== "style") {
+                duplicate.setAttribute(attr.name, attr.value);
+            }
+        }
+        setGeneratedBubbleId(duplicate);
+        // I don't think we need this trick for a newly-made bubble, and it won't work right without attaching
+        // the mutation observer.
+        Array.from(
+            duplicate.getElementsByClassName("bloom-show-en-when-blank")
+        ).forEach(e => e.classList.remove("bloom-show-en-when-blank"));
+
+        if (oldTarget) {
+            // Review: can we do anything smart about where to put it?
+            // The same offset from duplicate as oldTarget has from old MIGHT be somewhat helpful,
+            // though probably not right (e.g., if targets are in a row), and possibly off-the page.
+            // We could try to detect that targets are in a row...but they may not be, and where in
+            // the row does the new one belong? I think just leaving it in a position we've already
+            // tried to make at least safe is the best we can do.
+            makeTargetForBubble(duplicate);
+        }
+    }
 };
 
 const optionCss = turnedOn => `background-color: ${
@@ -1512,6 +1575,10 @@ export class DragActivityTool extends ToolboxToolReactAdaptor {
             window.setTimeout(() => this.newPageReady(), 100);
             return;
         }
+
+        setPlayerUrlPrefixFromWindowLocationHref(
+            page.ownerDocument.defaultView!.location.href
+        );
 
         const pageId = page.getAttribute("id") ?? "";
         if (pageId === this.lastPageId) {

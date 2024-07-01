@@ -249,22 +249,30 @@ function currentAudioUrl(id: string): string {
 }
 
 let playerUrlPrefix = "";
-// In bloom player, figuring the url prefix is more complicated. We pass it in.
-// In Bloom desktop, we don't call this at all. The code that would naturally do it
-// is in the wrong iframe and it's a pain to get it to the right one.
-// But there, the urlPrevix function works fine.
+// In bloom player, figuring the url prefix (to put before file JS needs to locate, like
+// sounds to play) is complicated. We pass it in.
+// In Bloom desktop, it's almost more tricky. If we're executing in the page iframe, we can
+// easily derive it from the page's URL. But if we're executing in the toolbox, that doesn't work.
+// So we arrange for newPageReady, called at least as often as changing book, to set it up
+// using setPlayerUrlPrefixFromWindowLocationHref
 export function setPlayerUrlPrefix(prefix: string) {
     playerUrlPrefix = prefix;
+}
+
+export function setPlayerUrlPrefixFromWindowLocationHref(bookSrc: string) {
+    setPlayerUrlPrefix(getUrlPrefixFromWindowHref(bookSrc));
+}
+
+function getUrlPrefixFromWindowHref(bookSrc: string) {
+    const index = bookSrc.lastIndexOf("/");
+    return bookSrc.substring(0, index);
 }
 
 export function urlPrefix(): string {
     if (playerUrlPrefix) {
         return playerUrlPrefix;
     }
-    const bookSrc = window.location.href;
-    const index = bookSrc.lastIndexOf("/");
-    const bookFolderUrl = bookSrc.substring(0, index);
-    return bookFolderUrl;
+    return getUrlPrefixFromWindowHref(window.location.href);
 }
 
 function getFirstAudioSentenceWithinElement(
