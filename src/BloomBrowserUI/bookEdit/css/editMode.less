@@ -250,7 +250,7 @@ body:not(.origami-drag) .bloom-imageContainer.hoverUp {
 .imageButton {
     width: 87px;
     height: 52px;
-    z-index: @imageEditingButtonZIndex;
+    z-index: @dragHandleEventZIndex;
     position: absolute;
     background-repeat: no-repeat;
     background-size: contain;
@@ -1272,4 +1272,123 @@ body :has(.bloom-page:focus-within, .bloom-page:hover) {
     left: 0;
     pointer-events: none; // We can click right through it to the bloom-content1
     opacity: 40%; // dim a bit to make it look like a prompt.
+}
+
+@resizeHandleRadius: 8px;
+@cropHandleRadius: 4px;
+@cropHandleCenter: 6px;
+@moveHandleWidth: 5px;
+// overlay controls
+#comical-control-frame {
+    position: absolute;
+    z-index: @dragHandleEventZIndex + 1;
+    outline: 1px solid @bloom-blue;
+    box-sizing: border-box;
+    pointer-events: none;
+
+    .bloom-ui-comical-resize-handle {
+        position: absolute;
+        width: @resizeHandleRadius * 2;
+        height: @resizeHandleRadius * 2;
+        border-radius: 50%;
+        background-color: @bloom-blue;
+        border: @resizeHandleRadius solid @bloom-blue;
+        box-sizing: border-box;
+        pointer-events: all;
+        //z-index: @canvasZIndex + 2;
+    }
+    .bloom-ui-comical-resize-handle-nw {
+        top: -@resizeHandleRadius;
+        left: -@resizeHandleRadius;
+        cursor: nw-resize;
+    }
+    .bloom-ui-comical-resize-handle-ne {
+        top: -@resizeHandleRadius;
+        right: -@resizeHandleRadius;
+        cursor: ne-resize;
+    }
+    .bloom-ui-comical-resize-handle-sw {
+        bottom: -@resizeHandleRadius;
+        left: -@resizeHandleRadius;
+        cursor: sw-resize;
+    }
+    .bloom-ui-comical-resize-handle-se {
+        bottom: -@resizeHandleRadius;
+        right: -@resizeHandleRadius;
+        cursor: se-resize;
+    }
+
+    .bloom-ui-comical-move-handle {
+        position: absolute;
+        width: @moveHandleWidth;
+        height: @moveHandleWidth;
+        box-sizing: border-box;
+        pointer-events: all;
+        cursor: move;
+        //z-index: @canvasZIndex + 2;
+    }
+    .bloom-ui-comical-move-handle-n {
+        top: 0;
+        left: @resizeHandleRadius;
+        width: calc(100% - @resizeHandleRadius * 2);
+        border-top: 1px solid @bloom-blue;
+    }
+    .bloom-ui-comical-move-handle-e {
+        top: @resizeHandleRadius;
+        right: 0;
+        height: calc(100% - @resizeHandleRadius * 2);
+        border-right: 1px solid @bloom-blue;
+    }
+    .bloom-ui-comical-move-handle-s {
+        bottom: 0;
+        left: @resizeHandleRadius;
+        width: calc(100% - @resizeHandleRadius * 2);
+        border-bottom: 1px solid @bloom-blue;
+    }
+    .bloom-ui-comical-move-handle-w {
+        top: @resizeHandleRadius;
+        left: 0;
+        height: calc(100% - @resizeHandleRadius * 2);
+        border-left: 1px solid @bloom-blue;
+    }
+
+    .bloom-ui-comical-crop-handle {
+        position: absolute;
+        width: @cropHandleRadius * 2;
+        height: @cropHandleRadius * 2;
+        border-radius: @cropHandleRadius;
+        background-color: @bloom-blue;
+        border: @cropHandleRadius solid @bloom-blue;
+        box-sizing: border-box;
+        display: none;
+        //z-index: @canvasZIndex + 2;
+    }
+    &.has-image .bloom-ui-comical-crop-handle {
+        display: block;
+    }
+
+    .bloom-ui-comical-crop-handle-n {
+        top: -@cropHandleRadius;
+        left: calc(50% - @cropHandleRadius - @cropHandleCenter);
+        width: @cropHandleCenter * 2 + @cropHandleRadius * 2;
+        cursor: n-resize;
+    }
+    .bloom-ui-comical-crop-handle-e {
+        top: calc(50% - @cropHandleRadius - @cropHandleCenter);
+        right: -@cropHandleRadius;
+        height: @cropHandleCenter * 2 + @cropHandleRadius * 2;
+        cursor: e-resize;
+    }
+    .bloom-ui-comical-crop-handle-s {
+        bottom: -@cropHandleRadius;
+        left: calc(50% - @cropHandleRadius - @cropHandleCenter);
+        width: @cropHandleCenter * 2 + @cropHandleRadius * 2;
+        cursor: s-resize;
+    }
+    .bloom-ui-comical-crop-handle-w {
+        top: calc(50% - @cropHandleRadius - @cropHandleCenter);
+        left: -@cropHandleRadius;
+        height: @cropHandleCenter * 2 + @cropHandleRadius * 2;
+        cursor: w-resize;
+    }
 }

@@ -585,6 +585,11 @@ export class BubbleManager {
                 this.setMouseDragHandlers(container);
             }
         );
+        Array.from(
+            document.getElementsByClassName(kTextOverPictureClass)
+        ).forEach((element: HTMLElement) => {
+            element.addEventListener("focusout", this.bubbleLosingFocus);
+        });
 
         // The container's onmousemove handler isn't capable of reliably detecting in all cases
         // when it goes out of bounds, because the mouse is no longer over the container.
@@ -598,6 +603,12 @@ export class BubbleManager {
             }
         );
     }
+    // declare this strange way so it has the right 'this' when added as event listener.
+    private bubbleLosingFocus = () => {
+        // removing focus from a text bubble means the next click on it could drag it.
+        console.log("bubble losing focus");
+        this.theBubbleWeAreTextEditing = undefined;
+    };
 
     // This is not a great place to make this available to the world.
     // But GetSettings only works in the page Iframe, and the bubble manager
@@ -959,7 +970,198 @@ export class BubbleManager {
         Comical.activateElement(this.activeElement);
         this.adjustTarget(this.activeElement);
         this.showCorrespondingTextBox(this.activeElement);
+        this.setupDragging(this.activeElement);
     }
+    private startResizeDragX: number;
+    private startResizeDragY: number;
+    private resizeDragCorner: "ne" | "nw" | "se" | "sw" | undefined;
+    private gotAMoveWhileMouseDown: boolean = false;
+
+    setupDragging(activeElement: HTMLElement | undefined) {
+        let controlFrame = document.getElementById("comical-control-frame");
+        if (!activeElement) {
+            if (controlFrame) {
+                controlFrame.remove();
+            }
+            return;
+        }
+
+        if (!controlFrame) {
+            controlFrame = activeElement.ownerDocument.createElement("div");
+            controlFrame.setAttribute("id", "comical-control-frame");
+            controlFrame.classList.add("bloom-ui"); // makes sure it gets cleaned up.
+            // controlFrame.style.position = "absolute";
+
+            //controlFrame.style.zIndex = "1000";
+            activeElement.parentElement?.appendChild(controlFrame);
+            const corners = ["ne", "nw", "se", "sw"];
+            corners.forEach(corner => {
+                const control = activeElement.ownerDocument.createElement(
+                    "div"
+                );
+                control.classList.add("bloom-ui-comical-resize-handle");
+                control.classList.add(
+                    "bloom-ui-comical-resize-handle-" + corner
+                );
+                controlFrame?.appendChild(control);
+                control.addEventListener("mousedown", event => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    this.startResizeDragX = event.clientX;
+                    this.startResizeDragY = event.clientY;
+                    this.resizeDragCorner = corner as "ne" | "nw" | "se" | "sw";
+                });
+
+                control.addEventListener("mousemove", event => {
+                    if (event.buttons !== 1 || !this.activeElement) {
+                        this.resizeDragCorner = undefined; // drag is over
+                        return;
+                    }
+
+                    if (this.resizeDragCorner) {
+                        const deltaX = event.clientX - this.startResizeDragX;
+                        const deltaY = event.clientY - this.startResizeDragY;
+                        this.startResizeDragX = event.clientX;
+                        this.startResizeDragY = event.clientY;
+                        const style = this.activeElement.style;
+                        //this.startResizeRect = this.activeElement.getBoundingClientRect();
+                        if (this.resizeDragCorner === "ne") {
+                            style.width =
+                                BubbleManager.pxToNumber(style.width) +
+                                deltaX +
+                                "px";
+                            style.height =
+                                BubbleManager.pxToNumber(style.height) -
+                                deltaY +
+                                "px";
+                            style.top =
+                                BubbleManager.pxToNumber(style.top) +
+                                deltaY +
+                                "px";
+                        } else if (this.resizeDragCorner === "nw") {
+                            style.width =
+                                BubbleManager.pxToNumber(style.width) -
+                                deltaX +
+                                "px";
+                            style.height =
+                                BubbleManager.pxToNumber(style.height) -
+                                deltaY +
+                                "px";
+                            style.top =
+                                BubbleManager.pxToNumber(style.top) +
+                                deltaY +
+                                "px";
+                            style.left =
+                                BubbleManager.pxToNumber(style.left) +
+                                deltaX +
+                                "px";
+                        } else if (this.resizeDragCorner === "se") {
+                            style.width =
+                                BubbleManager.pxToNumber(style.width) +
+                                deltaX +
+                                "px";
+                            style.height =
+                                BubbleManager.pxToNumber(style.height) +
+                                deltaY +
+                                "px";
+                        } else if (this.resizeDragCorner === "sw") {
+                            style.width =
+                                BubbleManager.pxToNumber(style.width) -
+                                deltaX +
+                                "px";
+                            style.height =
+                                BubbleManager.pxToNumber(style.height) +
+                                deltaY +
+                                "px";
+                            style.left =
+                                BubbleManager.pxToNumber(style.left) +
+                                deltaX +
+                                "px";
+                        }
+                        this.moveControlFrame();
+                    }
+                });
+            });
+            const sides = ["n", "s", "e", "w"];
+            sides.forEach(side => {
+                const cropControl = activeElement.ownerDocument.createElement(
+                    "div"
+                );
+                cropControl.classList.add("bloom-ui-comical-crop-handle");
+                cropControl.classList.add(
+                    "bloom-ui-comical-crop-handle-" + side
+                );
+                controlFrame?.appendChild(cropControl);
+            });
+
+            // controlFrame.addEventListener("mousedown", event => {
+            //     //     const currentFrame = document.getElementById("comical-control-frame");
+            //     //     if (currentFrame) {
+            //     //     if (currentFrame.style.top === this.activeElement?.style.top
+            //     //         && currentFrame.style.left === this.activeElement.style.left
+            //     //         && currentFrame.classList.contains("enable-text-mousing")) {
+            //     //         return;
+            //     //     }
+            //     // }
+            //     this.moveStarted = false; // mouse has not moved during this mouse activity.
+            //     this.startResizeDragX = event.clientX;
+            //     this.startResizeDragY = event.clientY;
+            // });
+            // controlFrame.addEventListener("mousemove", event => {
+            //     if (
+            //         event.buttons !== 1 ||
+            //         !this.activeElement ||
+            //         controlFrame?.classList.contains("enable-text-mousing")
+            //     ) {
+            //         return;
+            //     }
+            //     this.moveStarted = true;
+            //     event.preventDefault();
+            //     event.stopPropagation();
+            //     const deltaX = event.clientX - this.startResizeDragX;
+            //     const deltaY = event.clientY - this.startResizeDragY;
+            //     this.startResizeDragX = event.clientX;
+            //     this.startResizeDragY = event.clientY;
+            //     console.log(
+            //         "mousemove " +
+            //             this.startResizeDragX +
+            //             " " +
+            //             this.startResizeDragY
+            //     );
+            //     const style = this.activeElement.style;
+            //     style.top = BubbleManager.pxToNumber(style.top) + deltaY + "px";
+            //     style.left =
+            //         BubbleManager.pxToNumber(style.left) + deltaX + "px";
+            //     this.moveControlFrame();
+            // });
+            // controlFrame.addEventListener("mouseup", event => {
+            //     if (this.moveStarted) {
+            //         event.preventDefault();
+            //         event.stopPropagation();
+            //         controlFrame?.classList.add("enable-text-mousing");
+            //     }
+            // });
+        }
+        if (
+            activeElement?.getElementsByClassName("bloom-imageContainer")
+                ?.length > 0
+        ) {
+            controlFrame.classList.add("has-image");
+        } else {
+            controlFrame.classList.remove("has-image");
+        }
+        this.moveControlFrame();
+    }
+
+    private moveControlFrame = () => {
+        const controlFrame = document.getElementById("comical-control-frame");
+        if (controlFrame && this.activeElement) {
+            controlFrame.style.width = this.activeElement.style.width;
+            controlFrame.style.height = this.activeElement.style.height;
+            controlFrame.style.left = this.activeElement.style.left;
+            controlFrame.style.top = this.activeElement.style.top;
+        }
+    };
 
     public doNotifyChange() {
         const spec = this.getSelectedFamilySpec();
@@ -1371,6 +1573,7 @@ export class BubbleManager {
             );
             this.placeElementAtPosition($(bubble), container, moveTo);
         }
+        this.moveControlFrame();
     }
 
     // MUST be defined this way, rather than as a member function, so that it can
@@ -1381,6 +1584,7 @@ export class BubbleManager {
         if (this.isMouseEventAlreadyHandled(event)) {
             return;
         }
+        this.gotAMoveWhileMouseDown = false;
 
         // These coordinates need to be relative to the canvas (which is the same as relative to the image container).
         const coordinates = this.getPointRelativeToCanvas(event, container);
@@ -1426,12 +1630,14 @@ export class BubbleManager {
                 // pointer events, we should not be manipulating it here either.
                 return;
             }
-            // We clicked on a bubble, and either ctrl or alt is down, or we clicked outside the
+            // TODO: fixWe clicked on a bubble, and either ctrl or alt is down, or we clicked outside the
             // editable part. If we're outside the editable but inside the bubble, we don't need any default event processing,
             // and if we're inside and ctrl or alt is down, we want to prevent the events being
             // processed by the text.
-            event.preventDefault();
-            event.stopPropagation();
+            if (event.altKey || event.ctrlKey) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
             this.focusFirstVisibleFocusable(bubble.content);
             const positionInfo = bubble.content.getBoundingClientRect();
 
@@ -1500,6 +1706,9 @@ export class BubbleManager {
         // Capture the most recent data to use when our animation frame request is satisfied.
         // or so keyboard events can reference the current mouse position.
         this.lastMoveEvent = event;
+        if (event.buttons === 1 && (event.movementX || event.movementY)) {
+            this.gotAMoveWhileMouseDown = true;
+        }
 
         const container = event.currentTarget as HTMLElement;
         // Prevent two event handlers from triggering if the text box is currently being resized
@@ -1847,6 +2056,18 @@ export class BubbleManager {
     // be passed directly to addEventListener and still get the correct 'this'.
     private onMouseUp = (event: MouseEvent) => {
         const container = event.currentTarget as HTMLElement;
+        if (
+            !this.gotAMoveWhileMouseDown &&
+            (event.target as HTMLElement)?.closest(".bloom-editable")
+        ) {
+            this.theBubbleWeAreTextEditing = (event.target as HTMLElement)?.closest(
+                kTextOverPictureSelector
+            ) as HTMLElement;
+            console.log(
+                "setting bubble to edit",
+                this.theBubbleWeAreTextEditing.innerText
+            );
+        }
         if (this.bubbleToDrag || this.bubbleToResize) {
             // if we're doing a resize or drag, we don't want ordinary mouseup activity
             // on the text inside the bubble.
@@ -1884,6 +2105,7 @@ export class BubbleManager {
         );
     }
 
+    private theBubbleWeAreTextEditing: HTMLElement | undefined;
     /**
      * Returns true if a handler already exists to sufficiently process this mouse event
      * without needing our custom onMouseDown/onMouseHover/etc event handlers to process it
@@ -1920,6 +2142,10 @@ export class BubbleManager {
             // Ignore clicks on the image overlay buttons. The button's handler should process that instead.
             return true;
         }
+        if (targetElement.closest("#comical-control-frame")) {
+            // New drag controls
+            return true;
+        }
         if (targetElement.closest("[data-target-of")) {
             // Bloom game targets want to handle their own dragging.
             return true;
@@ -1931,8 +2157,14 @@ export class BubbleManager {
             // want playback-related behavior in video containers
             return true;
         }
-        const isInsideEditable = !!targetElement.closest(".bloom-editable");
-        return isInsideEditable;
+        const editable = targetElement.closest(".bloom-editable");
+        if (editable && this.theBubbleWeAreTextEditing) {
+            // an editable is allowed to handle its own events only if it's parent bubble has
+            // been established as active for text editing. Otherwise, we handle it as a move.
+            console.log("testing bubble, we have one we are text editing.");
+            return this.theBubbleWeAreTextEditing.contains(editable);
+        }
+        return false;
     }
 
     // Gets the coordinates of the specified event relative to the canvas element.
@@ -3431,96 +3663,93 @@ export class BubbleManager {
     // Make any added BubbleManager textboxes draggable, clickable, and resizable.
     // Called by bloomEditing.ts.
     public makeOverPictureElementsDraggableClickableAndResizable() {
-        // get all textOverPicture elements
-        const textOverPictureElems = $("body").find(kTextOverPictureSelector);
-        if (textOverPictureElems.length === 0) {
-            return; // if there aren't any, quit before we hurt ourselves!
-        }
-        const scale = EditableDivUtils.getPageScale();
+        return; // what follows is the old code. Keeping for now as parts may get reused
 
-        textOverPictureElems.resizable({
-            handles: "all",
-            // ENHANCE: Maybe we should add a containment option here?
-            //   If we don't let you drag one of these outside the image container, maybe we shouldn't let you resize one outside either
-            // resize: (event, ui) => {
-            //     ENHANCE: Workaround for the following bug
-            //       If the text over picture element is at minimum height, and then you use the top (North) edge to resize DOWN (that is, making it smaller)
-            //       the element will be DRAGGED down a little ways. (It seems to be dragged down until the top edge reaches the original bottom edge position).
-            //       I managed to confirm that this is registering as a RESIZE event, not the Bloom mousemove ("drag") event or the JQuery DRAG event
-            //       Oddly enough, this does not occur on the bottom edge. (FYI, the bottom edge defaults to on if you don't explicitly set "handles", but the top edge doesn't).
-            // },
-            stop: (event, ui) => {
-                const target = event.target as Element;
-                if (target) {
-                    // Resizing also changes size and position to pixels. Change it back to percentage.
+        // const scale = EditableDivUtils.getPageScale();
 
-                    BubbleManager.convertTextboxPositionToAbsolute(target);
+        // textOverPictureElems.resizable({
+        //     handles: "all",
+        //     // ENHANCE: Maybe we should add a containment option here?
+        //     //   If we don't let you drag one of these outside the image container, maybe we shouldn't let you resize one outside either
+        //     // resize: (event, ui) => {
+        //     //     ENHANCE: Workaround for the following bug
+        //     //       If the text over picture element is at minimum height, and then you use the top (North) edge to resize DOWN (that is, making it smaller)
+        //     //       the element will be DRAGGED down a little ways. (It seems to be dragged down until the top edge reaches the original bottom edge position).
+        //     //       I managed to confirm that this is registering as a RESIZE event, not the Bloom mousemove ("drag") event or the JQuery DRAG event
+        //     //       Oddly enough, this does not occur on the bottom edge. (FYI, the bottom edge defaults to on if you don't explicitly set "handles", but the top edge doesn't).
+        //     // },
+        //     stop: (event, ui) => {
+        //         const target = event.target as Element;
+        //         if (target) {
+        //             // Resizing also changes size and position to pixels. Change it back to percentage.
 
-                    // There was a problem where resizing a box messed up its draggable containment,
-                    // so now after we resize we go back through making it draggable and clickable again.
-                    this.makeOverPictureElementsDraggableAndClickable(
-                        $(target)
-                    );
+        //             BubbleManager.convertTextboxPositionToAbsolute(target);
 
-                    // Clear the custom class used to indicate that a resize action may have been started
-                    BubbleManager.clearResizingClass(target);
-                }
-            },
-            resize: (event, ui) => {
-                const target = event.target as HTMLElement;
-                if (target) {
-                    // If the user changed the height, prevent automatic shrinking.
-                    // If only the width changed, this is the case where we want it.
-                    // This needs to happen during the drag so that the right automatic
-                    // behavior happens during it.
-                    if (ui.originalSize.height !== ui.size.height) {
-                        target.classList.remove("bloom-allowAutoShrink");
-                    } else {
-                        target.classList.add("bloom-allowAutoShrink");
-                    }
-                    this.adjustResizingForScale(ui, scale);
-                    this.adjustTarget(target);
-                }
-            }
-        });
+        //             // There was a problem where resizing a box messed up its draggable containment,
+        //             // so now after we resize we go back through making it draggable and clickable again.
+        //             this.makeOverPictureElementsDraggableAndClickable(
+        //                 $(target)
+        //             );
 
-        // Normally JQuery adds the class "ui-resizable-resizing" to a Resizable when it is resizing,
-        // but this does not occur until the BUBBLE (normal) phase when the mouse is first MOVED (not when it is first clicked).
-        // This means that any children's onmousemove functions will fire first, before the handle.
-        // That means that children may incorrectly perceive no resize as happening, when there is in fact a resize going on.
-        // So, we set a custom indicator on it during the mousedown event, before the mousemove starts happening.
-        for (let i = 0; i < textOverPictureElems.length; ++i) {
-            const textOverPicElement = textOverPictureElems[i];
-            const handles = textOverPicElement.getElementsByClassName(
-                "ui-resizable-handle"
-            );
-            for (let i = 0; i < handles.length; ++i) {
-                const handle = handles[i];
+        //             // Clear the custom class used to indicate that a resize action may have been started
+        //             BubbleManager.clearResizingClass(target);
+        //         }
+        //     },
+        //     resize: (event, ui) => {
+        //         const target = event.target as HTMLElement;
+        //         if (target) {
+        //             // If the user changed the height, prevent automatic shrinking.
+        //             // If only the width changed, this is the case where we want it.
+        //             // This needs to happen during the drag so that the right automatic
+        //             // behavior happens during it.
+        //             if (ui.originalSize.height !== ui.size.height) {
+        //                 target.classList.remove("bloom-allowAutoShrink");
+        //             } else {
+        //                 target.classList.add("bloom-allowAutoShrink");
+        //             }
+        //             this.adjustResizingForScale(ui, scale);
+        //             this.adjustTarget(target);
+        //         }
+        //     }
+        // });
 
-                // Add a class that indicates these elements are only needed for the UI and aren't needed to be saved in the book's HTML
-                handle.classList.add("bloom-ui");
+        // // Normally JQuery adds the class "ui-resizable-resizing" to a Resizable when it is resizing,
+        // // but this does not occur until the BUBBLE (normal) phase when the mouse is first MOVED (not when it is first clicked).
+        // // This means that any children's onmousemove functions will fire first, before the handle.
+        // // That means that children may incorrectly perceive no resize as happening, when there is in fact a resize going on.
+        // // So, we set a custom indicator on it during the mousedown event, before the mousemove starts happening.
+        // for (let i = 0; i < textOverPictureElems.length; ++i) {
+        //     const textOverPicElement = textOverPictureElems[i];
+        //     const handles = textOverPicElement.getElementsByClassName(
+        //         "ui-resizable-handle"
+        //     );
+        //     for (let i = 0; i < handles.length; ++i) {
+        //         const handle = handles[i];
 
-                if (handle instanceof HTMLElement) {
-                    // Overwrite the default zIndex of 90 provided in the inline styles of modified_libraries\jquery-ui\jquery-ui-1.10.3.custom.min.js
-                    handle.style.zIndex = "1003"; // Should equal @resizeHandleEventZIndex
-                }
+        //         // Add a class that indicates these elements are only needed for the UI and aren't needed to be saved in the book's HTML
+        //         handle.classList.add("bloom-ui");
 
-                handle.addEventListener(
-                    "mousedown",
-                    BubbleManager.addResizingClassHandler
-                );
+        //         if (handle instanceof HTMLElement) {
+        //             // Overwrite the default zIndex of 90 provided in the inline styles of modified_libraries\jquery-ui\jquery-ui-1.10.3.custom.min.js
+        //             handle.style.zIndex = "1003"; // Should equal @resizeHandleEventZIndex
+        //         }
 
-                // Even though we clear it in the JQuery Resize Stop handler, we also need one here
-                // because if the mouse is depressed and then released (without moving), we do want this class applied temporarily
-                // but we also need to make sure it gets cleaned up, even though no formal Resize Start/Stop events occurred.
-                handle.addEventListener(
-                    "mouseup",
-                    BubbleManager.clearResizingClassHandler
-                );
-            }
-        }
+        //         handle.addEventListener(
+        //             "mousedown",
+        //             BubbleManager.addResizingClassHandler
+        //         );
 
-        this.makeOverPictureElementsDraggableAndClickable(textOverPictureElems);
+        //         // Even though we clear it in the JQuery Resize Stop handler, we also need one here
+        //         // because if the mouse is depressed and then released (without moving), we do want this class applied temporarily
+        //         // but we also need to make sure it gets cleaned up, even though no formal Resize Start/Stop events occurred.
+        //         handle.addEventListener(
+        //             "mouseup",
+        //             BubbleManager.clearResizingClassHandler
+        //         );
+        //     }
+        // }
+
+        // this.makeOverPictureElementsDraggableAndClickable(textOverPictureElems);
     }
 
     // BL-8134: Keeps mouse movement in sync with bubble resizing when scale is not 100%.
