@@ -1592,7 +1592,7 @@ const CorrectWrongControls: React.FunctionComponent<{
     );
 };
 
-const makeDuplicateOfDragBubble = () => {
+export const makeDuplicateOfDragBubble = () => {
     const old = OverlayTool.bubbleManager()?.getActiveElement();
     const duplicate = duplicateBubble();
     if (!duplicate || !old) {

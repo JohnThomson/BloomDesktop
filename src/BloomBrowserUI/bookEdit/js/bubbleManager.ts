@@ -30,6 +30,7 @@ import {
 import { adjustTarget } from "../toolbox/dragActivity/dragActivityTool";
 import BloomSourceBubbles from "../sourceBubbles/BloomSourceBubbles";
 import BloomHintBubbles from "./BloomHintBubbles";
+import { renderBubbleToolbox } from "./bubbleToolbox";
 
 export interface ITextColorInfo {
     color: string;
@@ -1093,6 +1094,11 @@ export class BubbleManager {
                 );
                 controlFrame?.appendChild(cropControl);
             });
+            const toolboxRoot = activeElement.ownerDocument.createElement(
+                "div"
+            );
+            toolboxRoot.setAttribute("id", "bubble-toolbox");
+            controlFrame.appendChild(toolboxRoot);
 
             // controlFrame.addEventListener("mousedown", event => {
             //     //     const currentFrame = document.getElementById("comical-control-frame");
@@ -1142,15 +1148,16 @@ export class BubbleManager {
             //     }
             // });
         }
-        if (
+        const hasImage =
             activeElement?.getElementsByClassName("bloom-imageContainer")
-                ?.length > 0
-        ) {
+                ?.length > 0;
+        if (hasImage) {
             controlFrame.classList.add("has-image");
         } else {
             controlFrame.classList.remove("has-image");
         }
         this.moveControlFrame();
+        renderBubbleToolbox(activeElement);
     }
 
     private moveControlFrame = () => {

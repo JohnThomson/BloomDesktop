@@ -192,6 +192,46 @@ export function GetButtonModifier(container) {
     return buttonModifier;
 }
 
+export function doImageCommand(
+    img: HTMLElement | undefined,
+    command: "cut" | "copy" | "paste" | "change"
+) {
+    if (!img) {
+        return;
+    }
+    // get the image id attribute. If it doesn't have one, add it before calling
+    // the server api. This is needed to properly identify the image later on in the
+    // changeImage method.  The copy command doesn't need to identify the image later,
+    // as the source url is enough for that command.
+    // (An image usually shouldn't have an id to begin with.)
+    let imageId = img.getAttribute("id");
+    const imageSrc = GetRawImageUrl(img);
+    if (command !== "copy") {
+        if (!imageId) {
+            imageId = EditableDivUtils.createUuid();
+            img.setAttribute("id", imageId);
+        }
+        // Note that the changeImage method (called from the C# code) will remove the id
+        // attribute after using it to find the correct image.  The C# code will call the
+        // removeImageId method if it doesn't call the changeImage method.  See BL-13619.
+    }
+
+    const topDiv = img.closest(".bloom-textOverPicture");
+    // Currently Gifs can only be added using the Games tool.
+    // A gif is always an img in an overlay (textOverPicture, even though it is
+    // not actually text) div, and we put a special class on the TOP element
+    // and use it in various ways where GIFs need to behave differently from
+    // other imgs. (For example, currently, they can only be cut/copied as file
+    // paths, we don't support metadata, they can't be cropped,...)
+    const imageIsGif = topDiv?.classList.contains("bloom-gif") ?? false;
+
+    postJson("editView/" + command + "Image", {
+        imageId,
+        imageSrc,
+        imageIsGif
+    });
+}
+
 export function addImageEditingButtons(containerDiv: HTMLElement): void {
     if (!containerDiv || containerDiv.classList.contains("hoverUp")) {
         return;
@@ -229,7 +269,7 @@ export function addImageEditingButtons(containerDiv: HTMLElement): void {
     }
     const buttonModifier = GetButtonModifier($containerDiv);
 
-    const addButtonHandler = (command: string) => {
+    const addButtonHandler = (command: "cut" | "copy" | "paste" | "change") => {
         const button = $containerDiv.get(0)?.firstElementChild;
         button?.addEventListener("click", (e: MouseEvent) => {
             // "detail >1" in chromium means this is a double click.
@@ -237,31 +277,10 @@ export function addImageEditingButtons(containerDiv: HTMLElement): void {
             // It's only going to debounce clicks that come in close enough to count as
             // double clicks, presumably based on the OS's double click timing setting.
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            if ((e as any).detail > 1 || !img) {
+            if ((e as any).detail > 1) {
                 return;
             }
-            // get the image id attribute. If it doesn't have one, add it before calling
-            // the server api. This is needed to properly identify the image later on in the
-            // changeImage method.  The copy command doesn't need to identify the image later,
-            // as the source url is enough for that command.
-            // (An image usually shouldn't have an id to begin with.)
-            let imageId = img.getAttribute("id");
-            const imageSrc = GetRawImageUrl(img);
-            if (command !== "copy") {
-                if (!imageId) {
-                    imageId = EditableDivUtils.createUuid();
-                    img.setAttribute("id", imageId);
-                }
-                // Note that the changeImage method (called from the C# code) will remove the id
-                // attribute after using it to find the correct image.  The C# code will call the
-                // removeImageId method if it doesn't call the changeImage method.  See BL-13619.
-            }
-
-            postJson("editView/" + command + "Image", {
-                imageId,
-                imageSrc,
-                imageIsGif
-            });
+            doImageCommand(img, command);
         });
     };
 
@@ -480,6 +499,12 @@ export function getImageUrlFromImageButton(button: HTMLButtonElement): string {
     const imageContainer = button?.parentElement;
     if (!imageContainer) return "";
     return GetRawImageUrl(getImgFromContainer(imageContainer));
+}
+
+export function getImageUrlFromImageContainer(
+    HTMLElement: HTMLElement
+): string {
+    return GetRawImageUrl(getImgFromContainer(HTMLElement));
 }
 
 function getImgFromContainer(
