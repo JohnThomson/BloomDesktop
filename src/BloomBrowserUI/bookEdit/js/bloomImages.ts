@@ -9,7 +9,11 @@ import {
 
 import theOneLocalizationManager from "../../lib/localizationManager/localizationManager";
 
-import { theOneBubbleManager, updateOverlayClass } from "./bubbleManager";
+import {
+    kTextOverPictureSelector,
+    theOneBubbleManager,
+    updateOverlayClass
+} from "./bubbleManager";
 
 import { farthest } from "../../utils/elementUtils";
 import { EditableDivUtils } from "./editableDivUtils";
@@ -233,7 +237,11 @@ export function doImageCommand(
 }
 
 export function addImageEditingButtons(containerDiv: HTMLElement): void {
-    if (!containerDiv || containerDiv.classList.contains("hoverUp")) {
+    if (
+        !containerDiv ||
+        containerDiv.classList.contains("hoverUp") ||
+        containerDiv.closest(kTextOverPictureSelector)
+    ) {
         return;
     }
     if (playingBloomGame(containerDiv)) {

@@ -42,7 +42,7 @@ const kComicalGeneratedClass: string = "comical-generated";
 // For now we're keeping this name for backwards-compatibility, even though now the element could be
 // a video or even another picture.
 const kTextOverPictureClass = "bloom-textOverPicture";
-const kTextOverPictureSelector = `.${kTextOverPictureClass}`;
+export const kTextOverPictureSelector = `.${kTextOverPictureClass}`;
 const kImageContainerClass = "bloom-imageContainer";
 const kImageContainerSelector = `.${kImageContainerClass}`;
 const kVideoContainerClass = "bloom-videoContainer";
