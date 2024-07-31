@@ -1,5 +1,5 @@
 /** @jsx jsx **/
-import { jsx, css } from "@emotion/react";
+import { jsx, css, SerializedStyles } from "@emotion/react";
 
 import * as React from "react";
 import { ReactNode, useEffect, useState } from "react";
@@ -9,8 +9,10 @@ import {
     ListItemIcon,
     ListItemText,
     MenuItem,
-    TypographyProps
+    TypographyProps,
+    TypographyPropsVariantOverrides
 } from "@mui/material";
+import { OverridableStringUnion } from "@mui/types";
 import NestedMenuItem from "mui-nested-menu-item";
 import CheckBoxOutlineBlankIcon from "@mui/icons-material/CheckBoxOutlineBlank";
 import CheckBoxIcon from "@mui/icons-material/CheckBox";
@@ -21,12 +23,17 @@ import {
 } from "./requiresBloomEnterprise";
 import { kBloomDisabledOpacity } from "../utils/colorUtils";
 import { kUiFontStack } from "../bloomMaterialUITheme";
+import { Variant } from "@mui/material/styles/createTypography";
 
 interface IBaseLocalizableMenuItemProps {
     english: string;
     l10nId: string;
     disabled?: boolean;
     tooltipIfDisabled?: string;
+    variant?: OverridableStringUnion<
+        Variant | "inherit",
+        TypographyPropsVariantOverrides
+    >;
 }
 
 export interface ILocalizableMenuItemProps
@@ -48,12 +55,13 @@ interface ILocalizableCheckboxMenuItemProps
 
 const kIconCheckboxAffordance = 28;
 const kEnterpriseStickerAffordance = 28;
-const typographyProps: TypographyProps = {
-    variant: "h6"
-};
 const menuItemColor = "black";
 
 export const LocalizableMenuItem: React.FunctionComponent<ILocalizableMenuItemProps> = props => {
+    const variant = props.variant ?? "h6";
+    const typographyProps: TypographyProps = {
+        variant: variant
+    };
     const label = useL10n(props.english, props.l10nId);
     // BL-10638 In the case of an expired subscription code, 'useEnterpriseAvailable()` returns false,
     // but `useGetEnterpriseStatus()` returns "Subscription". That state of things is useful for the
@@ -140,30 +148,28 @@ export const LocalizableMenuItem: React.FunctionComponent<ILocalizableMenuItemPr
             <MenuItem
                 key={props.l10nId}
                 onClick={menuClickHandler}
-                dense={true}
-                css={css`
-                    padding: 0 6px !important; // eliminate top and bottom padding to make even denser
-                    font-size: 14pt;
-                `}
+                // dense={true}
+                // css={css`
+                //     padding: 0 6px !important; // eliminate top and bottom padding to make even denser
+                //     font-size: 14pt;
+                // `}
                 disabled={props.disabled}
             >
                 <React.Fragment>
                     {iconElement}
                     <ListItemText
                         css={css`
-                            .MuiTypography-h6 {
+                            .MuiTypography-${variant} {
                                 font-weight: 400 !important; // H6 defaults to 500; too thick
-                                font-family: ${kUiFontStack}
+                                font-family: ${kUiFontStack};
                                 color: ${menuItemColor} !important;
 
                                 // We can't use the disabled prop because it prevents the click from opening settings and
                                 // prevents the tooltip. So we just make it look disabled (using the same setting as Mui-disabled).
                                 // And we only do it on the icon and text so the enterprise icon doesn't look disabled.
-                                opacity: ${
-                                    meetsEnterpriseRequirement
-                                        ? undefined
-                                        : kBloomDisabledOpacity
-                                };
+                                opacity: ${meetsEnterpriseRequirement
+                                    ? undefined
+                                    : kBloomDisabledOpacity};
                             }
                         `}
                         primaryTypographyProps={typographyProps}
@@ -179,6 +185,10 @@ export const LocalizableMenuItem: React.FunctionComponent<ILocalizableMenuItemPr
 };
 
 export const LocalizableCheckboxMenuItem: React.FunctionComponent<ILocalizableCheckboxMenuItemProps> = props => {
+    const variant = props.variant ?? "h6";
+    const typographyProps: TypographyProps = {
+        variant: variant
+    };
     const label = useL10n(props.english, props.l10nId);
     const [checked, setChecked] = useState(false);
     useEffect(() => {
@@ -224,7 +234,7 @@ export const LocalizableCheckboxMenuItem: React.FunctionComponent<ILocalizableCh
                 />
                 <ListItemText
                     css={css`
-                        .MuiTypography-h6 {
+                        .MuiTypography-${variant} {
                             font-weight: 400 !important; // H6 defaults to 500; too thick
                             font-family: ${kUiFontStack};
                             color: ${menuItemColor} !important;
