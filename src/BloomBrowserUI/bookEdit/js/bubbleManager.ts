@@ -227,7 +227,8 @@ export class BubbleManager {
     }
 
     // Convert string ending in pixels to a number
-    private static pxToNumber(px: string): number {
+    public static pxToNumber(px: string): number {
+        if (!px) return 0;
         return parseInt(px.replace("px", ""));
     }
 
@@ -975,29 +976,39 @@ export class BubbleManager {
     }
     private startResizeDragX: number;
     private startResizeDragY: number;
+    private oldWidth: number;
+    private oldHeight: number;
+    private oldLeft: number;
+    private oldTop: number;
+    private oldImageWidth: number;
+    private oldImageLeft: number;
+    private oldImageTop: number;
     private resizeDragCorner: "ne" | "nw" | "se" | "sw" | undefined;
     private gotAMoveWhileMouseDown: boolean = false;
 
-    setupDragging(activeElement: HTMLElement | undefined) {
+    setupDragging(eltToPutControlsOn: HTMLElement | undefined) {
         let controlFrame = document.getElementById("comical-control-frame");
-        if (!activeElement) {
+        if (!eltToPutControlsOn) {
             if (controlFrame) {
                 controlFrame.remove();
             }
             return;
         }
+        this.matchContainerToImage(eltToPutControlsOn);
 
         if (!controlFrame) {
-            controlFrame = activeElement.ownerDocument.createElement("div");
+            controlFrame = eltToPutControlsOn.ownerDocument.createElement(
+                "div"
+            );
             controlFrame.setAttribute("id", "comical-control-frame");
             controlFrame.classList.add("bloom-ui"); // makes sure it gets cleaned up.
             // controlFrame.style.position = "absolute";
 
             //controlFrame.style.zIndex = "1000";
-            activeElement.parentElement?.appendChild(controlFrame);
+            eltToPutControlsOn.parentElement?.appendChild(controlFrame);
             const corners = ["ne", "nw", "se", "sw"];
             corners.forEach(corner => {
-                const control = activeElement.ownerDocument.createElement(
+                const control = eltToPutControlsOn.ownerDocument.createElement(
                     "div"
                 );
                 control.classList.add("bloom-ui-comical-resize-handle");
@@ -1006,86 +1017,15 @@ export class BubbleManager {
                 );
                 controlFrame?.appendChild(control);
                 control.addEventListener("mousedown", event => {
-                    event.preventDefault();
-                    event.stopPropagation();
-                    this.startResizeDragX = event.clientX;
-                    this.startResizeDragY = event.clientY;
-                    this.resizeDragCorner = corner as "ne" | "nw" | "se" | "sw";
-                });
-
-                control.addEventListener("mousemove", event => {
-                    if (event.buttons !== 1 || !this.activeElement) {
-                        this.resizeDragCorner = undefined; // drag is over
-                        return;
-                    }
-
-                    if (this.resizeDragCorner) {
-                        const deltaX = event.clientX - this.startResizeDragX;
-                        const deltaY = event.clientY - this.startResizeDragY;
-                        this.startResizeDragX = event.clientX;
-                        this.startResizeDragY = event.clientY;
-                        const style = this.activeElement.style;
-                        //this.startResizeRect = this.activeElement.getBoundingClientRect();
-                        if (this.resizeDragCorner === "ne") {
-                            style.width =
-                                BubbleManager.pxToNumber(style.width) +
-                                deltaX +
-                                "px";
-                            style.height =
-                                BubbleManager.pxToNumber(style.height) -
-                                deltaY +
-                                "px";
-                            style.top =
-                                BubbleManager.pxToNumber(style.top) +
-                                deltaY +
-                                "px";
-                        } else if (this.resizeDragCorner === "nw") {
-                            style.width =
-                                BubbleManager.pxToNumber(style.width) -
-                                deltaX +
-                                "px";
-                            style.height =
-                                BubbleManager.pxToNumber(style.height) -
-                                deltaY +
-                                "px";
-                            style.top =
-                                BubbleManager.pxToNumber(style.top) +
-                                deltaY +
-                                "px";
-                            style.left =
-                                BubbleManager.pxToNumber(style.left) +
-                                deltaX +
-                                "px";
-                        } else if (this.resizeDragCorner === "se") {
-                            style.width =
-                                BubbleManager.pxToNumber(style.width) +
-                                deltaX +
-                                "px";
-                            style.height =
-                                BubbleManager.pxToNumber(style.height) +
-                                deltaY +
-                                "px";
-                        } else if (this.resizeDragCorner === "sw") {
-                            style.width =
-                                BubbleManager.pxToNumber(style.width) -
-                                deltaX +
-                                "px";
-                            style.height =
-                                BubbleManager.pxToNumber(style.height) +
-                                deltaY +
-                                "px";
-                            style.left =
-                                BubbleManager.pxToNumber(style.left) +
-                                deltaX +
-                                "px";
-                        }
-                        this.moveControlFrame();
-                    }
+                    this.startResizeDrag(
+                        event,
+                        corner as "ne" | "nw" | "se" | "sw"
+                    );
                 });
             });
             const sides = ["n", "s", "e", "w"];
             sides.forEach(side => {
-                const cropControl = activeElement.ownerDocument.createElement(
+                const cropControl = eltToPutControlsOn.ownerDocument.createElement(
                     "div"
                 );
                 cropControl.classList.add("bloom-ui-comical-crop-handle");
@@ -1093,8 +1033,14 @@ export class BubbleManager {
                     "bloom-ui-comical-crop-handle-" + side
                 );
                 controlFrame?.appendChild(cropControl);
+                cropControl.addEventListener("mousedown", event => {
+                    if (event.buttons !== 1 || !this.activeElement) {
+                        return;
+                    }
+                    this.startCropDrag(event, side);
+                });
             });
-            const toolboxRoot = activeElement.ownerDocument.createElement(
+            const toolboxRoot = eltToPutControlsOn.ownerDocument.createElement(
                 "div"
             );
             toolboxRoot.setAttribute("id", "bubble-toolbox");
@@ -1149,7 +1095,7 @@ export class BubbleManager {
             // });
         }
         const hasImage =
-            activeElement?.getElementsByClassName("bloom-imageContainer")
+            eltToPutControlsOn?.getElementsByClassName("bloom-imageContainer")
                 ?.length > 0;
         if (hasImage) {
             controlFrame.classList.add("has-image");
@@ -1157,7 +1103,447 @@ export class BubbleManager {
             controlFrame.classList.remove("has-image");
         }
         this.moveControlFrame();
-        renderBubbleToolbox(activeElement);
+        renderBubbleToolbox(eltToPutControlsOn);
+    }
+    private startResizeDrag(
+        event: MouseEvent,
+        corner: "ne" | "nw" | "se" | "sw"
+    ) {
+        event.preventDefault();
+        event.stopPropagation();
+        if (!this.activeElement) return;
+        this.startResizeDragX = event.clientX;
+        this.startResizeDragY = event.clientY;
+        this.resizeDragCorner = corner;
+        const style = this.activeElement.style;
+        this.oldWidth = BubbleManager.pxToNumber(style.width);
+        this.oldHeight = BubbleManager.pxToNumber(style.height);
+        this.oldTop = BubbleManager.pxToNumber(style.top);
+        this.oldLeft = BubbleManager.pxToNumber(style.left);
+        const imgC = this.activeElement.getElementsByClassName(
+            "bloom-imageContainer"
+        )[0];
+        const img = imgC?.getElementsByTagName("img")[0];
+        if (img && img.style.width) {
+            this.oldImageWidth = BubbleManager.pxToNumber(img.style.width);
+            this.oldImageTop = BubbleManager.pxToNumber(img.style.top);
+            this.oldImageLeft = BubbleManager.pxToNumber(img.style.left);
+        }
+        document.addEventListener("mousemove", this.continueResizeDrag);
+        document.addEventListener("mouseup", this.endResizeDrag);
+    }
+    private endResizeDrag(_event: MouseEvent) {
+        document.removeEventListener("mousemove", this.continueResizeDrag);
+        document.removeEventListener("mouseup", this.endResizeDrag);
+    }
+    private continueResizeDrag = (event: MouseEvent) => {
+        if (event.buttons !== 1 || !this.activeElement) {
+            this.resizeDragCorner = undefined; // drag is over
+            return;
+        }
+
+        if (this.resizeDragCorner) {
+            const deltaX = event.clientX - this.startResizeDragX;
+            const deltaY = event.clientY - this.startResizeDragY;
+            const style = this.activeElement.style;
+            const imgC = this.activeElement.getElementsByClassName(
+                "bloom-imageContainer"
+            )[0];
+            const img = imgC?.getElementsByTagName("img")[0];
+            // The slope of a line from nw to se (since y is positive down, this is a positive slope).
+            // If we're moving one of the other points we will negate it to get the slope of the line
+            // from ne to sw
+            let slope = img ? this.oldHeight / this.oldWidth : 0;
+
+            let newWidth = this.oldWidth;
+            let newHeight = this.oldHeight;
+            let newTop = this.oldTop;
+            let newLeft = this.oldLeft;
+            switch (this.resizeDragCorner) {
+                case "ne":
+                    newWidth = this.oldWidth + deltaX;
+                    newHeight = this.oldHeight - deltaY;
+                    newTop = this.oldTop + deltaY;
+                    break;
+                case "nw":
+                    newWidth = this.oldWidth - deltaX;
+                    newHeight = this.oldHeight - deltaY;
+                    newTop = this.oldTop + deltaY;
+                    newLeft = this.oldLeft + deltaX;
+                    break;
+                case "se":
+                    newWidth = this.oldWidth + deltaX;
+                    newHeight = this.oldHeight + deltaY;
+                    break;
+                case "sw":
+                    newWidth = this.oldWidth - deltaX;
+                    newHeight = this.oldHeight + deltaY;
+                    newLeft = this.oldLeft + deltaX;
+                    break;
+            }
+            if (slope) {
+                // We want to keep the aspect ratio of the image. So the possible places to move
+                // the moving corner must be on a line through the opposite corner
+                // (which isn't moving) with a slope that would make it pas through the
+                // original position of the point that is moving.
+                // If the point where the mouse is is not on that line, we pick the closest
+                // point that is.
+                let adjustX = newLeft;
+                let adjustY = newTop;
+                let originX = this.oldLeft;
+                let originY = this.oldTop;
+                switch (this.resizeDragCorner) {
+                    case "ne":
+                        adjustX = newLeft + newWidth;
+                        originY = this.oldTop + this.oldHeight; // SW
+                        slope = -slope;
+                        break;
+                    case "sw":
+                        adjustY = newTop + newHeight;
+                        originX = this.oldLeft + this.oldWidth; // NE
+                        slope = -slope;
+                        break;
+                    case "se":
+                        adjustX = newLeft + newWidth;
+                        adjustY = newTop + newHeight;
+                        // origin is already NW
+                        break;
+                    case "nw":
+                        originX = this.oldLeft + this.oldWidth; // SE
+                        originY = this.oldTop + this.oldHeight; // SE
+                        break;
+                }
+                // move adjustX, adjustY to the closest point on a line through originX, originY with the given slope
+                // point must be on line y = slope(x - originX) + originY
+                // and on the line y = (x - newX)/-slope + newY
+                // adjustX =
+                //     (slope * originX - originY + adjustY + adjustX / slope) /
+                //     (slope + 1 / slope);
+                // adjustY = slope * (adjustX - originX) + originY;
+                // convert to standard equation a1 * x + b1 * y + c1 = 0, a2 * x + b2 * y + c2 = 0
+                const a1 = -slope;
+                const c1 = slope * originX - originY;
+                const a2 = 1 / slope;
+                const c2 = -adjustX / slope - adjustY;
+                adjustX = (c2 - c1) / (a1 - a2);
+                adjustY = (c1 * a2 - c2 * a1) / (a1 - a2);
+                switch (this.resizeDragCorner) {
+                    case "ne":
+                        newTop = adjustY;
+                        newWidth = adjustX - this.oldLeft;
+                        newHeight = this.oldTop + this.oldHeight - adjustY;
+                        break;
+                    case "sw":
+                        newLeft = adjustX;
+                        newHeight = adjustY - this.oldTop;
+                        newWidth = this.oldLeft + this.oldWidth - adjustX;
+                        break;
+                    case "se":
+                        newWidth = adjustX - this.oldLeft;
+                        newHeight = adjustY - this.oldTop;
+                        break;
+                    case "nw":
+                        newLeft = adjustX;
+                        newTop = adjustY;
+                        newWidth = this.oldLeft + this.oldWidth - adjustX;
+                        newHeight = this.oldTop + this.oldHeight - adjustY;
+                        break;
+                }
+
+                // if (newWidth / newHeight < aspectRatio) {
+                //     newHeight = newWidth / aspectRatio;
+                // } else {
+                //     newWidth = newHeight * aspectRatio;
+                // }
+            }
+            style.width = newWidth + "px";
+            style.height = newHeight + "px";
+            style.top = newTop + "px";
+            style.left = newLeft + "px";
+            // Now, if the image is not cropped, it will resize automatically (width: 100% from
+            // stylesheet, height unset so automatically scales with width). If it is cropped,
+            // we need to resize it so that it stays the same amount cropped visually.
+            if (img.style.width) {
+                const scale = newWidth / this.oldWidth;
+                img.style.width = this.oldImageWidth * scale + "px";
+                // to keep the same part of it showing, we need to scale left and top the same way.
+                img.style.left = this.oldImageLeft * scale + "px";
+                img.style.top = this.oldImageTop * scale + "px";
+            }
+            this.moveControlFrame();
+        }
+    };
+    private startCropDragX: number;
+    private startCropDragY: number;
+    // The width of the img when we started cropping using this control.
+    // Multiple drags of the same crop control can use the same initial width
+    // to help figure the effect of dragging past the edge of the image.
+    private initialCropImageWidth: number = -1;
+    private initialCropImageHeight: number;
+    private initialCropImageLeft: number;
+    private initialCropImageTop: number;
+    private initialCropBubbleWidth: number;
+    private initialCropBubbleHeight: number;
+    private initialCropBubbleTop: number;
+    private initialCropBubbleLeft: number;
+    private lastDragControl: HTMLElement | undefined;
+    private currentCropSide: string | undefined;
+
+    private startCropDrag(event: MouseEvent, side: string) {
+        this.startCropDragX = event.clientX;
+        this.startCropDragY = event.clientY;
+        this.currentCropSide = side;
+        if (!this.activeElement) return; // makes lint happy
+        const img = this.activeElement?.getElementsByTagName("img")[0];
+        if (!img) return;
+        //Todo: various things should set this.initialImageWidth to -1:
+        // change of activeElement
+        // drag element
+        // resize element
+        if (
+            this.initialCropImageWidth === -1 ||
+            this.lastDragControl !== event.currentTarget
+        ) {
+            this.initialCropImageWidth = img.offsetWidth;
+            this.initialCropImageHeight = img.offsetHeight;
+            this.initialCropImageLeft = BubbleManager.pxToNumber(
+                img.style.left
+            );
+            this.initialCropImageTop = BubbleManager.pxToNumber(img.style.top);
+            this.initialCropBubbleWidth = this.activeElement.offsetWidth;
+            this.initialCropBubbleHeight = this.activeElement.offsetHeight;
+            this.initialCropBubbleTop = BubbleManager.pxToNumber(
+                this.activeElement.style.top
+            );
+            this.initialCropBubbleLeft = BubbleManager.pxToNumber(
+                this.activeElement.style.left
+            );
+            this.lastDragControl = event.currentTarget as HTMLElement;
+        }
+        if (!img.style.width) {
+            // From here on it should stay this width unless we decide otherwise.
+            // Todo: resize needs to scale it.
+            img.style.width = `${this.initialCropImageWidth}px`;
+        }
+        document.addEventListener("mousemove", this.continueCropDrag);
+        document.addEventListener("mouseup", this.stopCropDrag);
+    }
+    private stopCropDrag = () => {
+        document.removeEventListener("mousemove", this.continueCropDrag);
+        document.removeEventListener("mouseup", this.stopCropDrag);
+    };
+    private continueCropDrag = (event: MouseEvent) => {
+        if (event.buttons !== 1 || !this.activeElement) {
+            return;
+        }
+        const img = this.activeElement?.getElementsByTagName("img")[0];
+        if (!img || !this.activeElement) {
+            return;
+        }
+        const deltaX = event.clientX - this.startCropDragX;
+        const deltaY = event.clientY - this.startCropDragY;
+        if (deltaX === 0 && deltaY === 0) return;
+        this.startCropDragX = event.clientX;
+        this.startCropDragY = event.clientY;
+        const oldImageWidth = img.offsetWidth;
+        const oldBubbleWidth = this.activeElement.offsetWidth;
+        const oldBubbleHeight = this.activeElement.offsetHeight;
+        const oldBubbleLeft = BubbleManager.pxToNumber(
+            this.activeElement.style.left
+        );
+        const oldBubbleTop = BubbleManager.pxToNumber(
+            this.activeElement.style.top
+        );
+        const oldImageLeft = BubbleManager.pxToNumber(img.style.left);
+        const oldImageTop = BubbleManager.pxToNumber(img.style.top);
+        let newBubbleWidth = oldBubbleWidth + deltaX;
+        let newBubbleHeight = oldBubbleHeight + deltaY;
+        switch (this.currentCropSide) {
+            case "n":
+                newBubbleHeight = oldBubbleHeight - deltaY;
+                this.activeElement.style.height = `${newBubbleHeight}px`;
+                this.activeElement.style.top = `${oldBubbleTop + deltaY}px`;
+                img.style.top = `${oldImageTop - deltaY}px`;
+                break;
+            case "s":
+                this.activeElement.style.height = `${newBubbleHeight}px`;
+                break;
+            case "e":
+                this.activeElement.style.width = `${newBubbleWidth}px`;
+                // todo: stretch/unstretch
+                break;
+            case "w":
+                newBubbleWidth = oldBubbleWidth - deltaX;
+                this.activeElement.style.width = `${newBubbleWidth}px`;
+                this.activeElement.style.left = `${oldBubbleLeft + deltaX}px`;
+                img.style.left = `${oldImageLeft - deltaX}px`;
+                break;
+        }
+        let newImageWidth: number;
+        let newImageHeight: number;
+        // How much of the image should stay cropped on the left
+        const leftFraction =
+            -this.initialCropImageLeft / this.initialCropImageWidth;
+        const rightFraction =
+            (this.initialCropImageWidth +
+                this.initialCropImageLeft -
+                this.initialCropBubbleWidth) /
+            this.initialCropImageWidth;
+        const bottomFraction =
+            (this.initialCropImageHeight +
+                this.initialCropImageTop -
+                this.initialCropBubbleHeight) /
+            this.initialCropImageHeight;
+        // Deliberately dividing by the WIDTH here; all our calculations are
+        // based on the adjusted width of the image.
+        const topAsFractionOfWidth =
+            -this.initialCropImageTop / this.initialCropImageWidth;
+        const topFraction =
+            -this.initialCropImageTop / this.initialCropImageHeight;
+        const aspectRatio = img.naturalHeight / img.naturalWidth;
+        switch (this.currentCropSide) {
+            case "e":
+                if (
+                    // the bubble has stretched beyond the right side of the image
+                    newBubbleWidth >
+                    this.initialCropImageLeft + this.initialCropImageWidth
+                ) {
+                    // grow the image. We want its right edge to end up at newBubbleWidth,
+                    // after being stretched enough to leave the same fraction as before
+                    // cropped on the left.
+                    newImageWidth = newBubbleWidth / (1 - leftFraction);
+                    img.style.width = `${newImageWidth}px`;
+                    // fiddle with the left to keep the same part cropped
+                    img.style.left = `${-leftFraction * newImageWidth}px`;
+                    // and the top to split the extra height between top and bottom
+                    img.style.top = `${-topAsFractionOfWidth * newImageWidth - // would keep same crop
+                        (newImageWidth * aspectRatio -
+                            this.initialCropImageWidth * aspectRatio) /
+                            2}px`; // half the extra height at the top.
+                } else {
+                    img.style.width = `${this.initialCropImageWidth}px`;
+                    img.style.top = `${this.initialCropImageTop}px`;
+                    //img.style.left = `${this.initialCropImageLeft}px`;
+                }
+                break;
+            case "w":
+                if (
+                    // the bubble has stretched beyond the original left side of the image
+                    // oldBubbleLeft + deltaX is where the left of the bubble is now
+                    // this.initialCropImageLeft + this.initialBubbleImageLeft is where
+                    // the left of the image was when we started.
+                    oldBubbleLeft + deltaX <
+                    this.initialCropImageLeft + this.initialCropBubbleLeft
+                ) {
+                    // grow the image. We want its left edge to end up at zero,
+                    // after being stretched enough to leave the same fraction as before
+                    // cropped on the right.
+                    newImageWidth = newBubbleWidth / (1 - rightFraction);
+                    img.style.width = `${newImageWidth}px`;
+                    // no cropping on the left
+                    img.style.left = `0`;
+                    // and the top to split the extra height between top and bottom
+                    img.style.top = `${-topAsFractionOfWidth * newImageWidth - // would keep same crop
+                        (newImageWidth * aspectRatio -
+                            this.initialCropImageWidth * aspectRatio) /
+                            2}px`;
+                    // ((newBubbleWidth /
+                    //     (this.initialCropImageWidth +
+                    //         this.initialCropImageLeft) -
+                    //     1) *
+                    //     this.initialCropImageHeight) / // extra height
+                    //     2}px`; // half the extra height at the top.
+                } else {
+                    img.style.width = `${this.initialCropImageWidth}px`;
+                    img.style.top = `${this.initialCropImageTop}px`;
+                    //img.style.left = `${this.initialCropImageLeft}px`;
+                }
+                break;
+            case "s":
+                if (
+                    // the bubble has stretched beyond the bottom side of the image
+                    newBubbleHeight >
+                    this.initialCropImageTop + this.initialCropImageHeight
+                ) {
+                    // grow the image. We want its bottom edge to end up at newBubbleHeight,
+                    // after being stretched enough to leave the same fraction as before
+                    // cropped on the top.
+                    newImageHeight = newBubbleHeight / (1 - topFraction);
+                    newImageWidth = newImageHeight / aspectRatio;
+                    img.style.width = `${newImageWidth}px`;
+                    // fiddle with the top to keep the same part cropped
+                    img.style.top = `${-topAsFractionOfWidth *
+                        newImageWidth}px`;
+                    // and the left to split the extra width between top and bottom
+                    img.style.left = `${-leftFraction * newImageWidth - // would keep same crop
+                        (newImageWidth - this.initialCropImageWidth) / 2}px`; // half the extra width on the left.
+                } else {
+                    img.style.width = `${this.initialCropImageWidth}px`;
+                    //img.style.top = `${this.initialCropImageTop}px`;
+                    img.style.left = `${this.initialCropImageLeft}px`;
+                }
+                break;
+            case "n":
+                if (
+                    // the bubble has stretched beyond the original top side of the image
+                    // oldBubbleTop + deltaY is where the top of the bubble is now
+                    // this.initialCropImageTop + this.initialBubbleImageTop is where
+                    // the top of the image was when we started.
+                    oldBubbleTop + deltaY <
+                    this.initialCropImageTop + this.initialCropBubbleTop
+                ) {
+                    // grow the image. We want its top edge to end up at zero,
+                    // after being stretched enough to leave the same fraction as before
+                    // cropped on the bottom.
+                    newImageHeight = newBubbleHeight / (1 - bottomFraction);
+                    newImageWidth = newImageHeight / aspectRatio;
+                    img.style.width = `${newImageWidth}px`;
+                    // no cropping on the top
+                    img.style.top = `0`;
+                    // and the left to split the extra width between top and bottom
+                    img.style.left = `${-leftFraction * newImageWidth - // would keep same crop
+                        (newImageWidth - this.initialCropImageWidth) / 2}px`; // half the extra width on the left.
+                } else {
+                    img.style.width = `${this.initialCropImageWidth}px`;
+                    //img.style.top = `${this.initialCropImageTop}px`;
+                    img.style.left = `${this.initialCropImageLeft}px`;
+                }
+                break;
+        }
+        this.moveControlFrame();
+    };
+
+    private matchContainerToImage(container: HTMLElement) {
+        const img = container.getElementsByTagName("img")[0];
+        if (!img) return;
+        if (img.style.width) {
+            // we've already done cropping on this image, so we should not force the
+            // container back to the original image shape.
+            return;
+        }
+        const containerWidth = container.clientWidth;
+        const containerHeight = container.clientHeight;
+        const imgWidth = img.naturalWidth;
+        const imgHeight = img.naturalHeight;
+        const imgRatio = imgWidth / imgHeight;
+        const containerRatio = containerWidth / containerHeight;
+        if (imgRatio > containerRatio) {
+            // remove white bars at top and bottom by reducing container height
+            const newHeight = containerWidth / imgRatio;
+            const oldHeight = BubbleManager.pxToNumber(container.style.height);
+            container.style.height = `${newHeight}px`;
+            // and move container down so image does not move
+            const oldTop = BubbleManager.pxToNumber(container.style.top);
+            container.style.top = `${oldTop + (oldHeight - newHeight) / 2}px`;
+        } else {
+            // remove white bars at left and right by reducing container width
+            const newWidth = containerHeight * imgRatio;
+            const oldWidth = BubbleManager.pxToNumber(container.style.width);
+            container.style.width = `${newWidth}px`;
+            // and move container right so image does not move
+            const oldLeft = BubbleManager.pxToNumber(container.style.left);
+            container.style.left = `${oldLeft + (oldWidth - newWidth) / 2}px`;
+        }
     }
 
     private moveControlFrame = () => {

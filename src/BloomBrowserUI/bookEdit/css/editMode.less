@@ -1361,6 +1361,7 @@ body :has(.bloom-page:focus-within, .bloom-page:hover) {
         border: @cropHandleRadius solid @bloom-blue;
         box-sizing: border-box;
         display: none;
+        pointer-events: all;
         //z-index: @canvasZIndex + 2;
     }
     &.has-image .bloom-ui-comical-crop-handle {
@@ -1371,25 +1372,25 @@ body :has(.bloom-page:focus-within, .bloom-page:hover) {
         top: -@cropHandleRadius;
         left: calc(50% - @cropHandleRadius - @cropHandleCenter);
         width: @cropHandleCenter * 2 + @cropHandleRadius * 2;
-        cursor: n-resize;
+        cursor: ns-resize;
     }
     .bloom-ui-comical-crop-handle-e {
         top: calc(50% - @cropHandleRadius - @cropHandleCenter);
         right: -@cropHandleRadius;
         height: @cropHandleCenter * 2 + @cropHandleRadius * 2;
-        cursor: e-resize;
+        cursor: ew-resize;
     }
     .bloom-ui-comical-crop-handle-s {
         bottom: -@cropHandleRadius;
         left: calc(50% - @cropHandleRadius - @cropHandleCenter);
         width: @cropHandleCenter * 2 + @cropHandleRadius * 2;
-        cursor: s-resize;
+        cursor: ns-resize;
     }
     .bloom-ui-comical-crop-handle-w {
         top: calc(50% - @cropHandleRadius - @cropHandleCenter);
         left: -@cropHandleRadius;
         height: @cropHandleCenter * 2 + @cropHandleRadius * 2;
-        cursor: w-resize;
+        cursor: ew-resize;
     }
 }
 

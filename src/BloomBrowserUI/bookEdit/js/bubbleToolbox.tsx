@@ -23,6 +23,7 @@ import {
 import Menu from "@mui/material/Menu";
 import { Divider } from "@mui/material";
 import { DuplicateIcon } from "./DuplicateIcon";
+import { BubbleManager } from "./bubbleManager";
 
 const controlFrameColor: string = kBloomBlue;
 
