@@ -957,15 +957,24 @@ export class BubbleManager {
     }
 
     public setActiveElement(element: HTMLElement | undefined) {
-        if (this.activeElement === element) {
-            return;
-        }
-        if (this.activeElement) {
+        if (this.activeElement !== element && this.activeElement) {
             tryRemoveImageEditingButtons(
                 this.activeElement.getElementsByClassName(
                     "bloom-imageContainer"
                 )[0] as Element | undefined
             );
+        }
+        if (this.activeElement === element) {
+            // Once everything is set up, we don't need to do anything more if nothing changed...
+            // unless we have an active element and don't have a control frame, which indicates
+            // a just-loaded-page situation where we need to set up the control frame
+            // and probably do all the rest of the tasks connected with selecting an element.
+            if (
+                !this.activeElement ||
+                document.getElementById("comical-control-frame")
+            ) {
+                return;
+            }
         }
         this.activeElement = element;
         this.doNotifyChange();
@@ -1322,7 +1331,6 @@ export class BubbleManager {
         }
         if (!img.style.width) {
             // From here on it should stay this width unless we decide otherwise.
-            // Todo: resize needs to scale it.
             img.style.width = `${this.initialCropImageWidth}px`;
         }
         document.addEventListener("mousemove", this.continueCropDrag);
@@ -1544,6 +1552,27 @@ export class BubbleManager {
             const oldLeft = BubbleManager.pxToNumber(container.style.left);
             container.style.left = `${oldLeft + (oldWidth - newWidth) / 2}px`;
         }
+    }
+
+    updateBubbleForChangedImage(imgOrImageContainer: HTMLElement) {
+        const overlay = imgOrImageContainer.closest(
+            kTextOverPictureSelector
+        ) as HTMLElement;
+        if (!overlay) return;
+        const img =
+            imgOrImageContainer.tagName === "IMG"
+                ? imgOrImageContainer
+                : imgOrImageContainer.getElementsByTagName("img")[0];
+        if (!img) return;
+        // remove any cropping
+        img.style.width = "";
+        img.style.height = "";
+        img.style.left = "";
+        img.style.top = "";
+        // Get the aspect ratio right
+        this.matchContainerToImage(overlay);
+        // and align the controls with the new image size
+        this.moveControlFrame();
     }
 
     private moveControlFrame = () => {
@@ -2101,6 +2130,10 @@ export class BubbleManager {
         this.lastMoveEvent = event;
         if (event.buttons === 1 && (event.movementX || event.movementY)) {
             this.gotAMoveWhileMouseDown = true;
+            const controlFrame = document.getElementById(
+                "comical-control-frame"
+            );
+            controlFrame?.classList?.add("moving");
         }
 
         const container = event.currentTarget as HTMLElement;
@@ -2449,6 +2482,8 @@ export class BubbleManager {
     // be passed directly to addEventListener and still get the correct 'this'.
     private onMouseUp = (event: MouseEvent) => {
         const container = event.currentTarget as HTMLElement;
+        const controlFrame = document.getElementById("comical-control-frame");
+        controlFrame?.classList?.remove("moving");
         if (
             !this.gotAMoveWhileMouseDown &&
             (event.target as HTMLElement)?.closest(".bloom-editable")

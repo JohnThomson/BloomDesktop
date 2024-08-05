@@ -403,6 +403,7 @@ export function changeImage(imageInfo: {
     }
     // id is just a temporary expedient to find the right image easily in this method.
     imgOrImageContainer.removeAttribute("id");
+    theOneBubbleManager.updateBubbleForChangedImage(imgOrImageContainer);
 }
 
 // This origami checking business is related BL-13120

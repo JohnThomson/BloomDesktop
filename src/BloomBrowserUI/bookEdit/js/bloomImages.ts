@@ -100,7 +100,14 @@ export function SetupImage(image: JQuery) {
     // Remove any obsolete explicit image size and position left over from earlier versions of Bloom, before we had object-fit:contain.
     if (image.style) {
         // Note, in BL-9460 we had to return to having width and height in some cases.
-        if (!$(image.parent).hasClass("bloom-scale-with-code")) {
+        // As of 6.1, overlay images make use of explicit width, left, and top in styles for cropping.
+        // Since overlay images were added (2022) long after we switched to object-fit:contain (2018),
+        // we can safely suppress removing width and height for those as well as for ones explicitly
+        // marked to fix BL-9460 (as of August 2024, the latter is just one cover image in Kyrg2020).
+        if (
+            !$(image.parent).hasClass("bloom-scale-with-code") &&
+            !image.closest(kTextOverPictureSelector)
+        ) {
             image.style.width = "";
             image.style.height = "";
         }

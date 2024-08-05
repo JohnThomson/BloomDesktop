@@ -1286,16 +1286,23 @@ body :has(.bloom-page:focus-within, .bloom-page:hover) {
     box-sizing: border-box;
     pointer-events: none;
 
+    &.moving {
+        display: none;
+    }
+
     .bloom-ui-comical-resize-handle {
         position: absolute;
         width: @resizeHandleRadius * 2;
         height: @resizeHandleRadius * 2;
         border-radius: 50%;
-        background-color: @bloom-blue;
-        border: @resizeHandleRadius solid @bloom-blue;
+        background-color: white;
+        border: 1px solid @bloom-blue;
         box-sizing: border-box;
         pointer-events: all;
         //z-index: @canvasZIndex + 2;
+        &:hover {
+            background-color: @bloom-blue;
+        }
     }
     .bloom-ui-comical-resize-handle-nw {
         top: -@resizeHandleRadius;
@@ -1357,12 +1364,14 @@ body :has(.bloom-page:focus-within, .bloom-page:hover) {
         width: @cropHandleRadius * 2;
         height: @cropHandleRadius * 2;
         border-radius: @cropHandleRadius;
-        background-color: @bloom-blue;
-        border: @cropHandleRadius solid @bloom-blue;
+        background-color: white;
+        border: 1px solid @bloom-blue;
         box-sizing: border-box;
         display: none;
         pointer-events: all;
-        //z-index: @canvasZIndex + 2;
+        &:hover {
+            background-color: @bloom-blue;
+        }
     }
     &.has-image .bloom-ui-comical-crop-handle {
         display: block;
