@@ -860,6 +860,12 @@ function UpdateOverlay(container, img) {
             $(this).remove();
         });
 
+    if (container.closest(kTextOverPictureSelector)) {
+        // for overlays we indicate this using a button below the overlay.
+        // Overlays can be small, so buttons on top of them don't work well.
+        return;
+    }
+
     //review: should we also require copyright, illustrator, etc? In many contexts the id of the work-for-hire illustrator isn't available
     const copyright = $(img).attr("data-copyright");
     if (!copyright || copyright.length === 0) {
