@@ -1283,6 +1283,7 @@ export class BubbleManager {
                 img.style.top = this.oldImageTop * scale + "px";
             }
             this.moveControlFrame();
+            this.adjustTarget(this.activeElement);
         }
     };
     private startCropDragX: number;
