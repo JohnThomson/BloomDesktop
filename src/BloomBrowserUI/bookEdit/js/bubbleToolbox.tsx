@@ -148,7 +148,10 @@ const BubbleToolbox: React.FunctionComponent<{
             <div
                 css={css`
                     background-color: white;
-                    border: 4px solid #eee;
+                    border-radius: 3.785px;
+                    border: 0.757px solid rgba(255, 255, 255, 0.2);
+                    //opacity: 0.2;
+                    box-shadow: 0px 0px 4px 0px rgba(0, 0, 0, 0.25);
                     border-radius: 4px;
                     display: flex;
                     justify-content: space-around;
