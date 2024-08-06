@@ -1287,7 +1287,22 @@ body :has(.bloom-page:focus-within, .bloom-page:hover) {
     pointer-events: none;
 
     &.moving {
-        display: none;
+        .bloom-ui-comical-resize-handle,
+        .bloom-ui-comical-crop-handle {
+            display: none;
+            &.active {
+                display: block;
+            }
+        }
+    }
+    .bloom-ui-comical-crop-handle {
+        display: none; // default
+        &.active {
+            display: block;
+        }
+    }
+    &.has-image:not(.moving) .bloom-ui-comical-crop-handle {
+        display: block;
     }
 
     .bloom-ui-comical-resize-handle {
@@ -1300,6 +1315,7 @@ body :has(.bloom-page:focus-within, .bloom-page:hover) {
         box-sizing: border-box;
         pointer-events: all;
         //z-index: @canvasZIndex + 2;
+        &.active,
         &:hover {
             background-color: @bloom-blue;
         }
@@ -1367,14 +1383,11 @@ body :has(.bloom-page:focus-within, .bloom-page:hover) {
         background-color: white;
         border: 1px solid @bloom-blue;
         box-sizing: border-box;
-        display: none;
         pointer-events: all;
+        &.active,
         &:hover {
             background-color: @bloom-blue;
         }
-    }
-    &.has-image .bloom-ui-comical-crop-handle {
-        display: block;
     }
 
     .bloom-ui-comical-crop-handle-n {
