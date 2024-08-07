@@ -203,10 +203,6 @@ const BubbleToolbox: React.FunctionComponent<{
                     css={svgIconCss}
                     onClick={() => {
                         if (!props.bubble) return;
-                        const imgContainer = props.bubble.getElementsByClassName(
-                            "bloom-imageContainer"
-                        )[0] as HTMLElement;
-                        if (!imgContainer) return;
                         makeDuplicateOfDragBubble();
                     }}
                 >
@@ -216,10 +212,6 @@ const BubbleToolbox: React.FunctionComponent<{
                     css={materialIconCss}
                     onClick={() => {
                         if (!props.bubble) return;
-                        const imgContainer = props.bubble.getElementsByClassName(
-                            "bloom-imageContainer"
-                        )[0] as HTMLElement;
-                        if (!imgContainer) return;
                         deleteBubble();
                     }}
                 >

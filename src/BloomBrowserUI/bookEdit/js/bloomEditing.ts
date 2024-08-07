@@ -420,7 +420,10 @@ function hasOrigami(container: HTMLElement) {
 // can add new elements (such as during layout mode) and call this on only newly added elements.
 // Now document.load calls this with $('body') as the container.
 // REVIEW: Some of these would be better off in OneTimeSetup, but too much risk to try to decide right now.
-export function SetupElements(container: HTMLElement) {
+export function SetupElements(
+    container: HTMLElement,
+    elementToFocus?: HTMLElement
+) {
     recordWhatThisPageLooksLikeForSanityCheck(container);
 
     SetupImagesInContainer(container);
@@ -834,7 +837,16 @@ export function SetupElements(container: HTMLElement) {
         }
         BloomSourceBubbles.setupSizeChangedHandling(divsThatHaveSourceBubbles);
         // Ensure focus exists as best we can (BL-7994)
-        if (
+        if (elementToFocus && $(elementToFocus).find(":focusable")) {
+            console.log(
+                "focusing on elementToFocus " + elementToFocus.outerHTML
+            );
+            $(elementToFocus)
+                .find(":focusable")
+                .focus();
+            // see similar code below
+            BloomSourceBubbles.ShowSourceBubbleForElement(elementToFocus);
+        } else if (
             document.hasFocus() &&
             document.activeElement &&
             $(document.activeElement).find(":focusable").length > 0

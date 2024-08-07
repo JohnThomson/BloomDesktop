@@ -725,8 +725,20 @@ const DragActivityControls: React.FunctionComponent<{
     // but it's fairly harmless to do it an extra time, and makes lint happy, and maybe will
     // catch some inconsistency that would otherwise be missed.
     useEffect(() => {
+        // careful here. After a change to currentBubbleElement, there will unfortunately be a render
+        // before the useEffect above runs and sets currentBubbleTarget. We don't want to
+        // adjust the old target to conform to the new bubble.
+        // (It's harmless to adjust it passing undefined as the target and then again with
+        // the correct target, and preventing it would require searching the whole page for
+        // a matching target, so we don't try to prevent that.)
         if (currentBubbleElement) {
-            adjustTarget(currentBubbleElement, currentBubbleTarget);
+            if (
+                !currentBubbleTarget ||
+                currentBubbleTarget.getAttribute("data-target-of") ===
+                    currentBubbleElement.getAttribute("data-bubble-id")
+            ) {
+                adjustTarget(currentBubbleElement, currentBubbleTarget);
+            }
         } else {
             const page = getPage();
             const arrow = page?.querySelector("#target-arrow") as HTMLElement;
@@ -757,7 +769,8 @@ const DragActivityControls: React.FunctionComponent<{
             });
             bubbleToTargetObserver.current.observe(currentBubbleElement, {
                 childList: true,
-                subtree: true
+                subtree: true,
+                attributes: true // e.g., cropping of image
             });
         }
     }, [currentBubbleElement, currentBubbleTarget, props.activeTab]);

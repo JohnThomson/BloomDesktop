@@ -763,6 +763,7 @@ export class BubbleManager {
             //These can never be identified as duplicate event listeners, so we'll end up with tons
             // of duplicates.
             element.addEventListener("focusin", this.handleFocusInEvent);
+            console.log("adding focusin event to " + element.outerHTML);
             if (
                 includeCkEditor &&
                 element.classList.contains("bloom-editable")
@@ -773,6 +774,9 @@ export class BubbleManager {
     }
 
     private handleFocusInEvent(ev: Event) {
+        console.log(
+            "focus in event " + (ev.currentTarget as HTMLElement)?.outerHTML
+        );
         // Restore hiding these when we focus a bubble, so they don't get in the way of working on
         // that bubble.
         theOneBubbleManager.turnOnHidingImageButtons();
@@ -803,11 +807,6 @@ export class BubbleManager {
             const newTextOverPictureElement = bubble.content;
             Comical.activateBubble(bubble);
             this.updateComicalForSelectedElement(newTextOverPictureElement);
-            SetupElements(imageContainer);
-
-            // Since we may have just added an element, check if the container has at least one
-            // overlay element and add the 'hasOverlay' class.
-            updateOverlayClass(imageContainer);
 
             // SetupElements (above) will do most of what we need, but when it gets to
             // 'turnOnBubbleEditing()', it's already on, so the method will get skipped.
@@ -818,12 +817,19 @@ export class BubbleManager {
             // If attachEventsToEditables is false, then this is a child or duplicate bubble that
             // was already sent through here once. We don't need to add more 'focusin' listeners and
             // re-attach to the StyleEditor again.
+            // This must be done before we call SetupElements, which will attempt to focus the new
+            // bubble, and expects the focus event handler to get called.
             if (attachEventsToEditables) {
                 this.addEventsToFocusableElements(
                     newTextOverPictureElement,
                     attachEventsToEditables
                 );
             }
+            SetupElements(imageContainer, bubble.content);
+
+            // Since we may have just added an element, check if the container has at least one
+            // overlay element and add the 'hasOverlay' class.
+            updateOverlayClass(imageContainer);
         } else {
             let focusableContainer: HTMLElement = imageContainer;
             if (
@@ -964,6 +970,9 @@ export class BubbleManager {
                 )[0] as Element | undefined
             );
         }
+        // Sometimes in initialization the active element is set but this is not done.
+        // it's cheap and harmless to do it again if it isn't needed.
+        this.setupDragging(this.activeElement);
         if (this.activeElement === element) {
             // Once everything is set up, we don't need to do anything more if nothing changed...
             // unless we have an active element and don't have a control frame, which indicates
@@ -981,7 +990,6 @@ export class BubbleManager {
         Comical.activateElement(this.activeElement);
         this.adjustTarget(this.activeElement);
         this.showCorrespondingTextBox(this.activeElement);
-        this.setupDragging(this.activeElement);
     }
     private startResizeDragX: number;
     private startResizeDragY: number;
@@ -1528,6 +1536,7 @@ export class BubbleManager {
                 break;
         }
         this.moveControlFrame();
+        this.adjustTarget(this.activeElement);
     };
 
     private matchContainerToImage(overlay: HTMLElement) {

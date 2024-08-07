@@ -196,6 +196,10 @@
         // the contents are identical, this makes them a shadow.
         opacity: 50%;
     }
+    // in targets, as in image overlays, we want the height to be derived from the width.
+    .bloom-imageContainer img {
+        height: unset;
+    }
 }
 
 // This might be more specific than it needs to be, but it roughly matches a rule that gives it a border and shadow,
