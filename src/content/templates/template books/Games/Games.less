@@ -117,6 +117,14 @@
     }
 }
 
+.drag-activity-play .bloom-ui-dragging {
+    // This is purposely all but invisible. It's just enough to make Chrome think that one more
+    // pixel is being dragged, so that it redraws a little more of the background after the image
+    // moves away. Without it, some kind of rounding error causes lines to be left behind while
+    // dragging things if we are scaled up.
+    outline: 1px solid rgba(255, 255, 255, 0.01);
+}
+
 .drag-activity-play .drag-item-order-sentence {
     display: none;
 }

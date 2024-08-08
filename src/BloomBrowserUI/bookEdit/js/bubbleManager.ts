@@ -31,6 +31,7 @@ import { adjustTarget } from "../toolbox/dragActivity/dragActivityTool";
 import BloomSourceBubbles from "../sourceBubbles/BloomSourceBubbles";
 import BloomHintBubbles from "./BloomHintBubbles";
 import { renderBubbleToolbox } from "./bubbleToolbox";
+import { remove } from "mobx";
 
 export interface ITextColorInfo {
     color: string;
@@ -763,7 +764,9 @@ export class BubbleManager {
             //These can never be identified as duplicate event listeners, so we'll end up with tons
             // of duplicates.
             element.addEventListener("focusin", this.handleFocusInEvent);
-            console.log("adding focusin event to " + element.outerHTML);
+            console.log(
+                "adding focusin event to " + bubbleDescription(element)
+            );
             if (
                 includeCkEditor &&
                 element.classList.contains("bloom-editable")
@@ -775,7 +778,12 @@ export class BubbleManager {
 
     private handleFocusInEvent(ev: Event) {
         console.log(
-            "focus in event " + (ev.currentTarget as HTMLElement)?.outerHTML
+            "focus in event " +
+                bubbleDescription(
+                    (ev.currentTarget as HTMLElement).closest(
+                        kTextOverPictureSelector
+                    )
+                )
         );
         // Restore hiding these when we focus a bubble, so they don't get in the way of working on
         // that bubble.
@@ -963,6 +971,7 @@ export class BubbleManager {
     }
 
     public setActiveElement(element: HTMLElement | undefined) {
+        console.log("setActiveElement " + bubbleDescription(element));
         if (this.activeElement !== element && this.activeElement) {
             tryRemoveImageEditingButtons(
                 this.activeElement.getElementsByClassName(
@@ -970,26 +979,16 @@ export class BubbleManager {
                 )[0] as Element | undefined
             );
         }
-        // Sometimes in initialization the active element is set but this is not done.
-        // it's cheap and harmless to do it again if it isn't needed.
-        this.setupDragging(this.activeElement);
-        if (this.activeElement === element) {
-            // Once everything is set up, we don't need to do anything more if nothing changed...
-            // unless we have an active element and don't have a control frame, which indicates
-            // a just-loaded-page situation where we need to set up the control frame
-            // and probably do all the rest of the tasks connected with selecting an element.
-            if (
-                !this.activeElement ||
-                document.getElementById("comical-control-frame")
-            ) {
-                return;
-            }
-        }
+        // Some of this could probably be avoided if this.activeElement is not changing.
+        // But are cases in page initialization where this.activeElement
+        // gets set without calling this method, then it gets called again.
+        // It's safest if we just do it all every time.
         this.activeElement = element;
         this.doNotifyChange();
         Comical.activateElement(this.activeElement);
         this.adjustTarget(this.activeElement);
         this.showCorrespondingTextBox(this.activeElement);
+        this.setupDragging();
     }
     private startResizeDragX: number;
     private startResizeDragY: number;
@@ -1003,7 +1002,16 @@ export class BubbleManager {
     private resizeDragCorner: "ne" | "nw" | "se" | "sw" | undefined;
     private gotAMoveWhileMouseDown: boolean = false;
 
-    setupDragging(eltToPutControlsOn: HTMLElement | undefined) {
+    removeControlFrame() {
+        const controlFrame = document.getElementById("comical-control-frame");
+        if (controlFrame) {
+            controlFrame.remove();
+        }
+    }
+
+    setupDragging() {
+        const eltToPutControlsOn = this.activeElement;
+        console.log("setupDragging on" + bubbleDescription(eltToPutControlsOn));
         let controlFrame = document.getElementById("comical-control-frame");
         if (!eltToPutControlsOn) {
             if (controlFrame) {
@@ -1600,6 +1608,9 @@ export class BubbleManager {
     }
 
     private moveControlFrame = () => {
+        console.log(
+            "moving control frame to " + bubbleDescription(this.activeElement)
+        );
         const controlFrame = document.getElementById("comical-control-frame");
         if (controlFrame && this.activeElement) {
             controlFrame.style.width = this.activeElement.style.width;
@@ -2942,6 +2953,7 @@ export class BubbleManager {
             return; // Already off. No work needs to be done.
         }
         this.isComicEditingOn = false;
+        this.removeControlFrame();
 
         Comical.setActiveBubbleListener(undefined);
         Comical.stopEditing();
@@ -3985,14 +3997,10 @@ export class BubbleManager {
             const allOverPictureElements = Array.from(
                 document.getElementsByClassName(kTextOverPictureClass)
             );
-            // Game play has its own form of dragging and doesn't allow resizing or editing
-            // bubble content. Possibly removing contenteditable would be better
-            // in dragActivitRuntime's prepareActivity method, but cleaning up the
-            // handles is better here because this classs has the code to recreate
-            // them in restoreBubbleEditing.
+            // We don't want the user to be able to edit the text in the bubbles while playing a game.
+            // This doesn't need to be in the game prepareActivity because we remove contenteditable
+            // from all elements when publishing a book.
             allOverPictureElements.forEach(element => {
-                $(element).draggable("destroy");
-                $(element).resizable("destroy");
                 const editables = Array.from(
                     element.getElementsByClassName("bloom-editable")
                 );
@@ -4031,6 +4039,7 @@ export class BubbleManager {
                 });
             });
             this.makeOverPictureElementsDraggableClickableAndResizable();
+            this.setupDragging();
         }
         this.comicEditingSuspendedState = "none";
         this.turnOnBubbleEditing();
@@ -4450,4 +4459,26 @@ export function initializeBubbleManager() {
 interface IAlternate {
     style: string; // What to put in the style attr of the overlay; determines size and position
     tails: object[]; // The tails of the data-bubble; determines placing of tail.
+}
+
+export function bubbleDescription(e: Element | null | undefined): string {
+    const elt = e as HTMLElement;
+    if (!elt) {
+        return "no bubble";
+    }
+    const result = "bubble at (" + elt.style.left + ", " + elt.style.top + ") ";
+    const imageContainer = elt.getElementsByClassName(
+        "bloom-imageContainer"
+    )[0];
+    if (imageContainer) {
+        const img = imageContainer.getElementsByTagName("img")[0];
+        if (img) {
+            return result + "with image : " + img.getAttribute("src");
+        }
+    }
+    // Enhance: look for videoContainer similarly
+    else {
+        return result + "with text " + elt.innerText;
+    }
+    return result;
 }
