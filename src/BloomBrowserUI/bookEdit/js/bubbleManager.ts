@@ -423,9 +423,16 @@ export class BubbleManager {
             x => !EditableDivUtils.isInHiddenLanguageBlock(x)
         ) as HTMLElement[];
         if (overPictureElements.length > 0) {
-            this.activeElement = overPictureElements[
-                overPictureElements.length - 1
-            ] as HTMLElement;
+            // If we have no activeElement, or it's not in the list...deleted or belongs to
+            // another page, perhaps...pick an arbitrary one.
+            if (
+                !this.activeElement ||
+                overPictureElements.indexOf(this.activeElement) === -1
+            ) {
+                this.activeElement = overPictureElements[
+                    overPictureElements.length - 1
+                ] as HTMLElement;
+            }
             // This focus call doesn't seem to work, at least in a lasting fashion.
             // See the code in bloomEditing.ts/SetupElements() that sets focus after
             // calling BloomSourceBubbles.MakeSourceBubblesIntoQtips() in a delayed loop.
@@ -918,7 +925,8 @@ export class BubbleManager {
         }
         if (
             clickedElement.closest("#comical-control-frame") ||
-            clickedElement.closest(".MuiMenu-list")
+            clickedElement.closest(".MuiMenu-list") ||
+            clickedElement.closest(".above-page-control-container")
         ) {
             // clicking things in here (such as menu item in the pull-down) should not
             // clear the active element
