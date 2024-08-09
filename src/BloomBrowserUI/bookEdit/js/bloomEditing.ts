@@ -18,7 +18,12 @@ import BloomField from "../bloomField/BloomField";
 import BloomNotices from "./bloomNotices";
 import BloomSourceBubbles from "../sourceBubbles/BloomSourceBubbles";
 import BloomHintBubbles from "./BloomHintBubbles";
-import { initializeBubbleManager, theOneBubbleManager } from "./bubbleManager";
+import {
+    initializeBubbleManager,
+    kTextOverPictureClass,
+    kTextOverPictureSelector,
+    theOneBubbleManager
+} from "./bubbleManager";
 import { showTopicChooserDialog } from "../TopicChooser/TopicChooserDialog";
 import "../../modified_libraries/jquery-ui/jquery-ui-1.10.3.custom.min.js";
 import "./jquery.hasAttr.js"; //reviewSlog for CenterVerticallyInParent
@@ -836,6 +841,16 @@ export function SetupElements(
             );
         }
         BloomSourceBubbles.setupSizeChangedHandling(divsThatHaveSourceBubbles);
+
+        // If we saved the page with an indication that a particular element should be
+        // active, and calling code is not specifying one, restore the one we saved.
+        // This is especially useful when the page is unexpectedly reloaded, for example,
+        // changing a picture.
+        if (!elementToFocus) {
+            elementToFocus = Array.from(
+                document.getElementsByClassName(kTextOverPictureClass)
+            ).find(e => e.hasAttribute("data-bloom-active")) as HTMLElement;
+        }
         // Ensure focus exists as best we can (BL-7994)
         if (elementToFocus && $(elementToFocus).find(":focusable")) {
             console.log(

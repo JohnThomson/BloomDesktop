@@ -42,7 +42,7 @@ const kComicalGeneratedClass: string = "comical-generated";
 // We could rename this class to "bloom-overPictureElement", but that would involve a migration.
 // For now we're keeping this name for backwards-compatibility, even though now the element could be
 // a video or even another picture.
-const kTextOverPictureClass = "bloom-textOverPicture";
+export const kTextOverPictureClass = "bloom-textOverPicture";
 export const kTextOverPictureSelector = `.${kTextOverPictureClass}`;
 const kImageContainerClass = "bloom-imageContainer";
 const kImageContainerSelector = `.${kImageContainerClass}`;
@@ -916,6 +916,14 @@ export class BubbleManager {
             // copy buttons.
             return;
         }
+        if (
+            clickedElement.closest("#comical-control-frame") ||
+            clickedElement.closest(".MuiMenu-list")
+        ) {
+            // clicking things in here (such as menu item in the pull-down) should not
+            // clear the active element
+            return;
+        }
         // If we clicked in the document outside a Comical picture
         // we don't want anything Comical to be active.
         // (We don't use a blur event for this because we don't want to unset
@@ -978,12 +986,14 @@ export class BubbleManager {
                     "bloom-imageContainer"
                 )[0] as Element | undefined
             );
+            this.activeElement.removeAttribute("data-bloom-active");
         }
         // Some of this could probably be avoided if this.activeElement is not changing.
         // But are cases in page initialization where this.activeElement
         // gets set without calling this method, then it gets called again.
         // It's safest if we just do it all every time.
         this.activeElement = element;
+        this.activeElement?.setAttribute("data-bloom-active", "true");
         this.doNotifyChange();
         Comical.activateElement(this.activeElement);
         this.adjustTarget(this.activeElement);
@@ -1164,11 +1174,17 @@ export class BubbleManager {
         document.removeEventListener("mouseup", this.endResizeDrag);
         this.currentDragControl?.classList.remove("active");
     };
+
+    private minWidth = 30; // @MinTextBoxWidth in bubble.less Todo: 30
+    private minHeight = 30; // @MinTextBoxHeight in bubble.less
+
     private continueResizeDrag = (event: MouseEvent) => {
         if (event.buttons !== 1 || !this.activeElement) {
             this.resizeDragCorner = undefined; // drag is over
             return;
         }
+        if (event.movementX === 0 && event.movementY === 0) return;
+        this.initialCropImageWidth = -1; // resize resets the basis for cropping
 
         if (this.resizeDragCorner) {
             const deltaX = event.clientX - this.startResizeDragX;
@@ -1189,24 +1205,36 @@ export class BubbleManager {
             let newLeft = this.oldLeft;
             switch (this.resizeDragCorner) {
                 case "ne":
-                    newWidth = this.oldWidth + deltaX;
-                    newHeight = this.oldHeight - deltaY;
-                    newTop = this.oldTop + deltaY;
+                    newWidth = Math.max(this.oldWidth + deltaX, this.minWidth);
+                    newHeight = Math.max(
+                        this.oldHeight - deltaY,
+                        this.minHeight
+                    );
+                    newTop = this.oldTop + (this.oldHeight - newHeight);
                     break;
                 case "nw":
-                    newWidth = this.oldWidth - deltaX;
-                    newHeight = this.oldHeight - deltaY;
-                    newTop = this.oldTop + deltaY;
-                    newLeft = this.oldLeft + deltaX;
+                    newWidth = Math.max(this.oldWidth - deltaX, this.minWidth);
+                    newHeight = Math.max(
+                        this.oldHeight - deltaY,
+                        this.minHeight
+                    );
+                    newTop = this.oldTop + (this.oldHeight - newHeight);
+                    newLeft = this.oldLeft + (this.oldWidth - newWidth);
                     break;
                 case "se":
-                    newWidth = this.oldWidth + deltaX;
-                    newHeight = this.oldHeight + deltaY;
+                    newWidth = Math.max(this.oldWidth + deltaX, this.minWidth);
+                    newHeight = Math.max(
+                        this.oldHeight + deltaY,
+                        this.minHeight
+                    );
                     break;
                 case "sw":
-                    newWidth = this.oldWidth - deltaX;
-                    newHeight = this.oldHeight + deltaY;
-                    newLeft = this.oldLeft + deltaX;
+                    newWidth = Math.max(this.oldWidth - deltaX, this.minWidth);
+                    newHeight = Math.max(
+                        this.oldHeight + deltaY,
+                        this.minHeight
+                    );
+                    newLeft = this.oldLeft + (this.oldWidth - newWidth);
                     break;
             }
             if (slope) {
@@ -1321,16 +1349,23 @@ export class BubbleManager {
     private currentDragControl: HTMLElement | undefined;
 
     private startCropDrag(event: MouseEvent, side: string) {
+        const img = this.activeElement?.getElementsByTagName("img")[0];
+        if (!img || !this.activeElement) {
+            return;
+        }
         this.startCropDragX = event.clientX;
         this.startCropDragY = event.clientY;
         this.currentDragControl = event.currentTarget as HTMLElement;
         this.currentDragControl.classList.add("active");
         this.currentCropSide = side;
-        if (!this.activeElement) return; // makes lint happy
-        const img = this.activeElement?.getElementsByTagName("img")[0];
-        if (!img) return;
+        const style = this.activeElement.style;
+        this.oldWidth = BubbleManager.pxToNumber(style.width);
+        this.oldHeight = BubbleManager.pxToNumber(style.height);
+        this.oldTop = BubbleManager.pxToNumber(style.top);
+        this.oldLeft = BubbleManager.pxToNumber(style.left);
+        this.oldImageLeft = BubbleManager.pxToNumber(img.style.left);
+        this.oldImageTop = BubbleManager.pxToNumber(img.style.top);
         //Todo: various things should set this.initialImageWidth to -1:
-        // change of activeElement
         // drag element
         // resize element
         if (
@@ -1373,43 +1408,54 @@ export class BubbleManager {
         if (!img || !this.activeElement) {
             return;
         }
-        const deltaX = event.clientX - this.startCropDragX;
-        const deltaY = event.clientY - this.startCropDragY;
-        if (deltaX === 0 && deltaY === 0) return;
-        this.startCropDragX = event.clientX;
-        this.startCropDragY = event.clientY;
-        const oldImageWidth = img.offsetWidth;
-        const oldBubbleWidth = this.activeElement.offsetWidth;
-        const oldBubbleHeight = this.activeElement.offsetHeight;
-        const oldBubbleLeft = BubbleManager.pxToNumber(
-            this.activeElement.style.left
-        );
-        const oldBubbleTop = BubbleManager.pxToNumber(
-            this.activeElement.style.top
-        );
-        const oldImageLeft = BubbleManager.pxToNumber(img.style.left);
-        const oldImageTop = BubbleManager.pxToNumber(img.style.top);
-        let newBubbleWidth = oldBubbleWidth + deltaX;
-        let newBubbleHeight = oldBubbleHeight + deltaY;
+        // These may be adjusted to the deltas that would not violate min sizes
+        let deltaX = event.clientX - this.startCropDragX;
+        let deltaY = event.clientY - this.startCropDragY;
+        if (event.movementX === 0 && event.movementY === 0) return;
+
+        let newBubbleWidth = this.oldWidth; // default
+        let newBubbleHeight = this.oldHeight;
         switch (this.currentCropSide) {
             case "n":
-                newBubbleHeight = oldBubbleHeight - deltaY;
+                newBubbleHeight = Math.max(
+                    this.oldHeight - deltaY,
+                    this.minHeight
+                );
+                // Everything subsequent behaves as if it only moved as far as permitted.
+                deltaY = this.oldHeight - newBubbleHeight;
                 this.activeElement.style.height = `${newBubbleHeight}px`;
-                this.activeElement.style.top = `${oldBubbleTop + deltaY}px`;
-                img.style.top = `${oldImageTop - deltaY}px`;
+                // Moves down by the amount the bubble shrank (or), so the bottom stays in the same place
+                this.activeElement.style.top = `${this.oldTop + deltaY}px`;
+                // For a first attempt, we move it the oppposite of how the bubble actually
+                // changd size. That might leave a gap at the top, but we'll adjust for that later.
+                img.style.top = `${this.oldImageTop - deltaY}px`;
                 break;
             case "s":
+                newBubbleHeight = Math.max(
+                    this.oldHeight + deltaY,
+                    this.minHeight
+                );
+                deltaY = newBubbleHeight - this.oldHeight;
                 this.activeElement.style.height = `${newBubbleHeight}px`;
                 break;
             case "e":
+                newBubbleWidth = Math.max(
+                    this.oldWidth + deltaX,
+                    this.minWidth
+                );
+                deltaX = newBubbleWidth - this.oldWidth;
                 this.activeElement.style.width = `${newBubbleWidth}px`;
                 // todo: stretch/unstretch
                 break;
             case "w":
-                newBubbleWidth = oldBubbleWidth - deltaX;
+                newBubbleWidth = Math.max(
+                    this.oldWidth - deltaX,
+                    this.minWidth
+                );
+                deltaX = this.oldWidth - newBubbleWidth;
                 this.activeElement.style.width = `${newBubbleWidth}px`;
-                this.activeElement.style.left = `${oldBubbleLeft + deltaX}px`;
-                img.style.left = `${oldImageLeft - deltaX}px`;
+                this.activeElement.style.left = `${this.oldLeft + deltaX}px`;
+                img.style.left = `${this.oldImageLeft - deltaX}px`;
                 break;
         }
         let newImageWidth: number;
@@ -1462,10 +1508,10 @@ export class BubbleManager {
             case "w":
                 if (
                     // the bubble has stretched beyond the original left side of the image
-                    // oldBubbleLeft + deltaX is where the left of the bubble is now
+                    // this.oldLeft + deltaX is where the left of the bubble is now
                     // this.initialCropImageLeft + this.initialBubbleImageLeft is where
                     // the left of the image was when we started.
-                    oldBubbleLeft + deltaX <
+                    this.oldLeft + deltaX <
                     this.initialCropImageLeft + this.initialCropBubbleLeft
                 ) {
                     // grow the image. We want its left edge to end up at zero,
@@ -1519,10 +1565,10 @@ export class BubbleManager {
             case "n":
                 if (
                     // the bubble has stretched beyond the original top side of the image
-                    // oldBubbleTop + deltaY is where the top of the bubble is now
+                    // this.oldTop + deltaY is where the top of the bubble is now
                     // this.initialCropImageTop + this.initialBubbleImageTop is where
                     // the top of the image was when we started.
-                    oldBubbleTop + deltaY <
+                    this.oldTop + deltaY <
                     this.initialCropImageTop + this.initialCropBubbleTop
                 ) {
                     // grow the image. We want its top edge to end up at zero,
@@ -2411,6 +2457,7 @@ export class BubbleManager {
                 this.lastMoveContainer,
                 newPosition
             );
+            this.initialCropImageWidth = -1; // move resets the basis for cropping
             this.animationFrame = 0;
         });
     }
