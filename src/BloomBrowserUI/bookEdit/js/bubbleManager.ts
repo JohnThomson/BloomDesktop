@@ -3113,6 +3113,53 @@ export class BubbleManager {
         return bubble.getBubbleSpec();
     }
 
+    // Adjust the ordering of bubbles so that draggables are at the end.
+    // We want the things that can be moved around to be on top of the ones that can't.
+    // We don't use z-index because that makes stacking contexts and interferes with
+    // the way we keep bubble children on top of the canvas.
+    // Bubble levels should be consistent with the order of the elements in the DOM,
+    // since the former controls which one is treated as being clicked when there is overlap,
+    // while the latter determines which is on top.
+    public adjustBubbleOrdering = () => {
+        const parents = this.getAllPrimaryImageContainersOnPage();
+        parents.forEach(imageContainer => {
+            const bubbles = Array.from(
+                imageContainer.getElementsByClassName("bloom-textOverPicture")
+            );
+            let maxLevel = Math.max(
+                ...bubbles.map(
+                    b => Bubble.getBubbleSpec(b as HTMLElement).level ?? 0
+                )
+            );
+            const draggables = bubbles.filter(b =>
+                b.getAttribute("data-bubble-id")
+            );
+            if (
+                draggables.length === 0 ||
+                bubbles.indexOf(draggables[0]) ===
+                    bubbles.length - draggables.length
+            ) {
+                return; // already all at end (or none to move)
+            }
+            // Move them to the end, keeping them in order.
+            draggables.forEach(draggable => {
+                draggable.parentElement?.appendChild(draggable);
+                const bubble = new Bubble(draggable as HTMLElement);
+                // This would need to get fancier if draggbles came in groups with the same level.
+                // As it is, we just want their levels to be in the same order as their DOM order
+                // (relative to each other and the other bubbles) so getBubbleHit() will return
+                // the one that appears on top when they are stacked.
+                bubble.getBubbleSpec().level = maxLevel + 1;
+                bubble.persistBubbleSpec();
+                maxLevel++;
+            });
+            const parentContainer = draggables[0].closest(
+                ".bloom-imageContainer"
+            );
+            Comical.update(parentContainer as HTMLElement);
+        });
+    };
+
     // Adds a new over-picture element as a child of the specified {parentElement}
     //    (It is a child in the sense that the Comical library will recognize it as a child)
     // {offsetX}/{offsetY} is the offset in position from the parent to the child elements

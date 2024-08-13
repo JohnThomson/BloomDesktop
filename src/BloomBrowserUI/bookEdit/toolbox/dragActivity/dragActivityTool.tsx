@@ -20,7 +20,6 @@ import {
     OverlayItemRow,
     OverlayTextItem,
     OverlayVideoItem,
-    adjustBubbleOrdering,
     setGeneratedBubbleId
 } from "../overlay/overlayItem";
 import {
@@ -1838,7 +1837,7 @@ export class DragActivityTool extends ToolboxToolReactAdaptor {
             this.lastPageId = pageId;
             // useful during development, MAY not need in production.
             bubbleManager.removeDetachedTargets();
-            adjustBubbleOrdering();
+            bubbleManager.adjustBubbleOrdering();
 
             // Force things to Start tab as we change page.
             // If we decide not to do this, we should probably at least find a way to do it
