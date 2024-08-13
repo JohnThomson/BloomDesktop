@@ -101,7 +101,7 @@ const overlap = (start: HTMLElement, end: HTMLElement): boolean => {
 // Draw the arrow from the draggable to its target if it has one (and remove any previous arrow).
 // If the draggable is resized, adjust the target (if any) to match.
 // If forceAdjustAll is true, or we're in auto-adjust mode, adjust all draggables and targets
-// on the page to match the size of the draggable.
+// on the page to match the size of the draggable, except that image targets are not resized.
 export const adjustTarget = (
     draggable: HTMLElement,
     target: HTMLElement | undefined,
@@ -122,19 +122,28 @@ export const adjustTarget = (
     if (!draggable?.getAttribute("data-bubble-id")) {
         return;
     }
+    const allSameSize =
+        draggable.closest(".bloom-page")!.getAttribute("data-same-size") !==
+        "false";
     // if the target is not the same size, presumably the draggable size changed, in which case
     // we need to adjust the target, and possibly all other targets and draggables on the page.
     // If there's no target, just assume we need to adjust all if we're keeping sizes the same.
+    // Note: an image might be a different size even though it has not been resized; not a great
+    // problem if we adjust things anyway.
     let adjustAll = forceAdjustAll ?? false;
     if (!target) {
         adjustAll = true;
     } else {
         if (target.offsetHeight !== draggable.offsetHeight) {
-            target.style.height = `${draggable.offsetHeight}px`;
+            if (!allSameSize) {
+                target.style.height = `${draggable.offsetHeight}px`;
+            }
             adjustAll = true;
         }
         if (target.offsetWidth !== draggable.offsetWidth) {
-            target.style.width = `${draggable.offsetWidth}px`;
+            if (!allSameSize) {
+                target.style.width = `${draggable.offsetWidth}px`;
+            }
             adjustAll = true;
         }
     }
@@ -143,25 +152,38 @@ export const adjustTarget = (
     // Enhance: possibly we should only resize the ones that are initially the same size as the
     // target used to be? That could be useful if we ever again allow letter and word draggables
     // on the same game.
-    if (
-        adjustAll &&
-        draggable.closest(".bloom-page")!.getAttribute("data-same-size") !==
-            "false"
-    ) {
-        // We need to adjust the position of all the other targets and draggables.
+    if (adjustAll && allSameSize) {
+        // We need to adjust the position of all the targets and non-image draggables other than the one we started with.
         const page = draggable.closest(".bloom-page") as HTMLElement;
-        const otherDraggables = Array.from(
+        const otherDraggables: HTMLElement[] = [];
+        const draggableImages: HTMLElement[] = [];
+        const draggables: HTMLElement[] = Array.from(
             page.querySelectorAll("[data-bubble-id]")
-        ).filter(x => x !== draggable);
-        const otherTargets = Array.from(
-            page.querySelectorAll("[data-target-of]")
-        ).filter(x => x !== target);
-        otherDraggables.concat(otherTargets).forEach((elt: HTMLElement) => {
-            if (elt.offsetHeight !== draggable.offsetHeight) {
-                elt.style.height = `${draggable.offsetHeight}px`;
+        );
+        draggables.forEach(x => {
+            if (x.getElementsByClassName("bloom-imageContainer").length !== 0) {
+                draggableImages.push(x as HTMLElement);
+            } else if (x !== draggable) {
+                otherDraggables.push(x as HTMLElement);
             }
-            if (elt.offsetWidth !== draggable.offsetWidth) {
-                elt.style.width = `${draggable.offsetWidth}px`;
+        });
+        const otherTargets: HTMLElement[] = Array.from(
+            page.querySelectorAll("[data-target-of]")
+        );
+
+        let targetHeight = draggable.offsetHeight;
+        let targetWidth = draggable.offsetWidth;
+        if (draggableImages.length > 0) {
+            targetHeight = Math.max(...draggables.map(x => x.offsetHeight));
+            targetWidth = Math.max(...draggables.map(x => x.offsetWidth));
+        }
+
+        otherDraggables.concat(otherTargets).forEach((elt: HTMLElement) => {
+            if (elt.offsetHeight !== targetHeight) {
+                elt.style.height = `${targetHeight}px`;
+            }
+            if (elt.offsetWidth !== targetWidth) {
+                elt.style.width = `${targetWidth}px`;
             }
         });
     }

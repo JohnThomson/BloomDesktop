@@ -968,12 +968,12 @@ export function copyContentToTarget(draggable: HTMLElement) {
     if (!target) {
         return;
     }
-    // We want to copy the content of the draggale, with several exceptions.
+    // We want to copy the content of the draggable, with several exceptions.
     // To reduce flicker, we do the manipulations on a temporary element, and
     // only copy into the actual target if there is actually a change.
     // (Flicker is particularly likely with changes that don't affect the
     // target, like adding and removing the image editing buttons.)
-    const temp = target.ownerDocument.createElement("div");
+    let temp = target.ownerDocument.createElement("div");
     temp.innerHTML = draggable.innerHTML;
 
     // Don't need the bubble controls
@@ -1003,6 +1003,24 @@ export function copyContentToTarget(draggable: HTMLElement) {
     Array.from(temp.querySelectorAll("[tabindex]")).forEach(e => {
         e.removeAttribute("tabindex");
     });
+    const imageContainer = temp.getElementsByClassName(
+        "bloom-imageContainer"
+    )[0] as HTMLElement;
+    if (imageContainer) {
+        // We need the image container size to match the draggable size so that we get the
+        // same cropping.
+        imageContainer.style.width = draggable.style.width;
+        imageContainer.style.height = draggable.style.height;
+        imageContainer.style.position = "relative";
+        // We subract 2 here because the target box has a 2px border. In Play, the picture
+        // snaps to the same position as the target and is on top of the border (if it is showing).
+        // The extra offset puts it in the same place at design time (though under the border), giving a
+        // better indication of where it will end up.
+        imageContainer.style.top =
+            (target.offsetHeight - draggable.offsetHeight) / 2 - 2 + "px";
+        imageContainer.style.left =
+            (target.offsetWidth - draggable.offsetWidth) / 2 - 2 + "px";
+    }
     if (target.innerHTML !== temp.innerHTML) {
         target.innerHTML = temp.innerHTML;
     }
