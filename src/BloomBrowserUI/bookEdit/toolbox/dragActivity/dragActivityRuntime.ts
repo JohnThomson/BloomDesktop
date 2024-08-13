@@ -19,7 +19,12 @@ import {
     urlPrefix
 } from "./narration";
 
-let targetPositions: { x: number; y: number }[] = [];
+let targetPositions: {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+}[] = [];
 let originalPositions = new Map<HTMLElement, { x: number; y: number }>();
 let currentPage: HTMLElement | undefined;
 // Action to invoke if the user clicks a change page button.
@@ -97,7 +102,12 @@ export function prepareActivity(
         if (target) {
             const x = target.offsetLeft;
             const y = target.offsetTop;
-            targetPositions.push({ x, y });
+            targetPositions.push({
+                x,
+                y,
+                width: target.offsetWidth,
+                height: target.offsetHeight
+            });
             targets.push(target);
         }
         // if it has data-bubble-id, it should be draggable, just not needed
@@ -442,8 +452,10 @@ const showCorrect = (e: MouseEvent) => {
             if (!target) {
                 return; // this one is not required to be in a right place
             }
-            const x = target.offsetLeft;
-            const y = target.offsetTop;
+            const x =
+                target.offsetLeft + (target.offsetWidth - elt.offsetWidth) / 2;
+            const y =
+                target.offsetTop + (target.offsetHeight - elt.offsetHeight) / 2;
             elt.style.left = x + "px";
             elt.style.top = y + "px";
         });
@@ -507,13 +519,16 @@ const elementDrag = (e: PointerEvent) => {
     let xBest = x;
     let yBest = y;
     for (const slot of targetPositions) {
-        const deltaX = slot.x - x;
-        const deltaY = slot.y - y;
+        const offsetX = (slot.width - dragTarget.offsetWidth) / 2;
+        const offsetY = (slot.height - dragTarget.offsetHeight) / 2;
+        // if this target were centered in this slot, it would be at slot.x + offsetX, slot.y + offsetY
+        const deltaX = slot.x + offsetX - x;
+        const deltaY = slot.y + offsetY - y;
         const delta = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
         if (delta < deltaMin) {
             deltaMin = delta;
-            xBest = slot.x;
-            yBest = slot.y;
+            xBest = slot.x + offsetX;
+            yBest = slot.y + offsetY;
         }
     }
     if (deltaMin < 50) {
@@ -546,10 +561,7 @@ const stopDrag = (e: PointerEvent) => {
         if (elt === dragTarget) {
             return;
         }
-        if (
-            elt.offsetLeft === dragTarget.offsetLeft &&
-            elt.offsetTop === dragTarget.offsetTop
-        ) {
+        if (rightPosition(elt, dragTarget)) {
             const originalPosition = originalPositions.get(elt);
             if (originalPosition) {
                 elt.style.left = originalPosition.x + "px";
@@ -566,16 +578,18 @@ const getVisibleText = (elt: HTMLElement): string => {
         .join(" ");
 };
 
-const rightPosition = (
-    elt: HTMLElement,
-    correctX: number,
-    correctY: number
-) => {
-    const actualX = elt.offsetLeft;
-    const actualY = elt.offsetTop;
+const rightPosition = (draggableToCheck: HTMLElement, target: HTMLElement) => {
+    const actualX = draggableToCheck.offsetLeft;
+    const actualY = draggableToCheck.offsetTop;
+    const correctX =
+        target.offsetLeft +
+        (target.offsetWidth - draggableToCheck.offsetWidth) / 2;
+    const correctY =
+        target.offsetTop +
+        (target.offsetHeight - draggableToCheck.offsetHeight) / 2;
     return (
-        // Since anything correct should be snapped, using a range probably isn't necessary
-        Math.abs(correctX - actualX) < 0.5 && Math.abs(correctY - actualY) < 0.5
+        // At least a half-pixel error can occur just from centering the draggable in the target.
+        Math.abs(correctX - actualX) < 0.6 && Math.abs(correctY - actualY) < 0.6
     );
 };
 
@@ -678,10 +692,7 @@ function checkDraggables(page: HTMLElement) {
             return;
         }
 
-        const correctX = target.offsetLeft;
-        const correctY = target.offsetTop;
-
-        if (!rightPosition(draggableToCheck, correctX, correctY)) {
+        if (!rightPosition(draggableToCheck, target)) {
             // It's not in the expected place. But perhaps one with the same text is?
             // This only applies if it's a text item.
             // (don't use getElementsByClassName here...there could be a TG on an image description of
@@ -704,7 +715,7 @@ function checkDraggables(page: HTMLElement) {
                     if (getVisibleText(otherDraggable) !== visibleText) {
                         return false; // only interested in ones with the same text
                     }
-                    return rightPosition(otherDraggable, correctX, correctY);
+                    return rightPosition(otherDraggable, target);
                 })
             ) {
                 allCorrect = false;
@@ -1007,19 +1018,15 @@ export function copyContentToTarget(draggable: HTMLElement) {
         "bloom-imageContainer"
     )[0] as HTMLElement;
     if (imageContainer) {
+        // We need another layer to manage clipping and centering
+        const temp1 = target.ownerDocument.createElement("div");
+        temp.classList.add("bloom-targetWrapper");
         // We need the image container size to match the draggable size so that we get the
         // same cropping.
         imageContainer.style.width = draggable.style.width;
         imageContainer.style.height = draggable.style.height;
-        imageContainer.style.position = "relative";
-        // We subract 2 here because the target box has a 2px border. In Play, the picture
-        // snaps to the same position as the target and is on top of the border (if it is showing).
-        // The extra offset puts it in the same place at design time (though under the border), giving a
-        // better indication of where it will end up.
-        imageContainer.style.top =
-            (target.offsetHeight - draggable.offsetHeight) / 2 - 2 + "px";
-        imageContainer.style.left =
-            (target.offsetWidth - draggable.offsetWidth) / 2 - 2 + "px";
+        temp1.appendChild(temp);
+        temp = temp1;
     }
     if (target.innerHTML !== temp.innerHTML) {
         target.innerHTML = temp.innerHTML;
