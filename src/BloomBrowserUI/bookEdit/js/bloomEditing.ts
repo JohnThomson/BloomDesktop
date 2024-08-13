@@ -6,7 +6,8 @@ import {
     cleanupImages,
     SetOverlayForImagesWithoutMetadata,
     SetupResizableElement,
-    SetupImagesInContainer
+    SetupImagesInContainer,
+    doImageCommand
 } from "./bloomImages";
 import { SetupVideoEditing } from "./bloomVideo";
 import { SetupWidgetEditing } from "./bloomWidgets";
@@ -63,6 +64,7 @@ import { EditableDivUtils } from "./editableDivUtils";
 import { removeToolboxMarkup } from "../toolbox/toolbox";
 import { IBloomWebSocketEvent } from "../../utils/WebSocketManager";
 import { setupDragActivityTabControl } from "../toolbox/dragActivity/dragActivityTool";
+import BloomMessageBoxSupport from "../../utils/bloomMessageBoxSupport";
 
 // Allows toolbox code to make an element properly in the context of this iframe.
 export function makeElement(
@@ -1443,11 +1445,37 @@ async function cutSelectionImpl() {
 }
 
 // See comment on copySelection
-export const pasteClipboardText = () => {
-    pasteImpl();
+export const pasteClipboard = (imageAvailable: boolean) => {
+    pasteImpl(imageAvailable);
 };
 
-async function pasteImpl() {
+async function pasteImpl(imageAvailable: boolean) {
+    const bubbleManager = theOneBubbleManager;
+    // Enhance: in what case would we consider a non-overlay image container to be the natural destination for pasting?
+    const activeBubble = bubbleManager?.getActiveElement();
+    const imageContainer = activeBubble?.getElementsByClassName(
+        "bloom-imageContainer"
+    )[0];
+    if (imageContainer) {
+        if (imageAvailable) {
+            const img = imageContainer.getElementsByTagName("img")[0];
+            if (!img) {
+                return; // unexpected, maybe log??
+            }
+            doImageCommand(img, "paste");
+        } else {
+            const imageIsGif =
+                activeBubble?.classList.contains("bloom-gif") ?? false;
+            BloomMessageBoxSupport.CreateAndShowSimpleMessageBox(
+                imageIsGif
+                    ? "EditTab.NoGifFoundOnClipboard"
+                    : "EditTab.NoImageFoundOnClipboard",
+                "No image found",
+                ""
+            );
+        }
+        return; // can't paste anything but an image into an image container overlay
+    }
     // Using ckeditor here because it's the only way I've found to integrate clipboard
     // ops into an Undo stack that we can operate from an external button.
     // We do a Save before and after to make sure that the cut is distinct from
