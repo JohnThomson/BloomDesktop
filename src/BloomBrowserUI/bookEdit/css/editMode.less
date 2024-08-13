@@ -247,6 +247,14 @@ body:not(.origami-drag) .bloom-imageContainer.hoverUp {
     background-color: @ImageAndVideoHoverOverlay;
 }
 
+// The hovered image container background is just distracting when the whole page is an image
+// container. One group of such cases is bloom games. We may want to suppress it for pages
+// designed to have a full-bleed background for a comic, and perhaps others. I went for a
+// minimal change for now.
+.bloom-page[data-tool-id="game"] .bloom-imageContainer.hoverUp {
+    background-color: transparent;
+}
+
 .imageButton {
     width: 87px;
     height: 52px;
