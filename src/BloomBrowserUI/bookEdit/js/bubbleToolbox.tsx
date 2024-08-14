@@ -173,56 +173,90 @@ const BubbleToolbox: React.FunctionComponent<{
             >
                 {hasImage && (
                     <Fragment>
-                        {isPlaceHolder || (
+                        {
+                            // latest card says we don't want this as a button ever.
+                            // isPlaceHolder || (
+                            //     <BloomTooltip
+                            //         id="metadata"
+                            //         placement="top"
+                            //         tip={{
+                            //             l10nKey: "EditTab.Image.EditMetadata"
+                            //         }}
+                            //     >
+                            //         <button
+                            //             css={
+                            //                 hasLicenseProblem
+                            //                     ? svgIconCss
+                            //                     : materialIconCss
+                            //             }
+                            //             onClick={runMetadataDialog}
+                            //         >
+                            //             {hasLicenseProblem ? (
+                            //                 <img src="/bloom/bookEdit/img/Missing Metadata.svg" />
+                            //             ) : (
+                            //                 <CopyrightIcon color="primary" />
+                            //             )}
+                            //         </button>
+                            //     </BloomTooltip>
+                            // )
+                        }
+                        {isPlaceHolder && (
                             <BloomTooltip
                                 id="chooseImage"
                                 placement="top"
                                 tip={{
-                                    l10nKey: "EditTab.Image.EditMetadata"
+                                    l10nKey: "EditTab.Image.ChooseImage"
                                 }}
                             >
                                 <button
-                                    css={
-                                        hasLicenseProblem
-                                            ? svgIconCss
-                                            : materialIconCss
-                                    }
-                                    onClick={runMetadataDialog}
+                                    css={materialIconCss}
+                                    onClick={e => {
+                                        if (!props.bubble) return;
+                                        const imgContainer = props.bubble.getElementsByClassName(
+                                            "bloom-imageContainer"
+                                        )[0] as HTMLElement;
+                                        if (!imgContainer) return;
+                                        doImageCommand(
+                                            imgContainer.getElementsByTagName(
+                                                "img"
+                                            )[0] as HTMLImageElement,
+                                            "change"
+                                        );
+                                    }}
                                 >
-                                    {hasLicenseProblem ? (
-                                        <img src="/bloom/bookEdit/img/Missing Metadata.svg" />
-                                    ) : (
-                                        <CopyrightIcon color="primary" />
-                                    )}
+                                    <SearchIcon color="primary" />
                                 </button>
                             </BloomTooltip>
                         )}
-                        <BloomTooltip
-                            id="chooseImage"
-                            placement="top"
-                            tip={{
-                                l10nKey: "EditTab.Image.ChooseImage"
-                            }}
-                        >
-                            <button
-                                css={materialIconCss}
-                                onClick={e => {
-                                    if (!props.bubble) return;
-                                    const imgContainer = props.bubble.getElementsByClassName(
-                                        "bloom-imageContainer"
-                                    )[0] as HTMLElement;
-                                    if (!imgContainer) return;
-                                    doImageCommand(
-                                        imgContainer.getElementsByTagName(
-                                            "img"
-                                        )[0] as HTMLImageElement,
-                                        "change"
-                                    );
+                        {isPlaceHolder && (
+                            <BloomTooltip
+                                id="pasteImage"
+                                placement="top"
+                                tip={{
+                                    l10nKey: "EditTab.Image.PasteImage"
                                 }}
                             >
-                                <SearchIcon color="primary" />
-                            </button>
-                        </BloomTooltip>
+                                <button
+                                    css={materialIconCss}
+                                    style={{ marginRight: "20px" }}
+                                    onClick={e => {
+                                        if (!props.bubble) return;
+                                        const imgContainer = props.bubble.getElementsByClassName(
+                                            "bloom-imageContainer"
+                                        )[0] as HTMLElement;
+                                        if (!imgContainer) return;
+                                        doImageCommand(
+                                            imgContainer.getElementsByTagName(
+                                                "img"
+                                            )[0] as HTMLImageElement,
+                                            "paste"
+                                        );
+                                    }}
+                                >
+                                    <PasteIcon color="primary" />
+                                </button>
+                            </BloomTooltip>
+                        )}
                     </Fragment>
                 )}
                 {editable && (
