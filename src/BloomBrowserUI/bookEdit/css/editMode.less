@@ -1158,6 +1158,12 @@ body {
     }
 }
 
+.bloom-textOverPicture {
+    #formatButton {
+        display: none; // Enhance: maybe don't create at all?
+    }
+}
+
 // different bubble shapes require different positioning of the affordances
 [data-bubble] {
     // These happen to be multiples of 1.4 is because they are 1% increments of 140px (the default text box width)
@@ -1167,7 +1173,9 @@ body {
 
     // we need to push the label left-ward to get out of the way of the fat part of the bubble
     [data-languageTipContent]:after {
-        right: calc(100% + 14px) !important;
+        //right: calc(100% + 14px) !important;
+        content: "" !important; // suppress these, now in toolbox
+        //display: none !important;
     }
 }
 

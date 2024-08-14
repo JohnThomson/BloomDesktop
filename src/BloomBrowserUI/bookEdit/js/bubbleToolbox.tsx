@@ -24,6 +24,8 @@ import Menu from "@mui/material/Menu";
 import { Divider } from "@mui/material";
 import { DuplicateIcon } from "./DuplicateIcon";
 import { BubbleManager } from "./bubbleManager";
+import { GetEditor } from "./bloomEditing";
+import { BloomTooltip } from "../../react_components/BloomToolTip";
 
 const controlFrameColor: string = kBloomBlue;
 
@@ -43,7 +45,7 @@ const BubbleToolbox: React.FunctionComponent<{
         border-color: transparent;
         background-color: transparent;
         // These tweaks help make a neat row of aligned buttons the same size.
-        top: 3px;
+        top: 3px; // wants -4px if we align-items:start
         position: relative;
         svg {
             font-size: 1.7rem;
@@ -51,6 +53,8 @@ const BubbleToolbox: React.FunctionComponent<{
     `;
     const svgIconCss = css`
         width: 22px;
+        position: relative;
+        top: 7px; // remove if we align-items:start
         border-color: transparent;
         background-color: transparent;
     `;
@@ -142,6 +146,10 @@ const BubbleToolbox: React.FunctionComponent<{
             }
         );
     }
+    const editable = props.bubble.getElementsByClassName(
+        "bloom-editable bloom-visibility-code-on"
+    )[0] as HTMLElement;
+    const langName = editable?.getAttribute("data-languagetipcontent"); // todo: pretty name
 
     return (
         <ThemeProvider theme={lightTheme}>
@@ -155,6 +163,8 @@ const BubbleToolbox: React.FunctionComponent<{
                     border-radius: 4px;
                     display: flex;
                     justify-content: space-around;
+                    // if we do this we need to tweak the top: settings in materialIconCss and svgIconCss
+                    //align-items: start;
                     padding: 2px 10px;
                     margin: 0 auto 0 auto;
                     width: fit-content;
@@ -164,59 +174,139 @@ const BubbleToolbox: React.FunctionComponent<{
                 {hasImage && (
                     <Fragment>
                         {isPlaceHolder || (
-                            <button
-                                css={
-                                    hasLicenseProblem
-                                        ? svgIconCss
-                                        : materialIconCss
-                                }
-                                onClick={runMetadataDialog}
+                            <BloomTooltip
+                                id="chooseImage"
+                                placement="top"
+                                tip={{
+                                    l10nKey: "EditTab.Image.EditMetadata"
+                                }}
                             >
-                                {hasLicenseProblem ? (
-                                    <img src="/bloom/bookEdit/img/Missing Metadata.svg" />
-                                ) : (
-                                    <CopyrightIcon color="primary" />
-                                )}
-                            </button>
+                                <button
+                                    css={
+                                        hasLicenseProblem
+                                            ? svgIconCss
+                                            : materialIconCss
+                                    }
+                                    onClick={runMetadataDialog}
+                                >
+                                    {hasLicenseProblem ? (
+                                        <img src="/bloom/bookEdit/img/Missing Metadata.svg" />
+                                    ) : (
+                                        <CopyrightIcon color="primary" />
+                                    )}
+                                </button>
+                            </BloomTooltip>
                         )}
-                        <button
-                            css={materialIconCss}
-                            onClick={e => {
-                                if (!props.bubble) return;
-                                const imgContainer = props.bubble.getElementsByClassName(
-                                    "bloom-imageContainer"
-                                )[0] as HTMLElement;
-                                if (!imgContainer) return;
-                                doImageCommand(
-                                    imgContainer.getElementsByTagName(
-                                        "img"
-                                    )[0] as HTMLImageElement,
-                                    "change"
-                                );
+                        <BloomTooltip
+                            id="chooseImage"
+                            placement="top"
+                            tip={{
+                                l10nKey: "EditTab.Image.ChooseImage"
                             }}
                         >
-                            <SearchIcon color="primary" />
-                        </button>
+                            <button
+                                css={materialIconCss}
+                                onClick={e => {
+                                    if (!props.bubble) return;
+                                    const imgContainer = props.bubble.getElementsByClassName(
+                                        "bloom-imageContainer"
+                                    )[0] as HTMLElement;
+                                    if (!imgContainer) return;
+                                    doImageCommand(
+                                        imgContainer.getElementsByTagName(
+                                            "img"
+                                        )[0] as HTMLImageElement,
+                                        "change"
+                                    );
+                                }}
+                            >
+                                <SearchIcon color="primary" />
+                            </button>
+                        </BloomTooltip>
                     </Fragment>
                 )}
-                <button
-                    css={svgIconCss}
-                    onClick={() => {
-                        if (!props.bubble) return;
-                        makeDuplicateOfDragBubble();
+                {editable && (
+                    <div
+                        css={css`
+                            display: flex;
+                            flex-direction: column;
+                            margin-right: 10px;
+                        `}
+                    >
+                        <BloomTooltip
+                            id="format"
+                            placement="top"
+                            tip={{
+                                l10nKey:
+                                    "EditTab.Toolbox.ComicTool.Options.Format"
+                            }}
+                        >
+                            <button
+                                css={svgIconCss}
+                                style={{ top: 0 }}
+                                onClick={() => {
+                                    if (!props.bubble) return;
+                                    GetEditor().runFormatDialog(editable);
+                                }}
+                            >
+                                <img
+                                    // A trick to make it bloom-blue
+                                    // To generate new filter rules like this, use https://codepen.io/sosuke/pen/Pjoqqp
+                                    // But it would be better still to make a react element SVG that can be any color.
+                                    css={css`
+                                        filter: invert(38%) sepia(93%)
+                                            saturate(422%) hue-rotate(140deg)
+                                            brightness(93%) contrast(96%);
+                                    `}
+                                    src="/bloom/bookEdit/img/cog.svg"
+                                />
+                            </button>
+                        </BloomTooltip>
+                        <div
+                            css={css`
+                                color: ${kBloomBlue};
+                                font-size: 11px;
+                                margin-top: -3px;
+                            `}
+                        >
+                            {langName}
+                        </div>
+                    </div>
+                )}
+                <BloomTooltip
+                    id="format"
+                    placement="top"
+                    tip={{
+                        l10nKey: "EditTab.Toolbox.ComicTool.Options.Duplicate"
                     }}
                 >
-                    <img src="/bloom/bookEdit/img/Duplicate.svg" />
-                </button>
-                <button
-                    css={materialIconCss}
-                    onClick={() => {
-                        if (!props.bubble) return;
-                        deleteBubble();
+                    <button
+                        css={svgIconCss}
+                        onClick={() => {
+                            if (!props.bubble) return;
+                            makeDuplicateOfDragBubble();
+                        }}
+                    >
+                        <img src="/bloom/bookEdit/img/Duplicate.svg" />
+                    </button>
+                </BloomTooltip>
+                <BloomTooltip
+                    id="format"
+                    placement="top"
+                    tip={{
+                        l10nKey: "Common.Delete"
                     }}
                 >
-                    <TrashIcon color="primary" />
-                </button>
+                    <button
+                        css={materialIconCss}
+                        onClick={() => {
+                            if (!props.bubble) return;
+                            deleteBubble();
+                        }}
+                    >
+                        <TrashIcon color="primary" />
+                    </button>
+                </BloomTooltip>
                 <button
                     ref={ref => (menuEl.current = ref)}
                     css={materialIconCss}

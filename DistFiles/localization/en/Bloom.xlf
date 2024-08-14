@@ -2100,6 +2100,11 @@
         <note>ID: EditTab.Toolbox.ComicTool.Options.Duplicate</note>
         <note>Tooltip for the bubble Duplicate icon</note>
       </trans-unit>
+      <trans-unit id="EditTab.Toolbox.ComicTool.Options.Format" sil:dynamic="true">
+        <source xml:lang="en">Format Dialog...</source>
+        <note>ID: EditTab.Toolbox.ComicTool.Options.Format</note>
+        <note>Tooltip for the bubble Duplicate icon</note>
+      </trans-unit>
       <trans-unit id="EditTab.Toolbox.ComicTool.Options.ImageSelected" sil:dynamic="true">
         <source xml:lang="en">There are no options for this kind of overlay</source>
         <note>ID: EditTab.Toolbox.ComicTool.Options.ImageSelected</note>

@@ -561,7 +561,8 @@ export function UpdateImageTooltipVisibility(container: HTMLElement) {
     if (
         container.classList.contains("bloom-hideImageButtons") ||
         container.classList.contains("ui-suppressImageButtons") ||
-        playingBloomGame(container)
+        playingBloomGame(container) ||
+        EditableDivUtils.isInHiddenLanguageBlock(container)
     ) {
         // Since the image buttons aren't visible, hide the image tooltip too
         DisableImageTooltip(container);

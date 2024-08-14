@@ -293,9 +293,12 @@ function AddLanguageTags(container) {
             // With a really small box that also had a hint qtip, there wasn't enough room and the two fought
             // with each other, leading to flashing back and forth
             // Of course that was from when Language Tags were qtips too, but I think I'll leave the restriction for now.
-            if ($this.width() < 100) {
-                return;
-            }
+            // August 2024: very small boxes are now usually overlays, and they now show the language in the bubbleControlBox,
+            // so I don't think we need this restriction anymore. Leaving it here in case we have problems with other small
+            // boxes and need to be more selective.
+            // if ($this.width() < 100) {
+            //     return;
+            // }
 
             const key = $this.attr("lang");
             if (key !== undefined && (key === "*" || key.length < 1)) {
@@ -338,7 +341,7 @@ function SetBookCopyrightAndLicenseButtonVisibility(container) {
         .css("display", shouldShowButton ? "inline" : "none");
 }
 
-function GetEditor() {
+export function GetEditor() {
     return new StyleEditor("/bloom/bookEdit");
 }
 
