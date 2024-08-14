@@ -6,7 +6,6 @@ import * as ReactDOM from "react-dom";
 import { kBloomBlue, lightTheme } from "../../bloomMaterialUITheme";
 import { default as CopyrightIcon } from "@mui/icons-material/Copyright";
 import { default as SearchIcon } from "@mui/icons-material/Search";
-import { default as TrashIcon } from "@mui/icons-material/Delete";
 import { default as MenuIcon } from "@mui/icons-material/MoreHorizSharp";
 import { default as CopyIcon } from "@mui/icons-material/ContentCopy";
 import { default as CutIcon } from "@mui/icons-material/ContentCut";
@@ -24,8 +23,9 @@ import Menu from "@mui/material/Menu";
 import { Divider } from "@mui/material";
 import { DuplicateIcon } from "./DuplicateIcon";
 import { BubbleManager } from "./bubbleManager";
-import { GetEditor } from "./bloomEditing";
+import { copySelection, GetEditor, pasteClipboard } from "./bloomEditing";
 import { BloomTooltip } from "../../react_components/BloomToolTip";
+import { TrashIcon } from "../toolbox/overlay/TrashIcon";
 
 const controlFrameColor: string = kBloomBlue;
 
@@ -45,7 +45,7 @@ const BubbleToolbox: React.FunctionComponent<{
         border-color: transparent;
         background-color: transparent;
         // These tweaks help make a neat row of aligned buttons the same size.
-        top: 3px; // wants -4px if we align-items:start
+        top: -4px; // wants 3px if we remove align-items:start
         position: relative;
         svg {
             font-size: 1.7rem;
@@ -54,7 +54,7 @@ const BubbleToolbox: React.FunctionComponent<{
     const svgIconCss = css`
         width: 22px;
         position: relative;
-        top: 7px; // remove if we align-items:start
+        //top: 7px; // restore if we remove align-items:start
         border-color: transparent;
         background-color: transparent;
     `;
@@ -96,7 +96,16 @@ const BubbleToolbox: React.FunctionComponent<{
             l10nId: "Common.Delete",
             english: "Delete",
             onClick: deleteBubble,
-            icon: <TrashIcon css={muiMenIconCss} />
+            icon: (
+                <TrashIcon
+                    color="black"
+                    css={css`
+                        position: relative;
+                        top: -5px;
+                        left: -4px;
+                    `}
+                />
+            )
         }
     ];
     if (hasImage) {
@@ -119,7 +128,7 @@ const BubbleToolbox: React.FunctionComponent<{
                 onClick: () => {}
             }
         );
-        // todo: line before these
+
         menuOptions.push(
             {
                 l10nId: "-",
@@ -150,6 +159,41 @@ const BubbleToolbox: React.FunctionComponent<{
         "bloom-editable bloom-visibility-code-on"
     )[0] as HTMLElement;
     const langName = editable?.getAttribute("data-languagetipcontent"); // todo: pretty name
+    if (editable) {
+        menuOptions.unshift(
+            {
+                l10nId: "EditTab.Toolbox.ComicTool.Options.Format",
+                english: "Format",
+                onClick: () => GetEditor().runFormatDialog(editable),
+                icon: (
+                    <img
+                        css={css`
+                            width: 19px;
+                        `}
+                        src="/bloom/bookEdit/img/cog.svg"
+                    />
+                )
+            },
+            {
+                l10nId: "EditTab.Toolbox.ComicTool.Options.CopyText",
+                english: "Copy Text",
+                onClick: () => copySelection(),
+                icon: <CopyIcon css={muiMenIconCss} />
+            },
+            {
+                l10nId: "EditTab.Toolbox.ComicTool.Options.PasteText",
+                english: "Paste Text",
+                // We don't actually know there's no image on the clipboard, but it's not relevant for a text box.
+                onClick: () => pasteClipboard(false),
+                icon: <PasteIcon css={muiMenIconCss} />
+            },
+            {
+                l10nId: "-",
+                english: "",
+                onClick: () => {}
+            }
+        );
+    }
 
     return (
         <ThemeProvider theme={lightTheme}>
@@ -163,9 +207,8 @@ const BubbleToolbox: React.FunctionComponent<{
                     border-radius: 4px;
                     display: flex;
                     justify-content: space-around;
-                    // if we do this we need to tweak the top: settings in materialIconCss and svgIconCss
-                    //align-items: start;
-                    padding: 2px 10px;
+                    align-items: start;
+                    padding: 4px 10px;
                     margin: 0 auto 0 auto;
                     width: fit-content;
                     pointer-events: all;
@@ -277,7 +320,7 @@ const BubbleToolbox: React.FunctionComponent<{
                         >
                             <button
                                 css={svgIconCss}
-                                style={{ top: 0 }}
+                                style={{ top: 0, width: "26px" }}
                                 onClick={() => {
                                     if (!props.bubble) return;
                                     GetEditor().runFormatDialog(editable);
@@ -299,7 +342,7 @@ const BubbleToolbox: React.FunctionComponent<{
                         <div
                             css={css`
                                 color: ${kBloomBlue};
-                                font-size: 11px;
+                                font-size: 10px;
                                 margin-top: -3px;
                             `}
                         >
@@ -338,7 +381,7 @@ const BubbleToolbox: React.FunctionComponent<{
                             deleteBubble();
                         }}
                     >
-                        <TrashIcon color="primary" />
+                        <TrashIcon color={kBloomBlue} />
                     </button>
                 </BloomTooltip>
                 <button
@@ -359,6 +402,9 @@ const BubbleToolbox: React.FunctionComponent<{
                                 p {
                                     white-space: initial;
                                 }
+                                &.MuiDivider-root {
+                                    margin-bottom: 12px;
+                                }
                             }
                         }
                     `}
@@ -369,7 +415,13 @@ const BubbleToolbox: React.FunctionComponent<{
                 >
                     {menuOptions.map((option, index) => {
                         if (option.l10nId === "-") {
-                            return <Divider key={index} />;
+                            return (
+                                <Divider
+                                    key={index}
+                                    variant="middle"
+                                    component="li"
+                                />
+                            );
                         }
                         return (
                             <LocalizableMenuItem

@@ -1434,8 +1434,9 @@ body :has(.bloom-page:focus-within, .bloom-page:hover) {
 
 #bubble-toolbox {
     position: absolute;
-    // below, centered
-    bottom: -60px;
+    // below, centered. Wider than it ever needs to be; the button div inside
+    // will be fit-content and centered.
+    bottom: -67px;
     left: calc(50% - 150px);
     width: 300px;
 }
