@@ -88,6 +88,10 @@ export function prepareActivity(
         }
     );
 
+    Array.from(page.getElementsByTagName("img")).forEach((img: HTMLElement) => {
+        img.setAttribute("draggable", "false");
+    });
+
     // Record the positions of targets as snap locations and the original positions of draggables.
     // Add event listeners to draggables to start dragging.
     targetPositions = [];
@@ -244,6 +248,10 @@ export function undoPrepareActivity(page: HTMLElement) {
 
     page.querySelectorAll("[data-bubble-id]").forEach((elt: HTMLElement) => {
         elt.removeEventListener("pointerdown", startDrag, { capture: true });
+    });
+
+    Array.from(page.getElementsByTagName("img")).forEach((img: HTMLElement) => {
+        img.removeAttribute("draggable");
     });
 
     const videos = Array.from(page.getElementsByTagName("video"));
