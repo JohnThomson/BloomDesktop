@@ -1072,6 +1072,14 @@ const DragActivityControls: React.FunctionComponent<{
                 return;
             }
             adjustTarget(someDraggable, getTarget(someDraggable), true);
+        } else {
+            page.querySelectorAll(
+                "[data-target-of] .bloom-imageContainer"
+            ).forEach((ic: HTMLElement) => {
+                const target = ic.closest("[data-target-of]") as HTMLElement;
+                target.style.width = ic.style.width;
+                target.style.height = ic.style.height;
+            });
         }
     };
 
