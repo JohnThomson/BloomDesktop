@@ -44,6 +44,7 @@ import { showCopyrightAndLicenseInfoOrDialog } from "./copyrightAndLicense/Copyr
 import { showTopicChooserDialog } from "./TopicChooser/TopicChooserDialog";
 import ReactDOM = require("react-dom");
 import { FunctionComponentElement } from "react";
+import { UndoManager } from "./js/undoManager";
 export { getImageUrlFromImageButton } from "./js/bloomImages";
 
 //Called by c# using editTabBundle.handleUndo()
@@ -58,6 +59,8 @@ export function handleUndo(): void {
     const toolboxWindow = getToolboxBundleExports();
     if (toolboxWindow && toolboxWindow.canUndo()) {
         toolboxWindow.undo();
+    } else if (contentWindow && contentWindow.pageUndoManager().canUndo()) {
+        contentWindow.pageUndoManager().undoAction();
     } else if (contentWindow && contentWindow.ckeditorCanUndo()) {
         contentWindow.ckeditorUndo();
     }
@@ -165,6 +168,9 @@ export function canUndo(): string {
     }
     const toolboxWindow = getToolboxBundleExports();
     if (toolboxWindow && toolboxWindow.canUndo && toolboxWindow.canUndo()) {
+        return "yes";
+    }
+    if (contentWindow && contentWindow.pageUndoManager().canUndo()) {
         return "yes";
     }
     if (contentWindow && contentWindow.ckeditorCanUndo()) {

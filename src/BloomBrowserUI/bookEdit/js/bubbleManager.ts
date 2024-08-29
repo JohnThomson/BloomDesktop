@@ -31,6 +31,7 @@ import { adjustTarget } from "../toolbox/dragActivity/dragActivityTool";
 import BloomSourceBubbles from "../sourceBubbles/BloomSourceBubbles";
 import BloomHintBubbles from "./BloomHintBubbles";
 import { renderOverlayContextControls } from "./OverlayContextControls";
+import { UndoManager } from "./undoManager";
 
 export interface ITextColorInfo {
     color: string;
@@ -1453,8 +1454,10 @@ export class BubbleManager {
         // with mouse capture, but less portably.
         document.addEventListener("mousemove", this.continueCropDrag);
         document.addEventListener("mouseup", this.stopCropDrag);
+        UndoManager.theOneUndoManager().beginAction("Crop");
     }
     private stopCropDrag = () => {
+        UndoManager.theOneUndoManager().endAction();
         document.removeEventListener("mousemove", this.continueCropDrag);
         document.removeEventListener("mouseup", this.stopCropDrag);
         this.currentDragControl?.classList.remove("active-control");
@@ -3799,12 +3802,15 @@ export class BubbleManager {
             Comical.update(containerElement);
         }
 
+        console.log("Delete Bubble");
+        UndoManager.theOneUndoManager().beginAction("Delete Bubble"); // enhance: localize if we ever use these
         Comical.deleteBubbleFromFamily(textOverPicDiv, containerElement);
 
         // Update UI and make sure things get redrawn correctly.
         this.refreshBubbleEditing(containerElement, undefined, false);
         // By this point it's really gone, so this will clean up if it had a target.
         this.removeDetachedTargets();
+        UndoManager.theOneUndoManager().endAction();
     }
 
     // We verify that 'textElement' is the active element before calling this method.
