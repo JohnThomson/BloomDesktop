@@ -36,6 +36,7 @@ import { kBloomBlue } from "../../bloomMaterialUITheme";
 import OverflowChecker from "../OverflowChecker/OverflowChecker";
 import { MeasureText } from "../../utils/measureText";
 import theOneLocalizationManager from "../../lib/localizationManager/localizationManager";
+import { UndoManager } from "./undoManager";
 
 export interface ITextColorInfo {
     color: string;
@@ -991,6 +992,7 @@ export class BubbleManager {
     public static ignoreFocusChanges: boolean;
 
     public setActiveElement(element: HTMLElement | undefined) {
+        const oldActiveElement = this.activeElement;
         if (this.activeElement !== element && this.activeElement) {
             tryRemoveImageEditingButtons(
                 this.activeElement.getElementsByClassName(
@@ -1023,7 +1025,39 @@ export class BubbleManager {
             // Restore hiding these when we activate a bubble, so they don't get in the way of working on
             // that bubble.
             theOneBubbleManager.turnOnHidingImageButtons();
+	   }
+        // I think this is unnecessary, but it makes it more certain that things are back in
+        // a valid state after Undo.
+        UndoManager.theOneUndoManager().addUndoTask(() => {
+            this.restoreThingsAfterUndo(oldActiveElement);
+        });
+    }
+
+    private restoreThingsAfterUndo(oldActiveElement: HTMLElement | undefined) {
+        if (oldActiveElement && !document.body.contains(oldActiveElement)) {
+            const undoId = oldActiveElement.getAttribute("data-undo-id");
+            if (undoId) {
+                oldActiveElement = document.querySelector(
+                    `[data-undo-id="${undoId}"]`
+                ) as HTMLElement;
+            }
         }
+        this.removeControlFrame(); // may have been restored without event handlers, better to re-create
+        if (oldActiveElement) {
+            const oldContainer = BubbleManager.getTopLevelImageContainerElement(
+                oldActiveElement
+            );
+            // probably not needed if active element didn't change.
+            // maybe not needed unless old active element was deleted.
+            if (oldContainer) {
+                this.refreshBubbleEditing(
+                    oldContainer,
+                    new Bubble(oldActiveElement),
+                    true
+                );
+            }
+        }
+        this.setActiveElement(oldActiveElement);
     }
 
     // clientX/Y of the mouseDown event in one of the resize handles.
@@ -4028,6 +4062,9 @@ export class BubbleManager {
         if (!textOverPicDiv || !textOverPicDiv.parentElement) {
             return;
         }
+        UndoManager.theOneUndoManager().addUndoTask(() => {
+            this.restoreThingsAfterUndo(textOverPicDiv);
+        });
         const containerElement = textOverPicDiv.parentElement;
         // Make sure comical is up-to-date.
         if (

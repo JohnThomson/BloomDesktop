@@ -66,6 +66,7 @@ import { removeToolboxMarkup } from "../toolbox/toolbox";
 import { IBloomWebSocketEvent } from "../../utils/WebSocketManager";
 import { setupDragActivityTabControl } from "../toolbox/dragActivity/dragActivityTool";
 import BloomMessageBoxSupport from "../../utils/bloomMessageBoxSupport";
+import { UndoManager } from "./undoManager";
 
 // Allows toolbox code to make an element properly in the context of this iframe.
 export function makeElement(
@@ -1105,6 +1106,13 @@ export function bootstrap() {
     $.fn.reverse = function() {
         return this.pushStack(this.get().reverse(), arguments);
     };
+    document.addEventListener(
+        "mousedown",
+        () => {
+            UndoManager.theOneUndoManager().makeUndoSnapshot();
+        },
+        { capture: true }
+    );
 
     document.addEventListener("selectionchange", () => {
         const textSelected = isTextSelected();
@@ -1312,6 +1320,11 @@ export function getBodyContentForSavePage() {
             "getBodyContentForSavePage(): The page had origami when it loaded, but it doesn't now (check after cleanup). BL-13120"
         );
     }
+    // Remove attributes we added for Undo support. For now we can't continue undo beyond a page load,
+    // and they would clutter the saved HTML.
+    (Array.from(
+        document.querySelectorAll("[data-undo-id]")
+    ) as HTMLElement[]).forEach(e => e.removeAttribute("data-undo-id"));
 
     const result = document.body.innerHTML;
 

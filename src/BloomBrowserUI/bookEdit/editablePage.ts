@@ -46,6 +46,8 @@ export interface IPageFrameExports {
     ckeditorCanUndo(): boolean;
     ckeditorUndo(): void;
 
+    pageUndoManager(): UndoManager;
+
     SayHello(): void;
     renderDragActivityTabControl(currentTab: number): void;
 }
@@ -83,7 +85,12 @@ export {
 };
 import { origamiCanUndo, origamiUndo } from "./js/origami";
 import { postString } from "../utils/bloomApi";
+import { UndoManager } from "./js/undoManager";
 export { origamiCanUndo, origamiUndo };
+
+export function pageUndoManager(): UndoManager {
+    return UndoManager.theOneUndoManager();
+}
 
 const styleSheets = [
     "themes/bloom-jqueryui-theme/jquery-ui-1.8.16.custom.css",
