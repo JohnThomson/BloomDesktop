@@ -53,6 +53,7 @@ export class UndoManager {
     private maxUndoStack = 10;
 
     public makeUndoSnapshot() {
+        const start = performance.now();
         const initialState = createUndoElement(
             document.getElementsByClassName("bloom-page")[0] as HTMLElement
         );
@@ -67,7 +68,7 @@ export class UndoManager {
             if (CKEDITOR.currentInstance !== lastStackItem.editor) {
                 // We will no longer allow ckeditor undoes within that element; rather,
                 // all changes to it can be undone as a unit.
-                (lastStackItem.editor as any)?.undoManager()?.reset();
+                (lastStackItem.editor as any)?.undoManager?.reset();
             }
             if (
                 equivalentStates(
@@ -76,11 +77,16 @@ export class UndoManager {
                     currentCkEkditorUndoId
                 )
             ) {
+                console.log(
+                    "Snapshot unchanged after " +
+                        (performance.now() - start) +
+                        "ms"
+                );
                 return;
             }
             // A change that extends beyond the content of the current CkEditor instance has been detected.
             // Undo should undo that change, not any changes within the CkEditor instance.
-            (CKEDITOR.currentInstance as any)?.undoManager()?.reset();
+            (CKEDITOR.currentInstance as any)?.undoManager?.reset();
         }
         this.undoStack.push({
             actionName: "undo",
@@ -91,6 +97,7 @@ export class UndoManager {
         if (this.undoStack.length > this.maxUndoStack) {
             this.undoStack.shift();
         }
+        console.log("Snapshot took " + (performance.now() - start) + "ms");
     }
 
     public canUndo(): boolean {
@@ -104,7 +111,7 @@ export class UndoManager {
         // We give priority to CkEditor Undo actions. We reset CkEditor undo stacks when we detect a change
         // at a higher level.
         const ckEditorManager = (CKEDITOR.currentInstance as any)?.undoManager;
-        if (ckEditorManager.undoable()) {
+        if (ckEditorManager?.undoable()) {
             ckEditorManager.undo();
             return;
         }
@@ -218,9 +225,7 @@ export function applyUndoElement(element: HTMLElement, state: UndoElement) {
             .filter(a => a !== "data-undo-id");
 
         for (const key of currentAttributes) {
-            console.log("key " + key + " " + undoElement.props[key]);
             if (!undoElement.props[key]) {
-                console.log("removing " + key);
                 element.removeAttribute(key);
             }
         }
