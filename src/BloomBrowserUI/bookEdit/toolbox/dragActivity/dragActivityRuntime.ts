@@ -1020,10 +1020,6 @@ export function copyContentToTarget(draggable: HTMLElement) {
     Array.from(throwAway.querySelectorAll("[id]")).forEach(e => {
         e.removeAttribute("id");
     });
-    Array.from(throwAway.getElementsByClassName("hoverUp")).forEach(e => {
-        // Produces at least a change in background color that we don't want.
-        e.classList.remove("hoverUp");
-    });
     // Content is not editable inside the target.
     Array.from(throwAway.querySelectorAll("[contenteditable]")).forEach(e => {
         e.removeAttribute("contenteditable");

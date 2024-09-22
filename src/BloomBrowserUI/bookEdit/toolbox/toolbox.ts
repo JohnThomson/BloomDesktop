@@ -10,6 +10,7 @@ import { hookupLinkHandler } from "../../utils/linkHandler";
 import { ckeditableSelector } from "../../utils/shared";
 import { EditableDivUtils } from "../js/editableDivUtils";
 import { DragActivityTool } from "./dragActivity/dragActivityTool";
+import { getEditablePageBundleExports } from "../editViewFrame";
 
 export const isLongPressEvaluating: string = "isLongPressEvaluating";
 
@@ -289,6 +290,15 @@ export class ToolBox {
                 });
         });
         hookupLinkHandler();
+        document.addEventListener(
+            "mousedown",
+            () => {
+                getEditablePageBundleExports()
+                    ?.pageUndoManager()
+                    .makeUndoSnapshot();
+            },
+            { capture: true }
+        );
 
         // Using axios directly because bloomApi doesn't support merging promises with .all
         wrapAxios(

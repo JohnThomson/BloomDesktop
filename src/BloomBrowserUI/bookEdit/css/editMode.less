@@ -310,8 +310,8 @@ div.readOnlyInTranslationMode {
 
 // Since 'basePage.less' has a rule that puts the video placeholder in as a background image,
 // '.customPage' is needed to add enough specificity here to override that rule.
-body:not(.origami-drag) .customPage .bloom-videoContainer.hoverUp,
-body:not(.origami-drag) .bloom-imageContainer.hoverUp {
+body:not(.origami-drag) .customPage .bloom-videoContainer:hover,
+body:not(.origami-drag) .bloom-imageContainer:hover {
     background-color: @ImageAndVideoHoverOverlay;
 }
 
@@ -319,7 +319,7 @@ body:not(.origami-drag) .bloom-imageContainer.hoverUp {
 // container. One group of such cases is bloom games. We may want to suppress it for pages
 // designed to have a full-bleed background for a comic, and perhaps others. I went for a
 // minimal change for now.
-.bloom-page[data-tool-id="game"] .bloom-imageContainer.hoverUp {
+.bloom-page[data-tool-id="game"] .bloom-imageContainer:hover {
     background-color: transparent;
 }
 
@@ -519,17 +519,21 @@ body.bloom-fullBleed {
     }
 }
 
-.hoverUp .imageButton {
-    border: 2px outset @ImageButtonBorder !important;
-    border-radius: 3px !important;
+.bloom-imageContainer:hover,
+.bloom-videoContainer:hover,
+.bloom-widgetContainer:hover {
+    .imageButton {
+        border: 2px outset @ImageButtonBorder !important;
+        border-radius: 3px !important;
 
-    &:hover {
-        border: inset @ImageButtonBorder !important;
-    }
+        &:hover {
+            border: inset @ImageButtonBorder !important;
+        }
 
-    &.editMetadataButton {
-        background-image: none;
-        background-color: @MetadataButtonColor !important;
+        &.editMetadataButton {
+            background-image: none;
+            background-color: @MetadataButtonColor !important;
+        }
     }
 }
 
@@ -622,7 +626,7 @@ button.moveButton {
     background-size: contain;
 }
 
-img.hoverUp {
+img:hover {
     outline: 1px outset black;
 }
 
@@ -1106,7 +1110,7 @@ body {
 
 // Don't show text over picture borders, resizing handles, or format buttons unless hovering over the image
 // (This and several following rules were moved from content/bookLayout/bubble.less)
-.bloom-imageContainer:not(.hoverUp) .bloom-textOverPicture {
+.bloom-imageContainer:not(:hover) .bloom-textOverPicture {
     .bloom-editable {
         border: none;
 
@@ -1270,10 +1274,10 @@ canvas.moving {
     cursor: move;
 }
 
-.bloom-textOverPicture:not(.bloom-focusedTOP) * {
+.bloom-textOverPicture:not(:focus-within) * {
     cursor: default;
 }
-.bloom-textOverPicture.moving:not(.bloom-focusedTOP) * {
+.bloom-textOverPicture.moving:not(:focus-within) * {
     cursor: move;
 }
 

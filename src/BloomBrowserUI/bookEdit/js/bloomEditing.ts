@@ -131,7 +131,6 @@ function Cleanup() {
     $("div, figure").each(function() {
         $(this).removeClass("ui-draggable");
         $(this).removeClass("ui-resizable");
-        $(this).removeClass("hoverUp");
     });
     $("span").each(function() {
         $(this).removeClass("ui-disableHighlight");
@@ -1166,6 +1165,11 @@ export function bootstrap() {
         .each((index: number, element: Element) => {
             attachToCkEditor(element);
         });
+
+    // We want an initial snapshot in case we need to undo anything before the first
+    // mouse click. That would typically be typing, and usually undone by CkEditor.
+    // But if we add other things that can be undone, we might need this.
+    UndoManager.theOneUndoManager().makeUndoSnapshot();
 
     // We want to do this as late in the page setup process as possible because a
     // mouse zoom event will regenerate the page, and various things we do in the process

@@ -43,9 +43,6 @@ export interface IPageFrameExports {
 
     getTheOneBubbleManager(): BubbleManager;
 
-    ckeditorCanUndo(): boolean;
-    ckeditorUndo(): void;
-
     pageUndoManager(): UndoManager;
 
     SayHello(): void;

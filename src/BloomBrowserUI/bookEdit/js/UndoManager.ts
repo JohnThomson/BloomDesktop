@@ -21,6 +21,8 @@
 //   the right ID in the current DOM, it would just look in the trash, and if found, restore it to its parent
 //   and recursively restore its content. This would preserve event listeners.
 
+import { ckeditorCanUndo, ckeditorUndo } from "../editablePage";
+
 class UndoNode {}
 class UndoElement extends UndoNode {
     tagname: string = "";
@@ -28,19 +30,20 @@ class UndoElement extends UndoNode {
     props: {}; // object with keys that are attribute names and values that are attribute values
     id: string = "";
 }
+interface IUndoStackItem {
+    actionName: string;
+    initialState: UndoElement; // the state of the .bloom-page that Undo should restore
+    // other tasks to undo the action, besides restoring initialState.
+    // for example, restored deleted elements may need event listeners reattached.
+    undoTasks: (() => void)[];
+    editor: CKEDITOR.editor | undefined;
+}
 
 class UndoTextNode extends UndoNode {
     textContent: string | null;
 }
 export class UndoManager {
-    private undoStack: {
-        actionName: string;
-        initialState: UndoElement; // the state of the .bloom-page that Undo should restore
-        // other tasks to undo the action, besides restoring initialState.
-        // for example, restored deleted elements may need event listeners reattached.
-        undoTasks: (() => void)[];
-        editor: CKEDITOR.editor | undefined;
-    }[] = [];
+    private undoStack: IUndoStackItem[] = [];
 
     private static instance: UndoManager | undefined;
     public static theOneUndoManager(): UndoManager {
@@ -50,7 +53,7 @@ export class UndoManager {
         return UndoManager.instance;
     }
 
-    private maxUndoStack = 10;
+    private maxUndoStack = 20;
 
     public makeUndoSnapshot() {
         const start = performance.now();
@@ -77,16 +80,20 @@ export class UndoManager {
                     currentCkEkditorUndoId
                 )
             ) {
+                // I thought originally that we should not make a snapshot if the state is unchanged.
+                // But maybe there are changes inside the CkEditor instance that mean this state
+                // will be significant, if this mouse event changes something so that CkEditor
+                // Undos won't be used.
                 console.log(
                     "Snapshot unchanged after " +
                         (performance.now() - start) +
                         "ms"
                 );
-                return;
+            } else {
+                // A change that extends beyond the content of the current CkEditor instance has been detected.
+                // Undo should undo that change, not any changes within the CkEditor instance.
+                (CKEDITOR.currentInstance as any)?.undoManager?.reset();
             }
-            // A change that extends beyond the content of the current CkEditor instance has been detected.
-            // Undo should undo that change, not any changes within the CkEditor instance.
-            (CKEDITOR.currentInstance as any)?.undoManager?.reset();
         }
         this.undoStack.push({
             actionName: "undo",
@@ -101,33 +108,116 @@ export class UndoManager {
     }
 
     public canUndo(): boolean {
-        return (
-            this.undoStack.length > 0 ||
-            (CKEDITOR.currentInstance as any)?.undoManager?.undoable()
+        if (this.undoStack.length === 0) {
+            // Before the first mouse click! But just conceivably something has focus
+            // and CkEditor has an undo it can do.
+            return ckeditorCanUndo();
+        }
+        const lastStackItem = this.undoStack[this.undoStack.length - 1];
+        let currentCkEkditorUndoId =
+            CKEDITOR.currentInstance?.element?.getAttribute("data-undo-id") ??
+            "";
+        if (CKEDITOR.currentInstance !== lastStackItem.editor) {
+            // We will no longer allow ckeditor undoes within that element; rather,
+            // all changes to it can be undone as a unit.
+            (lastStackItem.editor as any)?.undoManager?.reset();
+        }
+        const currentState = createUndoElement(
+            document.getElementsByClassName("bloom-page")[0] as HTMLElement
         );
+        if (
+            !equivalentStates(
+                currentState,
+                lastStackItem.initialState,
+                currentCkEkditorUndoId
+            )
+        ) {
+            // The current top state is different outside the current CkEditor element.
+            // We will undo to that state.
+            return true;
+        }
+        // returning to the TOS state would not be a meaningful undo (except perhaps for undoing one or more
+        // CkEditor-level Undos). In this state CkEditor Undos are allowed.
+        if (ckeditorCanUndo()) {
+            return true;
+        }
+        // the top state is not significantly different, and there are no CkEditor undos to do.
+        // Can we find some state that IS different? Note that from here on, we WILL consider differences
+        // inside the current CkEditor instance.
+        for (let i = this.undoStack.length - 2; i >= 0; i--) {
+            if (
+                !equivalentStates(
+                    currentState,
+                    this.undoStack[i].initialState,
+                    ""
+                )
+            ) {
+                return true;
+            }
+        }
+        return false;
     }
 
-    public addUndoTask(task: () => void) {
-        // We give priority to CkEditor Undo actions. We reset CkEditor undo stacks when we detect a change
-        // at a higher level.
-        const ckEditorManager = (CKEDITOR.currentInstance as any)?.undoManager;
-        if (ckEditorManager?.undoable()) {
-            ckEditorManager.undo();
-            return;
-        }
+    public undo() {
         if (this.undoStack.length === 0) {
-            console.error("addUndoTask called with no snapshot to attach to");
+            // Before the first mouse click! But just conceivably something has focus
+            // and CkEditor has an undo it can do.
+            if (ckeditorCanUndo()) {
+                ckeditorUndo();
+                return;
+            }
+            console.log("Attempted undo, but no actions to undo");
             return;
         }
-        this.undoStack[this.undoStack.length - 1].undoTasks.push(task);
-    }
+        let lastStackItem = this.undoStack[this.undoStack.length - 1];
+        let currentCkEkditorUndoId =
+            CKEDITOR.currentInstance?.element?.getAttribute("data-undo-id") ??
+            "";
+        if (CKEDITOR.currentInstance !== lastStackItem.editor) {
+            // We will no longer allow ckeditor undoes within that element; rather,
+            // all changes to it can be undone as a unit.
+            (lastStackItem.editor as any)?.undoManager?.reset();
+            currentCkEkditorUndoId = ""; // don't exempt changes within the current CkEditor instance
+        }
+        const currentState = createUndoElement(
+            document.getElementsByClassName("bloom-page")[0] as HTMLElement
+        );
+        let firstTime = true;
+        while (
+            equivalentStates(
+                currentState,
+                lastStackItem.initialState,
+                currentCkEkditorUndoId
+            )
+        ) {
+            // nothing has changed, except possibly in CkEditor, so we may consider a CkEditor Undo
+            if (firstTime && ckeditorCanUndo()) {
+                ckeditorUndo();
+                return;
+            }
+            firstTime = false;
+            // Things are effectively unchanged from the current TOS, so we need to go back further.
+            // (This means we will lose any undoTasks in the current TOS. The assumption is that any
+            // mouse event that needs undoTasks will make a change to the DOM.)
+            this.undoStack.pop();
+            lastStackItem = this.undoStack[this.undoStack.length - 1];
+            currentCkEkditorUndoId = ""; // From now on, changes inside this element count.
+        }
 
-    public undoAction() {
         if (this.undoStack.length === 0) {
-            console.log("No actions to undo");
+            console.log(
+                "Attempted undo, but all saved states are eqivalent to the current state"
+            );
             return;
         }
 
+        // We get here if
+        // - Comparing with the TOS state shows a meaningful change outside the CkEditor element
+        // - The original TOS state was the same, so we looked for a CkEditor Undo, but didn't find one.
+        //   We popped that state of the stack until we found a meaningful undo.
+        // So now we want to restore the TOS state. Also, we should forget any ckEditor undos, since we
+        // are about to go further back than they would take us. (May have already done that.)
+        (CKEDITOR.currentInstance as any)?.undoManager?.reset();
         const lastState = this.undoStack.pop();
         //this.redoStack.push(lastState!);
         if (lastState?.initialState) {
@@ -136,11 +226,25 @@ export class UndoManager {
                 page as HTMLElement,
                 lastState.initialState as UndoElement
             );
-            //ReactDOM.render(lastState.initialState as ReactElement, page);
             // We need to do this after we change the DOM, because we may need to
             // reattach event handlers to the restored elements.
             lastState.undoTasks.forEach(task => task());
         }
+    }
+
+    public addUndoTask(task: () => void) {
+        // We give priority to CkEditor Undo actions. We reset CkEditor undo stacks when we detect a change
+        // at a higher level.
+        const ckEditorManager = (CKEDITOR.currentInstance as any)?.undoManager;
+        if (ckEditorManager?.undoable()) {
+            ckEditorManager.reset();
+            return;
+        }
+        if (this.undoStack.length === 0) {
+            console.error("addUndoTask called with no snapshot to attach to");
+            return;
+        }
+        this.undoStack[this.undoStack.length - 1].undoTasks.push(task);
     }
 }
 
@@ -163,7 +267,14 @@ export function createUndoElement(domElement: HTMLElement): UndoElement {
         Array.from(element.attributes)
             // we don't want data-undo-id in the props, because adding one is not a change that can be undone,
             // so it should not cause two successive snapshots to be considered different.
-            .filter(e => e.name !== "data-undo-id")
+            // Which element is active is not an undoable change.
+            // Title is just for UI, so we don't need to Undo it.
+            .filter(
+                e =>
+                    e.name !== "data-undo-id" &&
+                    e.name !== "data-bloom-active" &&
+                    e.name !== "title"
+            )
             .forEach(attr => {
                 props[attr.name] = attr.value;
             });
@@ -175,7 +286,7 @@ export function createUndoElement(domElement: HTMLElement): UndoElement {
 
         const children = Array.from(element.childNodes)
             .map(traverse)
-            .filter(x => x);
+            .filter(x => x); // remove undefineds
 
         const resultElement = new UndoElement();
         resultElement.tagname = tagName;
@@ -238,6 +349,7 @@ export function applyUndoElement(element: HTMLElement, state: UndoElement) {
                 const nextChild = unmatchedChidren[0];
                 if (nextChild.nodeType === Node.TEXT_NODE) {
                     if (nextUndoChild instanceof UndoTextNode) {
+                        // make the DOM match the snapshot; advance in both arrays
                         traverse(nextChild, undoChildren[i]);
                         unmatchedChidren.shift();
                         i++;
@@ -254,7 +366,8 @@ export function applyUndoElement(element: HTMLElement, state: UndoElement) {
                                 "data-undo-id"
                             ) === nextUndoChild.id
                         ) {
-                            // The next child in the state we are restoring is the corresponding element. Recurse.
+                            // The next child in the state we are restoring is the corresponding element. Recurse
+                            // and advance in both lists.
                             traverse(nextChild, nextUndoChild);
                             unmatchedChidren.shift();
                             i++;
@@ -278,7 +391,8 @@ export function applyUndoElement(element: HTMLElement, state: UndoElement) {
                                 )
                             ) {
                                 // The next child in the state we are restoring is a deletion; there is no corresponding item
-                                // in the current state of things. Restore a clone.
+                                // in the current state of things. Restore a clone. Advance through the undoChildren, but not the
+                                // unmatchedChildren, because we haven't found a match for the first thing in that.
                                 element.insertBefore(
                                     createNode(nextUndoChild),
                                     nextChild
@@ -288,13 +402,14 @@ export function applyUndoElement(element: HTMLElement, state: UndoElement) {
                                 // It's possible that things have been re-ordered. We might find nextChildId later in undoChildren.
                                 // May decide to handle that, by pushing nextChild back onto the end of unmatchedChildren, or into a new list,
                                 // if its ID occurs in undoChildren later. For now, I think handling simple deletions and insertions is enough.
-                                // So we'll just drop it. If the ID occurs again, it will have to be re-created.
+                                // So we'll just drop it. If the ID occurs again, it will have to be re-created. Advance through
+                                // unmatchedChidren, but not undoChildren.
                                 element.removeChild(nextChild);
                                 unmatchedChidren.shift();
                             }
                         }
                     } else {
-                        // The next child in the state we are restoring is some text. Insert it.
+                        // The next child in the state we are restoring is some text. Insert it and advance past it.
                         element.insertBefore(
                             createNode(nextUndoChild),
                             nextChild
@@ -306,10 +421,12 @@ export function applyUndoElement(element: HTMLElement, state: UndoElement) {
                     unmatchedChidren.shift(); // get rid of it and carry on
                 }
             } else {
+                // no more chldren in the DOM, but there are more in the snapshot. Add them.
                 element.appendChild(createNode(undoChildren[i]));
                 i++;
             }
         }
+        // remove any remaining children in the DOM that don't correspond to anything in the snapshot
         unmatchedChidren.forEach(child => {
             element.removeChild(child);
         });
@@ -356,18 +473,48 @@ export function equivalentStates(
     if (a.id !== b.id) {
         return false;
     }
-    if (JSON.stringify(a.props) !== JSON.stringify(b.props)) {
-        return false;
+    // Tempting, but it won't ignore missing vs empty
+    // if (JSON.stringify(a.props) !== JSON.stringify(b.props)) {
+    //     return false;
+    // }
+    for (const [key, value] of Object.entries(a.props)) {
+        const match = b.props[key];
+        // They must be the same, or both must be some version of empty.
+        if (match !== value && (match || value)) {
+            return false;
+        }
+    }
+    for (const [key, value] of Object.entries(b.props)) {
+        const match = a.props[key];
+        // I think this could be simplified, since we already checked it if a has the property at all.
+        // But it's easier to see that this is right, and I don't think the optimization would buy us much.
+        if (match !== value && (match || value)) {
+            return false;
+        }
     }
     if (a.id === ignoreInnerId) {
         // We already checked the IDs and attributes are the same, we don't care about anything inside.
         return true;
     }
-    if (a.children.length !== b.children.length) {
+    const importantFilter = (x: UndoNode) => {
+        if (x instanceof UndoElement) {
+            const className = x.props["class"];
+            if (
+                className &&
+                className.split(" ").some(c => c.startsWith("bloom-ui"))
+            ) {
+                return false;
+            }
+        }
+        return true;
+    };
+    const aChildren = a.children.filter(importantFilter);
+    const bChildren = b.children.filter(importantFilter);
+    if (aChildren.length !== bChildren.length) {
         return false;
     }
-    for (let i = 0; i < a.children.length; i++) {
-        if (!equivalentStates(a.children[i], b.children[i], ignoreInnerId)) {
+    for (let i = 0; i < aChildren.length; i++) {
+        if (!equivalentStates(aChildren[i], bChildren[i], ignoreInnerId)) {
             return false;
         }
     }

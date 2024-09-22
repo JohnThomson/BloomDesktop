@@ -167,10 +167,12 @@ function createElementFromHTML(htmlString) {
 // - not equivalent, if no ignorable element is specified
 // - equivalent, if the target element is specified to be ignored,
 // iff the change is entirely inside the target (specified by insideIgnore).
+// Simlarly, the change should be ignored if it is entirely inside the target and we add a class starting with "bloom-ui" to it.
 function testEquivalentStates(
     html: string,
     modify: (page: HTMLElement, editable: HTMLElement) => void,
-    insideIgnore: boolean
+    insideIgnore: boolean,
+    onlyBloomUiChanged: boolean = insideIgnore
 ) {
     const page = createElementFromHTML(html);
     const state1 = createUndoElement(page);
@@ -181,6 +183,17 @@ function testEquivalentStates(
     const state2 = createUndoElement(page);
     expect(equivalentStates(state1, state2, "xyz")).toBe(false);
     expect(equivalentStates(state1, state2, undoId)).toBe(insideIgnore);
+
+    // Now test that adding a class starting with "bloom-ui" to the target makes the change ignorable
+    // For this to work, it has to be present before we record the initial state.
+
+    const page2 = createElementFromHTML(html);
+    const editable2 = page2.querySelector("[id='target']") as HTMLElement;
+    editable2?.classList.add("bloom-ui-something");
+    const state3 = createUndoElement(page2);
+    modify(page2, editable2);
+    const state4 = createUndoElement(page2);
+    expect(equivalentStates(state3, state4, "xyz")).toBe(onlyBloomUiChanged);
 }
 
 fdescribe("UndoManager equivalentStates Tests", () => {
@@ -241,7 +254,8 @@ fdescribe("UndoManager equivalentStates Tests", () => {
             (_page, editable) => {
                 editable.setAttribute("style", "something");
             },
-            false
+            false,
+            true // adding an attribute to a bloom-ui element is not a difference
         );
     });
     it("considers an additional sibling after an ignorable element", () => {
@@ -259,8 +273,20 @@ fdescribe("UndoManager equivalentStates Tests", () => {
             (_page, editable) => {
                 editable.remove();
             },
-            false
+            false,
+            true // removing a bloom-ui element is not a difference
         );
+    });
+    it("ignores the difference between style empty and style not present", () => {
+        const html =
+            '<div class="bloom-page"><div class="bloom-editable" id="target">abc<b>def</b>hij</div></div>';
+        const page = createElementFromHTML(html);
+        const state1 = createUndoElement(page);
+        // can't use document.getElementById because we aren't adding page to the document.
+        const editable = page.querySelector("[id='target']") as HTMLElement;
+        editable.setAttribute("style", "");
+        const state2 = createUndoElement(page);
+        expect(equivalentStates(state1, state2, "xyz")).toBe(true);
     });
 
     // todo: change only in tag name

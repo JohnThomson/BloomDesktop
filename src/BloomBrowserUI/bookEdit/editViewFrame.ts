@@ -60,9 +60,7 @@ export function handleUndo(): void {
     if (toolboxWindow && toolboxWindow.canUndo()) {
         toolboxWindow.undo();
     } else if (contentWindow && contentWindow.pageUndoManager().canUndo()) {
-        contentWindow.pageUndoManager().undoAction();
-    } else if (contentWindow && contentWindow.ckeditorCanUndo()) {
-        contentWindow.ckeditorUndo();
+        contentWindow.pageUndoManager().undo();
     }
     // See also Browser.Undo; if all else fails we ask the C# browser object to Undo.
 }
@@ -171,9 +169,6 @@ export function canUndo(): string {
         return "yes";
     }
     if (contentWindow && contentWindow.pageUndoManager().canUndo()) {
-        return "yes";
-    }
-    if (contentWindow && contentWindow.ckeditorCanUndo()) {
         return "yes";
     }
     return "fail"; //can't undo in Javascript, possibly something in C# can?

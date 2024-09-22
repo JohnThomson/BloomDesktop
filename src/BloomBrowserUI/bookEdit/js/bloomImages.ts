@@ -164,7 +164,6 @@ export function doImageCommand(
 export function addImageEditingButtons(containerDiv: HTMLElement): void {
     if (
         !containerDiv || // huh? so why did we call this?
-        containerDiv.classList.contains("hoverUp") || // should already have them if wanted
         containerDiv.closest(kTextOverPictureSelector) // in overlay
     ) {
         return;
@@ -218,7 +217,7 @@ export function addImageEditingButtons(containerDiv: HTMLElement): void {
     };
 
     $containerDiv.prepend(
-        '<button class="miniButton cutImageButton imageOverlayButton disabled ' +
+        '<button class="bloom-ui miniButton cutImageButton imageOverlayButton disabled' +
             buttonModifier +
             '" title="' +
             theOneLocalizationManager.getText("EditTab.Image.CutImage") +
@@ -227,7 +226,7 @@ export function addImageEditingButtons(containerDiv: HTMLElement): void {
     addButtonHandler("cut");
 
     $containerDiv.prepend(
-        '<button class="miniButton copyImageButton imageOverlayButton disabled ' +
+        '<button class="bloom-ui miniButton copyImageButton imageOverlayButton disabled ' +
             buttonModifier +
             '" title="' +
             theOneLocalizationManager.getText("EditTab.Image.CopyImage") +
@@ -236,7 +235,7 @@ export function addImageEditingButtons(containerDiv: HTMLElement): void {
     addButtonHandler("copy");
 
     $containerDiv.prepend(
-        '<button class="pasteImageButton imageButton imageOverlayButton ' +
+        '<button class="bloom-ui pasteImageButton imageButton imageOverlayButton ' +
             buttonModifier +
             '" title="' +
             theOneLocalizationManager.getText("EditTab.Image.PasteImage") +
@@ -245,7 +244,7 @@ export function addImageEditingButtons(containerDiv: HTMLElement): void {
     addButtonHandler("paste");
 
     $containerDiv.prepend(
-        '<button class="changeImageButton imageButton imageOverlayButton ' +
+        '<button class="bloom-ui changeImageButton imageButton imageOverlayButton ' +
             buttonModifier +
             '" title="' +
             theOneLocalizationManager.getText("EditTab.Image.ChangeImage") +
@@ -283,7 +282,7 @@ export function addImageEditingButtons(containerDiv: HTMLElement): void {
         const title = theOneLocalizationManager.getText(
             "EditTab.Image.EditMetadata"
         );
-        const button = `<button class="editMetadataButton imageButton imageOverlayButton ${buttonModifier}" title="${title}"></button>`;
+        const button = `<button class="bloom-ui editMetadataButton imageButton imageOverlayButton ${buttonModifier}" title="${title}"></button>`;
         $containerDiv.prepend(button);
         $containerDiv.find("button.editMetadataButton").attr(
             "onClick",
@@ -298,8 +297,6 @@ export function addImageEditingButtons(containerDiv: HTMLElement): void {
             $(this).removeClass("disabled");
         });
     }
-
-    $containerDiv.addClass("hoverUp");
 }
 
 /**
@@ -324,7 +321,6 @@ function getImageEditingButtons(
 }
 
 export function removeImageEditingButtons(containerDiv: Element): void {
-    containerDiv.classList.remove("hoverUp");
     getImageEditingButtons(containerDiv, {
         skipProblemIndicator: true // leave the problem indicator visible
     }).forEach(button => {
@@ -373,18 +369,6 @@ export function EnableAllImageEditing() {
 // the img to fit the available space.
 // Precondition: containerDiv must be just a single HTMLElement
 function SetupImageContainer(containerDiv: HTMLElement) {
-    // Initialize the value of the hoverUp class.
-    // the hoverup class should be present whenever the mouse is over the containerDiv.
-    // This is usually achieved by mouseenter/mouseleave event handlers,
-    // but mouseenter won't trigger if the mouse starts off over the image container when the page is loaded
-    // That case is extremely commonplace when adding comic bubbles, because that needs to reload the page.
-    // (It is also possible to trigger even when opening up a new page, but probably less likely to happen accidentally)
-    if (containerDiv.matches(":hover")) {
-        containerDiv.classList.add("hoverUp");
-    } else {
-        containerDiv.classList.remove("hoverUp");
-    }
-
     // Now that we can overlay things on top of images, we don't want to show the flower placeholder
     // if the image container contains an overlay.
     updateOverlayClass(containerDiv);
@@ -771,7 +755,7 @@ function UpdateOverlay(container, img) {
     //review: should we also require copyright, illustrator, etc? In many contexts the id of the work-for-hire illustrator isn't available
     const copyright = $(img).attr("data-copyright");
     if (!copyright || copyright.length === 0) {
-        const buttonClasses = `editMetadataButton imageButton imgMetadataProblem ${GetButtonModifier(
+        const buttonClasses = `bloom-ui editMetadataButton imageButton imgMetadataProblem ${GetButtonModifier(
             container
         )}`;
         const englishText =

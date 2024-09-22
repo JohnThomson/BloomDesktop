@@ -608,7 +608,6 @@ export class BubbleManager {
         // However, it's possible the active bubble already moved; don't clear theBubbleWeAreTextEditing if so
         if (event.currentTarget === this.theBubbleWeAreTextEditing) {
             this.theBubbleWeAreTextEditing = undefined;
-            this.removeFocusClass();
         }
     };
 
@@ -887,9 +886,6 @@ export class BubbleManager {
             // looks as if it's in edit mode. I think it's best to just make it so.)
             theOneBubbleManager.theBubbleWeAreTextEditing =
                 theOneBubbleManager.activeElement;
-            theOneBubbleManager.theBubbleWeAreTextEditing?.classList.add(
-                "bloom-focusedTOP"
-            );
         } else {
             theOneBubbleManager.setActiveElement(undefined);
         }
@@ -979,14 +975,6 @@ export class BubbleManager {
         // }
     }
 
-    public removeFocusClass() {
-        Array.from(document.getElementsByClassName("bloom-focusedTOP")).forEach(
-            element => {
-                element.classList.remove("bloom-focusedTOP");
-            }
-        );
-    }
-
     // Some controls, such as MUI menus, temporarily steal focus. We don't want the usual
     // loss-of-focus behavior, so this allows suppressing it.
     public static ignoreFocusChanges: boolean;
@@ -1008,7 +996,6 @@ export class BubbleManager {
             // new range selection, so just set up the usual class to hide it.
             document.body.classList.add("hideAllCKEditors");
             window.getSelection()?.removeAllRanges();
-            this.removeFocusClass();
         }
         // Some of this could probably be avoided if this.activeElement is not changing.
         // But there are cases in page initialization where this.activeElement
@@ -1025,7 +1012,7 @@ export class BubbleManager {
             // Restore hiding these when we activate a bubble, so they don't get in the way of working on
             // that bubble.
             theOneBubbleManager.turnOnHidingImageButtons();
-	   }
+        }
         // I think this is unnecessary, but it makes it more certain that things are back in
         // a valid state after Undo.
         UndoManager.theOneUndoManager().addUndoTask(() => {
@@ -2944,7 +2931,6 @@ export class BubbleManager {
             this.theBubbleWeAreTextEditing = (event.target as HTMLElement)?.closest(
                 kTextOverPictureSelector
             ) as HTMLElement;
-            this.theBubbleWeAreTextEditing?.classList.add("bloom-focusedTOP");
             // We want to position the IP as if the user clicked where they did.
             // Since we already suppressed the mouseDown event, it's not enough to just
             // NOT suppress the mouseUp event. We need to actually move the IP to the
@@ -3352,7 +3338,6 @@ export class BubbleManager {
         }
         this.isComicEditingOn = false;
         this.removeControlFrame();
-        this.removeFocusClass();
 
         Comical.setActiveBubbleListener(undefined);
         Comical.stopEditing();
