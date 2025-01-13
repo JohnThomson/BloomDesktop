@@ -29,6 +29,7 @@ import {
 } from "../dragActivity/narration";
 import { IAudioRecorder } from "./IAudioRecorder";
 import { getToolboxBundleExports } from "../../editViewFrame";
+import { Div } from "../../../react_components/l10nComponents";
 
 export function getAudioRecorder(): IAudioRecorder | undefined {
     const exports = getToolboxBundleExports();
@@ -162,6 +163,19 @@ export const AdjustTimingsDialog: React.FunctionComponent<{
                     fontFamily={fontFamily}
                     shouldAdjustSegments={segmentsCreated}
                 />
+                <div
+                    css={css`
+                        display: flex;
+                    `}
+                >
+                    <Div l10nKey="CollectionTab.ContextMenu.More">More</Div>
+                    <div
+                        css={css`
+                            color: black;
+                            border: transparent;
+                        `}
+                    ></div>
+                </div>
             </DialogMiddle>
             <DialogBottomButtons>
                 <DialogOkButton
