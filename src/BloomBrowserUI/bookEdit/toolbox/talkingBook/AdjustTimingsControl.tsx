@@ -21,6 +21,8 @@ let currentRegion: Element | undefined;
 
 export const AdjustTimingsControl: React.FunctionComponent<{
     audioFileUrl: string;
+    // start and and are times in seconds from the start of the recording.
+    // They may be from previous adjustments or estimated based on text length.
     segments: Array<{ start: number; end: number; text: string }>;
     setEndTimes: (endTimes: number[]) => void;
     fontFamily: string;
@@ -113,6 +115,8 @@ export const AdjustTimingsControl: React.FunctionComponent<{
             );
         });
         ws.on("decode", () => {
+            // the text segments, with a start time, end time into the text of the bloom-editable
+            // and the content of that text.
             let segments: Array<{ start: number; end: number; text: string }> =
                 props.segments;
             if (props.shouldAdjustSegments) {
@@ -127,8 +131,8 @@ export const AdjustTimingsControl: React.FunctionComponent<{
                 // as far as we can either way without it getting much louder, and take the middle
                 // of that. We might also bias it somehow towards large quiet spots.
                 // Then again, this might be good enough.
-                const slopPercent = 0.3;
-                const breakSpotCount = 15;
+                const slopFraction = 0.3;
+                const breakSpotCount = 15; // a good default for short sentences
                 const data = ws.decodedData?.getChannelData(0);
                 segments = props.segments.map(s => ({
                     start: s.start,
@@ -137,22 +141,33 @@ export const AdjustTimingsControl: React.FunctionComponent<{
                 }));
                 for (let i = 0; i < segments.length - 1; i++) {
                     const seg = segments[i];
+                    // mid is our first guess of where to put the break, an index into the audio data (samples) array
+                    // that is the same fraction of its length as the text break is of the text length.
+                    // Enhance: ignore diacritics.
                     const mid = (data.length * seg.end) / ws.getDuration();
                     const slop =
                         ((seg.end - seg.start) / ws.getDuration()) *
-                        slopPercent *
+                        slopFraction *
                         data.length;
+                    // an index into the audio data samples array
                     const start = mid - slop;
                     const nextSeg = segments[i + 1];
                     const nextSlop =
                         ((nextSeg.end - nextSeg.start) / ws.getDuration()) *
-                        slopPercent *
+                        slopFraction *
                         data.length;
+                    // another index into the audio data samples array
+                    // the adjusted end of the current segment will be the best place we
+                    // can find between start and end.
                     const end = mid + nextSlop;
-                    const numberOfBreaks = Math.min(
-                        breakSpotCount,
-                        end - start
-                    ); // paranoia, should always be breakSpotCount
+                    const slopDuration =
+                        ((end - start) / data.length) * ws.getDuration(); // seconds
+                    const minBreakLength = 0.1; // be at least this fine-grained, otherwise, no segment may look like a pause.
+                    const minBreaks = Math.floor(slopDuration / minBreakLength);
+                    const numberOfBreaks = Math.max(
+                        minBreaks,
+                        Math.min(breakSpotCount, end - start)
+                    );
                     const breakSpots: number[] = [];
                     const breakSpotLength = (end - start) / numberOfBreaks;
                     for (let j = 0; j < numberOfBreaks; j++) {
