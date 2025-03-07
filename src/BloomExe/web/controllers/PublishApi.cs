@@ -438,7 +438,7 @@ namespace Bloom.web.controllers
                             .BookSelection
                             .CurrentSelection
                             .TitleBestForUserDisplay,
-                        numberOfFirstPageWithOverlay = _publishModel.BookSelection.CurrentSelection.GetNumberOfFirstPageWithOverlay(),
+                        numberOfFirstPageWithCanvasElement = _publishModel.BookSelection.CurrentSelection.GetNumberOfFirstPageWithCanvasElement(),
                     }
                 )
             );

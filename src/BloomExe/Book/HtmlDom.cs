@@ -2804,7 +2804,7 @@ namespace Bloom.Book
         }
 
         /// <summary>
-        /// This is true if it has overlays of the type that require ComicalJs support.
+        /// This is true if it has canvas elements of the type that require ComicalJs support.
         /// </summary>
         public bool HasComicalOverlays()
         {
@@ -2815,10 +2815,10 @@ namespace Bloom.Book
         }
 
         /// <summary>
-        /// True if it has any overlays at all. (Text-only ones don't require a ComicalJs SVG, but they
+        /// True if it has any canvas elements at all. (Text-only ones don't require a ComicalJs SVG, but they
         /// could still get misplaced by a migration to Default appearance.)
         /// </summary>
-        public bool HasOverlays()
+        public bool HasCanvasElements()
         {
             return _dom.SelectSingleNode("//div[contains(@class, 'bloom-textOverPicture')]")
                 != null;

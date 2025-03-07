@@ -1753,9 +1753,13 @@ p {
         {
             const string htmlContent =
                 @"<html>
-<head>" + kHtmlHeadContent + @"
+<head>"
+                + kHtmlHeadContent
+                + @"
 </head>
-<body>"+ kBodyContentWithoutClasses + @"
+<body>"
+                + kBodyContentWithoutClasses
+                + @"
 <div class=""Title-On-Cover-style"" lang=""en"">Test 5</div>
 <div class=""small-style"" lang=""en"">Test 6</div>
 <div class=""Inside-Back-Cover-style"" lang=""jmx"">Test 7</div>
@@ -1798,16 +1802,24 @@ p {
         {
             const string htmlContent =
                 @"<html>
-<head>" + kHtmlHeadContent + @"
+<head>"
+                + kHtmlHeadContent
+                + @"
 </head>
-<body>" + kBodyContentWithoutClasses + @"
+<body>"
+                + kBodyContentWithoutClasses
+                + @"
 <div class=""Title-On-Cover-style"" lang=""en"">Test 5</div>
 </body>
 </html>";
 
             var fonts = new HashSet<string>();
             HtmlDom.FindFontsUsedInCss(htmlContent, fonts, true);
-            Assert.AreEqual(4, fonts.Count, "Four fonts are actually used in the test html/css data");
+            Assert.AreEqual(
+                4,
+                fonts.Count,
+                "Four fonts are actually used in the test html/css data"
+            );
             Assert.IsTrue(
                 fonts.Contains("NikoshBAN"),
                 "The text/css data refers to NikoshBAN as a font."
@@ -1827,10 +1839,10 @@ p {
         }
 
         [Test]
-        public void MigrateChildren_MigratesOverlays_DoesNotLoseOverlays()
+        public void MigrateChildren_MigratesCanvasElements_DoesNotLoseCanvasElements()
         {
             // The original has two images, two translation groups, a video, and a widget, in the order picture, text, video, widget, text, picture.
-            // The image contains text, video, image, and widget overlays.
+            // The image contains text, video, image, and widget canvas elements.
             var pageDom = new HtmlDom(
                 @"<html><head></head><body>
 					<div class='bloom-page' id='pageGuid'>
@@ -1886,8 +1898,8 @@ p {
 				</body></html>"
             );
             // The output has slots for a widget, video, text, image, another text, and another image.
-            // We particularly want to check that the overlay items are not moved to the top level, but preserved
-            // as overlays of the moved image.
+            // We particularly want to check that the canvas element items are not moved to the top level, but preserved
+            // as canvas elements of the moved image.
             var templateDom = new HtmlDom(
                 @"<html><head></head><body>
 					<div class='bloom-page' id='templateGuid'>
@@ -1899,7 +1911,7 @@ p {
 							</div>
 						</div>
 						<div class='split-pane-component-inner'>
-							<div id='overlaySlot' title='placeHolder.png' class='bloom-imageContainer'>
+							<div id='canvasElementSlot' title='placeHolder.png' class='bloom-imageContainer'>
 								<img src='placeHolder.png' alt=''></img>
 							</div>
 						</div>
@@ -1949,7 +1961,7 @@ p {
             assertThatOutput.HasSpecifiedNumberOfMatchesForXpath(secondTextXpath, 1);
             assertThatOutput.HasSpecifiedNumberOfMatchesForXpath(topTextXpath, 1);
             assertThatOutput.HasSpecifiedNumberOfMatchesForXpath(imageDescXpath, 1);
-            // second image slot should be filled from second top-level input image, not from overlay
+            // second image slot should be filled from second top-level input image, not from canvas element
             // likewise for video and widget
             assertThatOutput.HasSpecifiedNumberOfMatchesForXpath(
                 "//div[@id='imageSlot2']/img[@src='myImageFile2.png']",
@@ -1963,17 +1975,17 @@ p {
                 "//div[@id='outerVideo']/video/source[@src='video/videoGuid.mp4']",
                 1
             );
-            // overlays should become overlays of first image
+            // canvas elements should become canvas elements of first image
             assertThatOutput.HasSpecifiedNumberOfMatchesForXpath(
-                "//div[@id='overlaySlot']//img[@src='myImageFileOverlay.png']",
+                "//div[@id='canvasElementSlot']//img[@src='myImageFileCanvasElement.png']",
                 1
             );
             assertThatOutput.HasSpecifiedNumberOfMatchesForXpath(
-                "//div[@id='overlaySlot']//iframe[@src='activities/balldragTouch/indexOverlay.html']",
+                "//div[@id='canvasElementSlot']//iframe[@src='activities/balldragTouch/indexCanvasElement.html']",
                 1
             );
             assertThatOutput.HasSpecifiedNumberOfMatchesForXpath(
-                "//div[@id='overlaySlot']//video/source[@src='video/videoGuidOverlay.mp4']",
+                "//div[@id='canvasElementSlot']//video/source[@src='video/videoGuidCanvasElementy.mp4']",
                 1
             );
         }

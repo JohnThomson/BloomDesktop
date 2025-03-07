@@ -260,13 +260,14 @@ namespace Bloom.Publish
             {
                 // At this point (5.1), we have an enterprise-related publishing problem if :
                 // - User is not in Enterprise mode AND
-                // - Book contains overlay elements AND
+                // - Book contains canvas element elements AND
                 // - Book is not a translated shell
 
-                var overlayElementNodes = BookSelection?.CurrentSelection?.RawDom.SafeSelectNodes(
-                    "//div[contains(@class, 'bloom-textOverPicture')]"
-                );
-                var bookContainsOverlayElements = (overlayElementNodes?.Length ?? 0) > 0;
+                var canvasElementElementNodes =
+                    BookSelection?.CurrentSelection?.RawDom.SafeSelectNodes(
+                        "//div[contains(@class, 'bloom-textOverPicture')]"
+                    );
+                var bookContainsOverlayElements = (canvasElementElementNodes?.Length ?? 0) > 0;
 
                 var bookIsTranslatedFromShell =
                     BookSelection?.CurrentSelection?.BookData?.BookIsDerivative() ?? false;

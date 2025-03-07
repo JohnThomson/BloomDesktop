@@ -787,16 +787,16 @@ namespace Bloom.Publish
         )
         {
             var imgContainer = img.ParentNode as SafeXmlElement;
-            var overlay = imgContainer?.ParentNode as SafeXmlElement;
-            // Cropping is implemented using the interaction between an overlay (obsolete: bloom-textOverPicture)
+            var canvasElement = imgContainer?.ParentNode as SafeXmlElement;
+            // Cropping is implemented using the interaction between a canvas element
             // which specifies the visible area of the image by its height and width, and the img two levels
-            // down which may have adjusted width, left, and top to position part of itself in the overlay.
+            // down which may have adjusted width, left, and top to position part of itself in the canvas element.
             // An image can only be cropped, and we can only know what part of it to remove, if it occurs in
             // this structure. Other images (e.g., branding) are left alone. (At the stage where this code is run,
-            // background images, including all normal page content images, are still represented as overlays.)
+            // background images, including all normal page content images, are still represented as canvas elements.)
             if (
-                overlay == null
-                || !overlay.HasClass("bloom-textOverPicture")
+                canvasElement == null
+                || !canvasElement.HasClass("bloom-textOverPicture")
                 || !imgContainer.HasClass("bloom-imageContainer")
             )
                 return;
@@ -810,18 +810,18 @@ namespace Bloom.Publish
             var imgWidth = GetNumberFromPx("width", imgStyle);
             var imgLeft = GetNumberFromPx("left", imgStyle);
             var imgTop = GetNumberFromPx("top", imgStyle);
-            var overlayStyle = overlay.GetAttribute("style");
-            var overlayWidth = GetNumberFromPx("width", overlayStyle);
-            var overlayHeight = GetNumberFromPx("height", overlayStyle);
-            if (imgWidth == 0 || overlayWidth == 0)
+            var canvasElementStyle = canvasElement.GetAttribute("style");
+            var canvasElementWidth = GetNumberFromPx("width", canvasElementStyle);
+            var canvasElementHeight = GetNumberFromPx("height", canvasElementStyle);
+            if (imgWidth == 0 || canvasElementWidth == 0)
                 return;
             if (!ImageUtils.TryGetImageSize(srcPath, out Size size))
             {
                 return; // can't crop the image if we can't get its size.
             }
             var scale = imgWidth / size.Width;
-            var selWidth = overlayWidth / scale;
-            var selHeight = overlayHeight / scale;
+            var selWidth = canvasElementWidth / scale;
+            var selHeight = canvasElementHeight / scale;
             var selLeft = -imgLeft / scale;
             var selTop = -imgTop / scale;
             var ext = Path.GetExtension(srcPath).ToLowerInvariant();

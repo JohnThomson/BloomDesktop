@@ -3606,10 +3606,10 @@ namespace Bloom.Book
                 return;
 
             // Make sure that in every image container, the first element is the img.
-            // This is important because, since 5.4, we don't use a z-index to put overlays above the base image
-            // (so the overlay image container does not become a stacking context, so we can use
+            // This is important because, since 5.4, we don't use a z-index to put canvas elements above the base image
+            // (so the canvas element image container does not become a stacking context, so we can use
             // z-index on its children to put them above the comicaljs canvas),
-            // which means we depend on the img being first to make sure the overlays are on top of it.
+            // which means we depend on the img being first to make sure the canvas elements are on top of it.
             // (I'm not sure we ever created situations where the img was not first, but now it's vital,
             // so I added this maintenance to make sure of it.)
             var imageContainers = Dom.SafeSelectNodes(
@@ -3795,6 +3795,20 @@ namespace Bloom.Book
             Dom.UpdateMetaElement("maintenanceLevel", "4");
         }
 
+        private void migrateClassName(string oldClassName, string newClassName)
+        {
+            var elements = Dom.SafeSelectNodes($"//*[contains(@class, '{oldClassName}')]")
+                .Cast<SafeXmlElement>()
+                .ToList();
+            foreach (var element in elements)
+            {
+                element.SetAttribute(
+                    "class",
+                    element.GetAttribute("class").Replace(oldClassName, newClassName)
+                );
+            }
+        }
+
         /// <summary>
         /// Only for 6.1 and 6.0! Do not merge to 6.2.
         /// </summary>
@@ -3806,20 +3820,9 @@ namespace Bloom.Book
             );
             if (GetMaintenanceLevel() != 5)
                 return;
-            var legacyCanvasElements = Dom.SafeSelectNodes(
-                    "//*[contains(@class, 'bloom-canvas-element')]"
-                )
-                .Cast<SafeXmlElement>()
-                .ToList();
-            foreach (var element in legacyCanvasElements)
-            {
-                element.SetAttribute(
-                    "class",
-                    element
-                        .GetAttribute("class")
-                        .Replace("bloom-canvas-element", "bloom-textOverPicture")
-                );
-            }
+            migrateClassName("bloom-canvas-element", "bloom-textOverPicture");
+            migrateClassName("bloom-has-canvas-element", "hasOverlay");
+
             Dom.UpdateMetaElement("maintenanceLevel", "4");
         }
 
