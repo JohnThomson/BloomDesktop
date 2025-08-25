@@ -1,6 +1,7 @@
 "use strict";
 /// <reference path="localizationManager.ts" />
 ///<reference path="../../typings/bundledFromTSC.d.ts"/>
+import { describe, it, expect } from "vitest";
 import theOneLocalizationManager from "./localizationManager";
 
 describe("localizationManager", () => {

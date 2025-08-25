@@ -17,6 +17,7 @@ import { get } from "../../utils/bloomApi";
 import theOneLocalizationManager from "../localizationManager/localizationManager";
 import { EditableDivUtils } from "../../bookEdit/js/editableDivUtils";
 import { kBloomCanvasClass } from "../../bookEdit/js/bloomImages";
+import jQuery from "jquery";
 
 (function($) {
     $.fn.splitPane = function() {

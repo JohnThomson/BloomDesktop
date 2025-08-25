@@ -1,10 +1,9 @@
 /// <reference path="../typings/jquery/jquery.d.ts" />
-import * as jQuery from 'jquery';
+import $ from "jquery";
 
 interface JQuery {
-        onSafe(eventName: string, data?: any, handler?: any)
+    onSafe(eventName: string, data?: any, handler?: any);
 }
-
 
 /**
  * Like "on", but first does an "off" so that it can be called repeatedly without getting multiple event subscriptions
@@ -13,14 +12,17 @@ interface JQuery {
  * @param [handler]
  * @returns {Object}
  */
-$.fn.onSafe = function (eventName, data, handler) {
+$.fn.onSafe = function(eventName, data, handler) {
+    this.each(function() {
+        if (data)
+            $(this)
+                .off(eventName)
+                .on(eventName, data, handler);
+        else
+            $(this)
+                .off(eventName)
+                .on(eventName, handler);
+    });
 
-        this.each(function () {
-                if (data)
-                        $(this).off(eventName).on(eventName, data, handler);
-                else
-                        $(this).off(eventName).on(eventName, handler);
-        });
-
-        return this;
+    return this;
 };

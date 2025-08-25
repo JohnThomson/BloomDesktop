@@ -5,8 +5,8 @@ import {
     ILocalizationState,
     LocalizableElement
 } from "./l10nComponents";
-import * as MarkdownIt from "markdown-it";
-import * as MarkdownItAttrs from "markdown-it-attrs";
+import MarkdownIt from "markdown-it";
+import MarkdownItAttrs from "markdown-it-attrs";
 
 // This component expects its content to be a single string (like all localizable elements) that
 // contains Markdown. It will convert that into HTML and show it.

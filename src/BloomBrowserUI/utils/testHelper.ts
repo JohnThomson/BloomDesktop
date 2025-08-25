@@ -53,25 +53,6 @@ export function ensureIdsDontExist(ids: string[]) {
     });
 }
 
-export const customJasmineMatchers = {
-    // This upgrades toBe with an arrow that points to the first character that differs.
-    toBeString: _ => {
-        return {
-            compare: (actual, expected) => {
-                const pass = actual === expected;
-                const message = pass
-                    ? undefined
-                    : getStringDifference(actual, expected);
-
-                return {
-                    pass,
-                    message
-                };
-            }
-        };
-    }
-};
-
 export function getStringDifference(actual: string, expected: string) {
     const index = findFirstDiffPos(actual, expected);
     if (index < 0) {

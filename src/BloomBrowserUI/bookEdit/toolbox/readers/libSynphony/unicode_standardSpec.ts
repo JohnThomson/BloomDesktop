@@ -1,6 +1,17 @@
+import { describe, it, expect, beforeEach, afterEach, beforeAll } from "vitest";
 import { theOneLibSynphony } from "./synphony_lib";
+import { LibSynphony } from "./synphony_lib.js";
+import "./bloomSynphonyExtensions";
+
+//const theOneLibSynphony = new LibSynphony();
+//addBloomSynphonyExtensions();
 
 describe("Unicode Standards", function() {
+    // beforeAll(function() {
+    //     if (!theOneLibSynphony) {
+    //         theOneLibSynphony = new LibSynphony();
+    //     }
+    // });
     beforeEach(function() {
         //
     });
@@ -110,6 +121,7 @@ describe("Unicode Standards", function() {
         var result5 = " This is sentence 3.";
         var result6 = "\r\n";
 
+        console.log("the one libSynphony", theOneLibSynphony);
         var fragments = theOneLibSynphony.stringToSentences(inputText);
         expect(fragments.length).toBe(6);
         expect(fragments[0].text).toBe(result1);
