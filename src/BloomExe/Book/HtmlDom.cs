@@ -607,8 +607,14 @@ namespace Bloom.Book
             e.RemoveAttribute("dir");
         }
 
-        public static void RemoveClassesBeginningWith(SafeXmlElement xmlElement, string classPrefix)
+        public static void RemoveClassesBeginningWith(
+            SafeXmlElement xmlElement,
+            string classPrefix,
+            HashSet<string> classesToKeep = null
+        )
         {
+            if (classesToKeep == null)
+                classesToKeep = new HashSet<string>();
             var oldClasses = xmlElement.GetClasses();
 
             if (oldClasses.Length == 0)
@@ -617,7 +623,7 @@ namespace Bloom.Book
             var classes = "";
             foreach (var part in oldClasses)
             {
-                if (!part.StartsWith(classPrefix))
+                if (!part.StartsWith(classPrefix) || classesToKeep.Contains(part))
                     classes += part + " ";
             }
             xmlElement.SetAttribute("class", classes.Trim());
@@ -3828,6 +3834,19 @@ namespace Bloom.Book
             string[] backgroundImgValues
         )
         {
+            // We definitely don't want to do this when switching between auto and custom layout
+            // for a cover page. The data-imgsizebasedon from auto mode will cause mayhem
+            // when the cover image has become just one of many canvas elements on the custom
+            // page. There doesn't seem to be a problem going the other way, probably because
+            // the position of the cover image is entirely computed.
+            // We don't need to do this auto-manipulation to elements in the data-div itself.
+            // And doing so might propagate somehow to the custom page. So we don't do it
+            // there either.
+            if (
+                node.ParentWithClass("bloom-custom-cover") != null
+                || node.ParentWithAttributeValue("id", "bloomDataDiv") != null
+            )
+                return;
             // The situation we want to establish is that the image is inside an imageContainer
             // inside a canvasElement inside a bloomCanvas. That may not be true initially.
             var imageContainer = node.ParentElement;
