@@ -2214,6 +2214,10 @@
         <note>ID: EditTab.Toolbox.ComicTool.Options.Duplicate</note>
         <note>Tooltip for the bubble Duplicate icon</note>
       </trans-unit>
+      <trans-unit id="EditTab.Toolbox.ComicTool.Options.FieldType" translate ="no">
+        <source xml:lang="en">Field Type:</source>
+        <note>ID: EditTab.Toolbox.ComicTool.Options.FieldType</note>
+      </trans-unit>
       <trans-unit id="EditTab.Toolbox.ComicTool.Options.FillBackground" sil:dynamic="true" translate ="no">
         <source xml:lang="en">Fill Background</source>
         <note>ID: EditTab.Toolbox.ComicTool.Options.FillBackground</note>

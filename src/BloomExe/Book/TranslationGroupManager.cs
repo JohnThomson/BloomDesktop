@@ -486,7 +486,7 @@ namespace Bloom.Book
         )
         {
             HashSet<string> classesToKeep = null;
-            if (editable.ParentWithAttributeValue("data-book", "coverImage") != null)
+            if (editable.ParentWithAttributeValue("data-book", "customCover") != null)
             {
                 // on a custom page, every bloom-editable is the only thing visible
                 // in its translationGroup, and visibility is not controlled by the

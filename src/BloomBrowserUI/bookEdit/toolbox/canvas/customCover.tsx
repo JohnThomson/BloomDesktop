@@ -202,6 +202,7 @@ export function convertCoverPageToCustom(
     const mainCanvas = document.createElement("div");
     mainCanvas.classList.add(kBloomCanvasClass);
     mainCanvas.classList.add("bloom-has-canvas-element");
+    removeImgSizeBasedOnAttributes(mainCanvas);
     // We'll put the new images before (and with lower bubble index) than text, since
     // we may want to put text over images, and clicks should prefer the text.
     let level = 2; // level 1 will be the background image
@@ -225,6 +226,15 @@ export function convertCoverPageToCustom(
     // This needs to be after we measure positions of things!
     page.classList.add("bloom-custom-cover");
     finishReactivatingPage(page);
+}
+
+function removeImgSizeBasedOnAttributes(container: HTMLElement): void {
+    container.removeAttribute("data-imgsizebasedon");
+    Array.from(container.querySelectorAll("[data-imgsizebasedon]")).forEach(
+        (element) => {
+            element.removeAttribute("data-imgsizebasedon");
+        },
+    );
 }
 
 async function setDataDefault(
@@ -311,10 +321,6 @@ function renderCoverMenu(page: HTMLElement, container: HTMLElement): void {
 }
 
 // Todo:
-// - there is a bug where turning a title language off in the book settings
-// somehow gets a style="display:block/none" put on the title bloom-editables.
-// This gets propagated through data-book and pre-empts the intended control
-// by bloom-visibility-code-on.
 // - Test how books that have this open in 6.3, and whether this damages
 // things in 6.4. May need some of the TranslationGroupManager changes
 // in 6.3, and to prevent earlier 6.3's from opening such books. Concern is
@@ -330,7 +336,8 @@ function renderCoverMenu(page: HTMLElement, container: HTMLElement): void {
 // marked as the cover image.)
 // - Field should offer topic as well as language list.
 // - Field should offer to make an image "the cover image".
-// - cropping does not survive "become background image".
+// - cropping does not survive "become background image". Maybe this is to be expected,
+// given that it is likely to change shape?
 // - Do we want to do any auto-sizing of read-only fields (languages and topic)?
 // - Make sure the appropriate Canvas controls (and only those) are enabled for
 // read-only fields. For example, we should be able to change colors...not sure

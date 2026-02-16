@@ -3793,6 +3793,12 @@ namespace Bloom.Book
         )
         {
             var result = new List<Tuple<string, string>>();
+            // Don't save any of this data for an image in the custom margin box. We don't
+            // need it for reconstructing that image, because it is saved with all its parents
+            // in the data-div entry for the custom margin box. And we don't want to transfer
+            // its layout settings to the standard one.
+            if (IsInCustomMarginBox(node))
+                return result;
             var ce = node.ParentElement?.ParentElement;
             if (ce != null)
             {
@@ -3834,18 +3840,12 @@ namespace Bloom.Book
             string[] backgroundImgValues
         )
         {
-            // We definitely don't want to do this when switching between auto and custom layout
-            // for a cover page. The data-imgsizebasedon from auto mode will cause mayhem
-            // when the cover image has become just one of many canvas elements on the custom
-            // page. There doesn't seem to be a problem going the other way, probably because
-            // the position of the cover image is entirely computed.
-            // We don't need to do this auto-manipulation to elements in the data-div itself.
-            // And doing so might propagate somehow to the custom page. So we don't do it
-            // there either.
-            if (
-                node.ParentWithClass("bloom-custom-cover") != null
-                || node.ParentWithAttributeValue("id", "bloomDataDiv") != null
-            )
+            // We don't need to do this to the cover image that is embedded in the custom
+            // margin box, because its containers with the style on the bloom-canvas-element
+            // and the data-imgsizebasedon of the bloom-canvas are saved as part of the content
+            // of the custom margin box. And we MUST not copy the values we saved from the
+            // standard cover into the custom one, either directly or via the copy in the data-div.
+            if (IsInCustomMarginBox(node) || IsInCustomCoverInDataDiv(node))
                 return;
             // The situation we want to establish is that the image is inside an imageContainer
             // inside a canvasElement inside a bloomCanvas. That may not be true initially.
@@ -3889,6 +3889,19 @@ namespace Bloom.Book
             bloomCanvas.AddClass("bloom-has-canvas-element"); // probably only necessary if we added the canvas element
             bloomCanvas.SetAttribute("data-imgsizebasedon", backgroundImgValues[0]);
             canvasElement.SetAttribute("style", backgroundImgValues[1]);
+        }
+
+        public static bool IsInCustomCoverInDataDiv(SafeXmlElement node)
+        {
+            var customCover = node.ParentWithAttributeValue("data-book", "customCover");
+            if (customCover == null)
+                return false;
+            return customCover.ParentWithAttributeValue("id", "bloomDataDiv") != null;
+        }
+
+        public static bool IsInCustomMarginBox(SafeXmlElement node)
+        {
+            return node.ParentWithClass("bloom-customMarginBox") != null;
         }
     }
 }

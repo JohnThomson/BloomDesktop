@@ -1585,6 +1585,20 @@ namespace Bloom.Book
         private List<Tuple<string, XmlString>> GetAttributesToSave(SafeXmlElement node)
         {
             var result = new List<Tuple<string, XmlString>>();
+            if (HtmlDom.IsInCustomMarginBox(node))
+            {
+                // We don't want to transfer attribute values or classes from the custom page
+                // layout to the standard one. It's likely that special styling or image cropping
+                // or anything similar  will have the wrong effect there. The one exception is the
+                // src of an image: we allow changing the cover image in one place to change it in
+                // the other, just as changing the text of a title in one place changes it in both.
+                // We don't need to worry about re-creating attribute values inside the custom margin
+                // box, because its whole content is saved.
+                if (node.Name == "img" && !string.IsNullOrWhiteSpace(node.GetAttribute("src")))
+                    result.Add(
+                        Tuple.Create("src", XmlString.FromUnencoded(node.GetAttribute("src")))
+                    );
+            }
             foreach (var attr in node.AttributePairs)
             {
                 if (_attributesNotToCopy.Contains(attr.Name))
@@ -1670,35 +1684,36 @@ namespace Bloom.Book
         {
             try
             {
+                // elements that have children that also have data-book attributes
+                // (for example, the customMarginBox on a custom front cover)
+                // must be processed before all others. For example, if we've been
+                // editing the auto version of the cover, the data-div still contains
+                // a copy of the custom layout version. Its layout is relevant,
+                // but its version of things like the title text may be obsolete.
+                // We want to first restore the customMarginBox content, and then
+                // restore things like the title into it (among other places).
+                var nodesToProcessFirst = targetDom
+                    .SafeSelectNodes(
+                        "//div[contains(@class,'bloom-contains-child-data') and @data-book]"
+                    )
+                    .Cast<SafeXmlElement>();
+                foreach (var elt in nodesToProcessFirst)
+                    UpdateOneElementFromDataSet(data, itemsToDelete, elt);
+
+                // Run this query AFTER that update, so that we're updating the (possibly modified) set of nodes that
+                // result from doing it.
                 var query =
                     $"//{elementName}[(@data-book or @data-collection or @data-library or @{kDataXmatterPage})]";
                 var nodesOfInterest = targetDom.SafeSelectNodes(query).Cast<SafeXmlElement>();
 
-                var otherNodes = new List<SafeXmlElement>();
                 foreach (var elt in nodesOfInterest)
                 {
-                    // elements that have children that also have data-book attributes
-                    // (for example, the customMarginBox on a custom front cover)
-                    // must be processed before all others. For example, if we've been
-                    // editing the auto version of the cover, the data-div still contains
-                    // a copy of the custom layout version. Its layout is relevant,
-                    // but its version of things like the title text may be obsolete.
-                    // We want to first restore the customMarginBox content, and the
-                    // restore things like the title into it (among other places).
-                    if (elt.HasClass("bloom-contains-child-data"))
+                    // if it has that class we already processed it, and should not do so again,
+                    // since it might replace some of the nodes in our list with new ones.
+                    if (!elt.HasClass("bloom-contains-child-data"))
                     {
                         UpdateOneElementFromDataSet(data, itemsToDelete, elt);
-                        // and now that element may have different contents and
-                        // they should be updated too.
-                        otherNodes.AddRange(elt.SafeSelectElements("." + query));
                     }
-                    else
-                        otherNodes.Add(elt);
-                }
-
-                foreach (var node in otherNodes)
-                {
-                    UpdateOneElementFromDataSet(data, itemsToDelete, node);
                 }
             }
             catch (Exception error)
@@ -1804,7 +1819,14 @@ namespace Bloom.Book
                     }
                     SetInnerXmlPreservingLabel(key, node, XmlString.FromXml(s));
                     var attrs = dsv.GetAttributeList(lang);
-                    if (attrs != null)
+                    // don't copy attributes (including classes) from standard page into custom.
+                    // To properly prevent this, we must also not copy into the copy saved in the
+                    // data-div.
+                    if (
+                        attrs != null
+                        && !HtmlDom.IsInCustomMarginBox(node)
+                        && !HtmlDom.IsInCustomCoverInDataDiv(node)
+                    )
                     {
                         MergeAttrsIntoElement(attrs, node);
                     }
@@ -1983,6 +2005,10 @@ namespace Bloom.Book
                     return false;
                 }
             }
+
+            // Don't transfer data other than the src from the standard cover page to the custom one.
+            if (HtmlDom.IsInCustomMarginBox(node))
+                return true;
 
             // Historically, we've gone back and forth about putting width/height on images. Normally if we find this,
             // we want to remove it because we now use object-fit:contain instead. However in some styling cases (at least border),
