@@ -5182,19 +5182,63 @@ namespace Bloom.Book
             coverImgElt = null;
             if (Storage == null)
                 return null; // can happen in tests
-            // This first branch covers the currently obsolete approach to images using background-image.
-            // In that approach the data-book attribute is on the imageContainer.
-            // Note that we want the coverImage from a page, instead of the dataDiv because the former
-            // "doesn't have the data in the form that GetImageElementUrl can handle."
-            coverImgElt = Storage
-                .Dom.SafeSelectNodes("//div[not(@id='bloomDataDiv')]/div[@data-book='coverImage']")
+            var outsideFrontCover = Storage
+                .Dom.SafeSelectNodes(
+                    "//div[contains(concat(' ', normalize-space(@class), ' '), ' outsideFrontCover ')]"
+                )
                 .Cast<SafeXmlElement>()
                 .FirstOrDefault();
-            // If that fails, we look for an img with the relevant attribute. Happily this doesn't conflict with the data-div.
+
+            if (outsideFrontCover == null)
+                return null;
+
+            var isCustomCover = outsideFrontCover
+                .GetAttribute("class")
+                .Contains("bloom-custom-cover");
+
+            var coverSearchRoot = outsideFrontCover;
+            if (isCustomCover)
+            {
+                coverSearchRoot = outsideFrontCover
+                    .SafeSelectNodes(
+                        ".//div[contains(concat(' ', normalize-space(@class), ' '), ' bloom-customMarginBox ')]"
+                    )
+                    .Cast<SafeXmlElement>()
+                    .FirstOrDefault();
+
+                if (coverSearchRoot == null)
+                    coverSearchRoot = outsideFrontCover;
+            }
+
+            // Prefer an img in the outsideFrontCover. This is the current expected shape.
+            coverImgElt = coverSearchRoot
+                .SafeSelectNodes(".//img[@data-book='coverImage']")
+                .Cast<SafeXmlElement>()
+                .FirstOrDefault();
+
+            // Fall back to the obsolete background-image approach where data-book is on a div.
             if (coverImgElt == null)
             {
-                coverImgElt = Storage
-                    .Dom.SafeSelectNodes("//img[@data-book='coverImage']")
+                coverImgElt = coverSearchRoot
+                    .SafeSelectNodes(".//div[@data-book='coverImage']")
+                    .Cast<SafeXmlElement>()
+                    .FirstOrDefault();
+            }
+
+            if (coverImgElt == null && isCustomCover)
+            {
+                coverImgElt = coverSearchRoot
+                    .SafeSelectNodes(".//img")
+                    .Cast<SafeXmlElement>()
+                    .FirstOrDefault();
+            }
+
+            if (coverImgElt == null && isCustomCover)
+            {
+                coverImgElt = coverSearchRoot
+                    .SafeSelectNodes(
+                        ".//div[contains(translate(@style, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), 'background-image')]"
+                    )
                     .Cast<SafeXmlElement>()
                     .FirstOrDefault();
             }

@@ -347,3 +347,4 @@ function renderCoverMenu(page: HTMLElement, container: HTMLElement): void {
 // child elements. I don't think this will involve keeping both versions around
 // like we're doing for the cover; more like a new page type, only for "change layout",
 // that results in converting all the page content to canvas elements.
+// - page thumbnail for front cover is not showing custom layout
